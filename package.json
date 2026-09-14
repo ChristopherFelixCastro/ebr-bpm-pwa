@@ -1,0 +1,12 @@
+{
+  "name": "ebr-bpm-pwa",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema PWA de Evaluacion Basada en Riesgo y BPM",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "validate": "node --version",
+    "test": "npm run validate"
+  },
+  "engines": {"node": ">=20"}
+}

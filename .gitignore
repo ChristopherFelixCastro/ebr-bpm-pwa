@@ -1,0 +1,36 @@
+# Dependencies and builds
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Logs and local tooling
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/extensions.json
+
+# Local databases, caches and uploaded files
+*.sqlite
+*.sqlite3
+.cache/
+uploads/
+
+# Generated reports
+reports/
+playwright-report/
+test-results/
