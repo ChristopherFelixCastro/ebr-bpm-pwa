@@ -1,11 +1,3 @@
-/**
- * Riesgo total y frecuencia de inspección.
- *
- *   RT = riesgo del producto × riesgo del establecimiento
- *
- * El rango se busca con el valor exacto: con la versión inicial, 3.6 es Anual y
- * 6.3 es Semestral.
- */
 import type { Decimal } from './decimal.js';
 import { RiskEngineError } from './errors.js';
 import { rangeContains, type CompiledFrequencyRange, type CompiledRuleVersion } from './rules.js';
@@ -15,7 +7,6 @@ export interface TotalRiskCalculation {
   range: CompiledFrequencyRange;
 }
 
-/** Rango de frecuencia que contiene el riesgo total. Lanza `RIESGO_TOTAL_SIN_RANGO` si ninguno lo contiene. */
 export function classifyTotalRisk(rule: CompiledRuleVersion, totalRisk: Decimal): CompiledFrequencyRange {
   const range = rule.frequencyRanges.find((candidate) => rangeContains(candidate.range, totalRisk));
   if (range === undefined) {

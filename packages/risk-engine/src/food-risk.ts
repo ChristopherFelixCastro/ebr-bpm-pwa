@@ -1,11 +1,3 @@
-/**
- * Riesgo del producto: el mayor puntaje aplicable entre las subcategorías que
- * elabora el establecimiento (versión inicial: bajo 1, medio 2, alto 3).
- *
- * Una subcategoría sin nivel (No aplica o vacío en la matriz) no participa y
- * nunca se convierte en cero. Si ninguna aplica, el resultado es
- * SIN_RIESGO_PRODUCTO_APLICABLE: el flujo debe tratarlo, no se inventa un puntaje.
- */
 import { Decimal } from './decimal.js';
 import { RiskEngineError } from './errors.js';
 import { compareText } from './sort.js';
@@ -42,7 +34,6 @@ function isNonEmptyText(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== '';
 }
 
-/** En la matriz, un valor vacío equivale a No aplica. */
 function isEmpty(value: unknown): boolean {
   return value === null || value === undefined || (typeof value === 'string' && value.trim() === '');
 }

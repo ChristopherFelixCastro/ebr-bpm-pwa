@@ -1,8 +1,3 @@
-/**
- * Recorre todas las combinaciones de la regla v1 (4^6 combinaciones de tramos × 3
- * niveles de producto) y compara el motor con un cálculo independiente hecho solo
- * con enteros.
- */
 import { describe, expect, it } from 'vitest';
 import {
   calculateInspectionRisk,
@@ -14,14 +9,13 @@ import {
 } from '../src/index.js';
 import { bpmItems, ruleV1, subcategory } from './helpers.js';
 
-// Un valor de entrada por tramo; el índice 0..3 corresponde a 1, 1.67, 2.33 y 3 puntos.
 const VOLUME = ['100000', '500000', '1000000', '3000000'];
 const HACCP = ['TODAS_LAS_LINEAS', 'LINEAS_75', 'LINEAS_25', 'NO_IMPLEMENTADO'];
 const BPM: BpmItemSnapshot[][] = [
-  bpmItems({ C: 45 }), // 100 %
-  bpmItems({ C: 3, IT: 1 }), // 75 %
-  bpmItems({ C: 13, IT: 7 }), // 65 %
-  bpmItems({ C: 1, IT: 1, NA: 3 }), // 50 %
+  bpmItems({ C: 45 }),
+  bpmItems({ C: 3, IT: 1 }),
+  bpmItems({ C: 13, IT: 7 }),
+  bpmItems({ C: 1, IT: 1, NA: 3 }),
 ];
 const INABIE = ['NO_SUPLIDOR', 'LOCAL', 'REGIONAL', 'NACIONAL'];
 const REJECTIONS = [0, 1, 2, 5];
@@ -32,7 +26,6 @@ const PRODUCTS: Record<1 | 2 | 3, FoodSubcategorySnapshot[]> = {
   3: [subcategory('leche', 'ALTO'), subcategory('pure', null)],
 };
 
-// Oráculo con enteros: puntos y pesos en centésimas → RE y RT en diezmilésimas.
 const POINTS = [100, 167, 233, 300];
 const WEIGHTS = [16, 9, 56, 5, 6, 8];
 
@@ -43,7 +36,6 @@ function oracle(indices: number[], productRisk: number) {
   return { re, rt, level };
 }
 
-/** Texto exacto de un entero en diezmilésimas: 13931 → "1.3931". */
 function fromTenThousandths(units: number): string {
   const integerPart = Math.floor(units / 10000);
   const fraction = String(units % 10000).padStart(4, '0').replace(/0+$/, '');

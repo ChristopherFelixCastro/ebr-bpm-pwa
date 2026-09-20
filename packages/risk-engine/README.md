@@ -2,6 +2,8 @@
 
 Motor de cálculo del sistema EBR/BPM. Para una inspección calcula:
 
+> **Integración pendiente:** el API de Core debe proporcionar la instantánea oficial, la versión de reglas asignada y la persistencia transaccional del resultado. El motor no se conecta directamente a la base de datos ni expone endpoints.
+
 - el **cumplimiento BPM**;
 - el **riesgo del producto**;
 - el **riesgo del establecimiento** (seis factores ponderados);
@@ -45,19 +47,18 @@ import { calculateInspectionRisk, RiskEngineError } from '@ebr-bpm/risk-engine';
 try {
   const resultado = calculateInspectionRisk(instantanea, versionAsignada);
   if (resultado.status === 'CALCULADO') {
-    resultado.totalRisk.value;   // "4.1793" (exacto, para guardar)
-    resultado.riskLevel;         // "MEDIO"
-    resultado.frequency;         // "SEMESTRAL"
-    resultado.frequencyMonths;   // 6
+    resultado.totalRisk.value;
+    resultado.riskLevel;
+    resultado.frequency;
+    resultado.frequencyMonths;
   } else {
-    resultado.reasons;           // ["SIN_CRITERIOS_APLICABLES"] y/o ["SIN_RIESGO_PRODUCTO_APLICABLE"]
+    resultado.reasons;
   }
-  resultado.explanation;         // desglose para "Cómo se calculó este resultado" y para el PDF
+  resultado.explanation;
 } catch (error) {
   if (error instanceof RiskEngineError) {
-    error.code;                  // p. ej. "RESPUESTAS_INCOMPLETAS" → la API responde 422
-    error.details;               // ítems, factor u opciones involucradas
-    // En Express: res.status(422).json(error) → toJSON() incluye name, code, message y details
+    error.code;
+    error.details;
   }
 }
 ```

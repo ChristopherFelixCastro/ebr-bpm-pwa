@@ -1,9 +1,3 @@
-/**
- * @ebr-bpm/risk-engine — motor de cálculo EBR/BPM.
- *
- * Uso típico (en Core):
- *   const resultado = calculateInspectionRisk(instantanea, versionPublicada);
- */
 export { calculateInspectionRisk } from './calculate.js';
 export { calculateBpmCompliance, type BpmAnswerPoints, type BpmCalculation } from './bpm.js';
 export {

@@ -1,10 +1,3 @@
-/**
- * Validación y compilación de una versión de reglas.
- *
- * `validateRuleVersion` sirve al publicar una versión (devuelve la lista de problemas).
- * `compileRuleVersion` la convierte a valores exactos para calcular y lanza
- * `VERSION_INVALIDA` si tiene problemas.
- */
 import { Decimal, Ratio } from './decimal.js';
 import { RiskEngineError } from './errors.js';
 import {
@@ -22,7 +15,6 @@ import {
 } from './types.js';
 
 export interface RuleIssue {
-  /** Ruta del dato con problema, por ejemplo `factors[2].weight`. */
   path: string;
   message: string;
 }
@@ -81,28 +73,19 @@ export interface CompiledRuleVersion {
   bpmAnswerPoints: Record<Exclude<BpmAnswer, 'NA'>, Decimal>;
   productRiskPoints: Record<RiskLevel, Decimal>;
   display: { percentageDecimals: number; riskDecimals: number };
-  /** En el orden de FACTOR_CODES. */
   factors: CompiledFactor[];
-  /** Ordenados de menor a mayor riesgo. */
   frequencyRanges: CompiledFrequencyRange[];
   weightSum: Decimal;
-  /** Riesgo total mínimo y máximo que se puede obtener con esta versión. */
   totalRiskBounds: { min: Decimal; max: Decimal };
 }
 
 const MAX_DISPLAY_DECIMALS = 10;
-/** Máximo de decimales en pesos, puntos y límites de una versión. */
 const MAX_RULE_DECIMALS = 6;
-
-/* ------------------------------------------------------------------ */
-/* Rangos                                                              */
-/* ------------------------------------------------------------------ */
 
 function compareBound(value: Decimal | Ratio, bound: Decimal): -1 | 0 | 1 {
   return value instanceof Decimal ? value.compare(bound) : value.compare(bound);
 }
 
-/** ¿El valor está dentro del rango? */
 export function rangeContains(range: CompiledRange, value: Decimal | Ratio): boolean {
   if (range.min !== null) {
     const c = compareBound(value, range.min);
@@ -115,7 +98,6 @@ export function rangeContains(range: CompiledRange, value: Decimal | Ratio): boo
   return true;
 }
 
-/** Número con separador de miles: 2000000 → 2,000,000. */
 export function formatNumber(value: Decimal): string {
   const [integerPart = '0', fractionPart] = value.toString().split('.');
   const negative = integerPart.startsWith('-');
@@ -125,13 +107,10 @@ export function formatNumber(value: Decimal): string {
 }
 
 export interface DescribeRangeOptions {
-  /** Unidad para mostrar. "%" se escribe junto a cada número; las demás, una vez al final. */
   unit?: string | null;
-  /** Si el valor siempre es entero, [1, 2) se escribe "= 1" y [3, ∞) "≥ 3". */
   integerOnly?: boolean;
 }
 
-/** Texto del rango: "> 60 % y ≤ 70 %", "≥ 200,000 y < 800,000 unidades por mes", "= 1". */
 export function describeRange(range: CompiledRange, options: DescribeRangeOptions = {}): string {
   const unit = options.unit ?? null;
   const percent = unit === '%';
@@ -140,7 +119,6 @@ export function describeRange(range: CompiledRange, options: DescribeRangeOption
 
   let { min, max, minInclusive, maxInclusive } = range;
   if (options.integerOnly === true) {
-    // En un dominio entero, (a, …) es [a+1, …) y (…, b) es (…, b-1].
     if (min !== null) {
       min = minInclusive ? min.ceil() : min.floor().add(Decimal.ONE);
       minInclusive = true;
@@ -170,10 +148,6 @@ function compareByLowerBound(a: CompiledRange, b: CompiledRange): number {
   return a.minInclusive === b.minInclusive ? 0 : a.minInclusive ? -1 : 1;
 }
 
-/**
- * Revisa que los rangos no se solapen, no dejen huecos y lleguen hasta +∞.
- * Con `coverFromZero`, además deben empezar en 0 (inclusive) o antes.
- */
 function checkContiguous(
   ranges: ReadonlyArray<{ range: CompiledRange; path: string }>,
   issues: RuleIssue[],
@@ -216,10 +190,6 @@ function checkContiguous(
     });
   }
 }
-
-/* ------------------------------------------------------------------ */
-/* Lectura defensiva (la versión puede venir de JSON o de la base)     */
-/* ------------------------------------------------------------------ */
 
 class Reader {
   readonly issues: RuleIssue[] = [];
@@ -308,10 +278,6 @@ class Reader {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* Análisis de la versión                                              */
-/* ------------------------------------------------------------------ */
-
 const factorOrder = (code: FactorCode): number => {
   const index = FACTOR_CODES.indexOf(code);
   return index === -1 ? FACTOR_CODES.length : index;
@@ -354,7 +320,6 @@ function readFactor(r: Reader, value: unknown, path: string): CompiledFactor | n
       `${path}.bands`,
       true,
     );
-    // null (columna vacía en la base) cuenta como ausente.
     const unit = raw.unit ?? undefined;
     const integerOnly = raw.integerOnly ?? undefined;
     if (unit !== undefined && typeof unit !== 'string') r.issue(`${path}.unit`, 'Debe ser texto');
@@ -444,7 +409,6 @@ function readFrequencyRanges(r: Reader, value: unknown): CompiledFrequencyRange[
     false,
   );
 
-  // A más riesgo, nivel más alto e inspección más frecuente.
   const ordered = [...ranges].sort((a, b) => compareByLowerBound(a.range, b.range));
   for (let i = 1; i < ordered.length; i += 1) {
     const previous = ordered[i - 1]!;
@@ -459,7 +423,6 @@ function readFrequencyRanges(r: Reader, value: unknown): CompiledFrequencyRange[
   return ordered;
 }
 
-/** ¿Hay algún valor de [min, max] dentro del rango? */
 function overlaps(range: CompiledRange, min: Decimal, max: Decimal): boolean {
   const belowMax =
     range.min === null || range.min.compare(max) < 0 || (range.min.equals(max) && range.minInclusive);
@@ -468,11 +431,6 @@ function overlaps(range: CompiledRange, min: Decimal, max: Decimal): boolean {
   return belowMax && aboveMin;
 }
 
-/**
- * El riesgo total mínimo alcanzable no puede quedar por debajo del primer rango
- * (los rangos son contiguos y el último no tiene tope, así que el resto está cubierto),
- * y cada nivel debe poder alcanzarse con alguna combinación.
- */
 function checkReachability(
   r: Reader,
   ranges: readonly CompiledFrequencyRange[],
@@ -522,7 +480,6 @@ function analyze(rule: RiskRuleVersion): { compiled: CompiledRuleVersion; issues
   };
   const display = { percentageDecimals: decimalsOf('percentageDecimals'), riskDecimals: decimalsOf('riskDecimals') };
 
-  // Puntaje de las respuestas BPM: 0 ≤ IT ≤ CP ≤ C, IT < C y C > 0.
   const answers = r.record(root.bpmAnswerPoints, 'bpmAnswerPoints');
   const pointsC = r.decimal(answers.C, 'bpmAnswerPoints.C') ?? Decimal.ONE;
   const pointsCP = r.decimal(answers.CP, 'bpmAnswerPoints.CP') ?? Decimal.ZERO;
@@ -534,7 +491,6 @@ function analyze(rule: RiskRuleVersion): { compiled: CompiledRuleVersion; issues
   }
   if (pointsIT.compare(pointsC) >= 0) r.issue('bpmAnswerPoints.IT', 'Debe ser menor que el puntaje de C');
 
-  // Puntaje del riesgo del producto: positivo y creciente (BAJO < MEDIO < ALTO).
   const productRaw = r.record(root.productRiskPoints, 'productRiskPoints');
   const productRiskPoints = {} as Record<RiskLevel, Decimal>;
   RISK_LEVELS.forEach((level, index) => {
@@ -546,7 +502,6 @@ function analyze(rule: RiskRuleVersion): { compiled: CompiledRuleVersion; issues
     }
   });
 
-  // Factores (se ordenan como en FACTOR_CODES para que el resultado no dependa del orden de las filas).
   const factors = r
     .array(root.factors, 'factors')
     .map((value, index) => readFactor(r, value, `factors[${index}]`))
@@ -567,8 +522,6 @@ function analyze(rule: RiskRuleVersion): { compiled: CompiledRuleVersion; issues
 
   const frequencyRanges = readFrequencyRanges(r, root.frequencyRanges);
 
-  // Todo riesgo total posible debe caer en algún rango: se revisa el mínimo alcanzable
-  // (los rangos ya son contiguos y el último no tiene tope).
   const pointsOf = (factor: CompiledFactor): Decimal[] =>
     factor.kind === 'RANGO' ? factor.bands.map((band) => band.points) : factor.options.map((option) => option.points);
   const extreme = (values: Decimal[], pick: 'min' | 'max'): Decimal =>
@@ -599,12 +552,10 @@ function analyze(rule: RiskRuleVersion): { compiled: CompiledRuleVersion; issues
   };
 }
 
-/** Lista de problemas de una versión de reglas. Vacía = se puede publicar. */
 export function validateRuleVersion(rule: RiskRuleVersion): RuleIssue[] {
   return analyze(rule).issues;
 }
 
-/** Convierte la versión a valores exactos. Lanza `VERSION_INVALIDA` con la lista de problemas. */
 export function compileRuleVersion(rule: RiskRuleVersion): CompiledRuleVersion {
   const { compiled, issues } = analyze(rule);
   if (issues.length > 0) {

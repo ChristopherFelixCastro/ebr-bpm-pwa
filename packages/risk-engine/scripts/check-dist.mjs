@@ -1,6 +1,3 @@
-// Verifica el paquete compilado tal como lo usarán la API y los portales:
-// se importa por su nombre (exports) desde ESM y desde CommonJS, y el caso de
-// referencia debe dar exactamente el resultado guardado en test/fixtures.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';

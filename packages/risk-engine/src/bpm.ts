@@ -1,13 +1,3 @@
-/**
- * Cumplimiento BPM de una inspección.
- *
- *   puntos_obtenidos = suma de los puntajes de las respuestas aplicables
- *   puntos_posibles  = cantidad de respuestas aplicables × puntaje de C
- *   porcentaje_bpm   = puntos_obtenidos / puntos_posibles × 100
- *
- * NA no suma ni entra al denominador. Si no queda ningún ítem aplicable no hay
- * porcentaje: el resultado es SIN_CRITERIOS_APLICABLES (nunca 0 % ni 100 %).
- */
 import { Decimal, Ratio } from './decimal.js';
 import { RiskEngineError } from './errors.js';
 import { compareCodes, compareText } from './sort.js';
@@ -21,9 +11,7 @@ export interface BpmCalculation {
   pointsObtained: Decimal;
   pointsPossible: Decimal;
   applicableItems: number;
-  /** Ítems con NA, fuera del denominador. */
   excludedItems: ItemRef[];
-  /** null cuando no hay ítems aplicables. */
   percentage: Ratio | null;
 }
 
@@ -58,7 +46,7 @@ export function calculateBpmCompliance(
     if (typeof allowsPartial !== 'boolean') {
       throw new RiskEngineError('ENTRADA_INVALIDA', `${path}.allowsPartial debe ser true o false`, { path });
     }
-    const answer = item.answer ?? null; // una respuesta ausente cuenta como sin responder
+    const answer = item.answer ?? null;
     if (answer !== null && !BPM_ANSWERS.includes(answer)) {
       throw new RiskEngineError('ENTRADA_INVALIDA', `${path}.answer no es una respuesta válida`, {
         path,

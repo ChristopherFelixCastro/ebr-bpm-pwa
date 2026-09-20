@@ -5,7 +5,6 @@ import { cloneJson, expectEngineError, ruleV1 } from './helpers.js';
 type Mutable = Record<string, any>;
 type Bands = any[];
 
-/** Aplica un cambio a una copia de la regla v1 y devuelve los mensajes de validación. */
 function issuesAfter(change: (rule: Mutable) => void): string[] {
   const rule = ruleV1() as unknown as Mutable;
   change(rule);
@@ -158,11 +157,9 @@ describe('Versión de reglas', () => {
   });
 
   it('rechaza niveles que ninguna combinación puede alcanzar', () => {
-    // Con productos de 4 a 6 puntos el RT va de 4 a 18: nunca es BAJO.
     expect(issuesAfter((rule) => (rule.productRiskPoints = { BAJO: '4', MEDIO: '5', ALTO: '6' }))).toEqual([
       'frequencyRanges: El nivel BAJO no se puede alcanzar: el riesgo total va de 4 a 18',
     ]);
-    // Con ALTO en 2.1 el RT máximo es 6.3, que todavía es MEDIO.
     expect(issuesAfter((rule) => (rule.productRiskPoints = { BAJO: '1', MEDIO: '2', ALTO: '2.1' }))).toEqual([
       'frequencyRanges: El nivel ALTO no se puede alcanzar: el riesgo total va de 1 a 6.3',
     ]);

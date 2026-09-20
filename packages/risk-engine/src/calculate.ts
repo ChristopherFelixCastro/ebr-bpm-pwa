@@ -1,11 +1,3 @@
-/**
- * Cálculo completo de una inspección: BPM → riesgo del producto → riesgo del
- * establecimiento → riesgo total → frecuencia, con su explicación.
- *
- * Es una función pura: la misma instantánea con la misma versión de reglas da
- * siempre el mismo resultado, y el resultado no comparte referencias con la
- * entrada (queda congelado).
- */
 import { calculateBpmCompliance } from './bpm.js';
 import { RiskEngineError } from './errors.js';
 import { calculateEstablishmentRisk } from './establishment.js';

@@ -1,12 +1,3 @@
-/**
- * Riesgo del establecimiento: suma de los seis factores × su peso.
- *
- *   RE = volumen×p1 + HACCP×p2 + BPM×p3 + INABIE×p4 + rechazos×p5 + muestreo×p6
- *
- * Los puntos, los pesos y los tramos salen de la versión de reglas. El factor BPM
- * se puntúa con el porcentaje exacto de la ficha; si la ficha no tiene criterios
- * aplicables, el RE no se puede calcular.
- */
 import { Decimal, Ratio, type DecimalInput } from './decimal.js';
 import { RiskEngineError } from './errors.js';
 import {
@@ -39,7 +30,6 @@ export interface EstablishmentCalculation {
   total: Decimal | null;
 }
 
-/** Tramo que contiene el valor. Lanza `VALOR_FUERA_DE_RANGO` si ninguno lo contiene. */
 export function selectBand(factor: CompiledRangeFactor, value: Decimal | Ratio): CompiledBand {
   const band = factor.bands.find((candidate) => rangeContains(candidate.range, value));
   if (band === undefined) {
@@ -52,7 +42,6 @@ export function selectBand(factor: CompiledRangeFactor, value: Decimal | Ratio):
   return band;
 }
 
-/** Opción elegida. Lanza `OPCION_DESCONOCIDA` si no existe en la versión. */
 export function selectOption(factor: CompiledOptionFactor, code: string): CompiledOption {
   const option = factor.options.find((candidate) => candidate.code === code);
   if (option === undefined) {
@@ -144,7 +133,6 @@ export function calculateEstablishmentRisk(
   const factors = rule.factors.map((factor): FactorCalculation => {
     if (factor.code !== 'CUMPLIMIENTO_BPM') return readAnswer(factor, answers);
     if (factor.kind !== 'RANGO') {
-      // compileRuleVersion ya lo impide; se deja por seguridad de tipos.
       throw new RiskEngineError('VERSION_INVALIDA', 'CUMPLIMIENTO_BPM debe ser un factor de rango');
     }
     if (bpmPercentage === null) {

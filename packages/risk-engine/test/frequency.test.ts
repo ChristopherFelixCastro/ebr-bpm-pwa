@@ -25,7 +25,6 @@ describe('Riesgo total y frecuencia', () => {
   });
 
   it('multiplica sin errores de punto flotante en el límite 6.3', () => {
-    // Con números de JavaScript, 3 × 2.1 da 6.300000000000001 y caería en ALTO.
     expect(3 * 2.1).toBeGreaterThan(6.3);
     const total = calculateTotalRisk(rule, d('3'), d('2.1'));
     expect(total.value.toString()).toBe('6.3');

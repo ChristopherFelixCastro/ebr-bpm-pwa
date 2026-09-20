@@ -192,10 +192,9 @@ describe('Cálculo completo de una inspección', () => {
     const v2 = ruleV1() as unknown as Mutable;
     v2.id = 'regla-riesgo-v2';
     v2.version = '2';
-    v2.factors[0].weight = '0.20'; // volumen
-    v2.factors[2].weight = '0.52'; // BPM
+    v2.factors[0].weight = '0.20';
+    v2.factors[2].weight = '0.52';
 
-    // BPM 50 %: vale 3 puntos, así que bajar su peso cambia el RE.
     const lowBpm = (ruleVersionId: string): InspectionSnapshot => ({
       ...referenceSnapshot(),
       ruleVersionId,
@@ -205,11 +204,9 @@ describe('Cálculo completo de una inspección', () => {
 
     const withV2 = calculate(lowBpm('regla-riesgo-v2'), v2 as RiskRuleVersion);
     expect(withV2.ruleVersion).toEqual({ id: 'regla-riesgo-v2', version: '2', status: 'PUBLICADA' });
-    // 0.20 + 0.27 + 3 × 0.52 + 0.1165 + 0.1002 + 0.1864
     expect(withV2.establishmentRisk?.value).toBe('2.4331');
 
     const afterV1 = calculate(lowBpm('regla-riesgo-v1'));
-    // 0.16 + 0.27 + 3 × 0.56 + 0.1165 + 0.1002 + 0.1864
     expect(afterV1.establishmentRisk?.value).toBe('2.5131');
     expect(JSON.stringify(afterV1)).toBe(beforeV1);
   });
@@ -233,7 +230,6 @@ describe('Cálculo completo de una inspección', () => {
   });
 
   it('llega exactamente a los límites 3.6 y 6.3 en un cálculo completo', () => {
-    // Versión de prueba: los productos MEDIO y ALTO valen 3.6 y 6.3, y las mejores respuestas dan RE = 1.
     const rule = { ...ruleV1(), id: 'regla-limites', productRiskPoints: { BAJO: '1', MEDIO: '3.6', ALTO: '6.3' } };
     expect(validateRuleVersion(rule)).toEqual([]);
     const best: InspectionSnapshot = {

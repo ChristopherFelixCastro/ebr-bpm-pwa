@@ -53,7 +53,7 @@ describe('Riesgo del establecimiento', () => {
     ['199999.99', 'MICRO'],
     ['200000', 'PEQUENO'],
     ['799000', 'PEQUENO'],
-    ['799500', 'PEQUENO'], // el SDP dice 200,000–799,000: se cierra el hueco hasta 800,000
+    ['799500', 'PEQUENO'],
     ['799999.99', 'PEQUENO'],
     ['800000', 'MEDIANO'],
     ['2000000', 'MEDIANO'],
@@ -86,7 +86,6 @@ describe('Riesgo del establecimiento', () => {
   });
 
   it('un porcentaje periódico apenas encima de 80 cuenta como más de 80', () => {
-    // 241/3 = 80.333…
     const bpmFactor = factor(calculate(referenceAnswers(), Ratio.of(241n, 3n)).factors, 'CUMPLIMIENTO_BPM');
     expect(bpmFactor.input).toMatchObject({ kind: 'VALOR' });
     expect(bpmFactor.selected?.code).toBe('MAS_DE_80');

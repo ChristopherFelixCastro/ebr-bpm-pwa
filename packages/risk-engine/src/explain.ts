@@ -1,8 +1,3 @@
-/**
- * Explicación auditable del cálculo ("Cómo se calculó este resultado").
- * Todo sale como texto exacto para que el portal y el PDF muestren lo mismo que
- * se guardó, sin volver a calcular.
- */
 import { Decimal, type Ratio } from './decimal.js';
 import type { BpmCalculation } from './bpm.js';
 import type { EstablishmentCalculation, FactorCalculation } from './establishment.js';
@@ -12,10 +7,8 @@ import { describeRange, formatNumber, type CompiledRuleVersion } from './rules.j
 import type { CalculationExplanation, ComputedValue, FactorExplanation } from './types.js';
 import { ENGINE_VERSION } from './version.js';
 
-/** Decimales con los que se guarda un valor que no es un decimal finito (por ejemplo, 25/39). */
 export const STORED_DECIMALS = 10;
 
-/** Agrega el separador de miles a un número ya formateado: 4179.3000 → 4,179.3000. */
 function groupThousands(text: string): string {
   const [integerPart = '', fractionPart] = text.split('.');
   const grouped = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -30,14 +23,12 @@ export function toComputedValue(value: Decimal | Ratio, displayDecimals: number)
   return { value: text, exact, display: groupThousands(value.toFixed(displayDecimals)) };
 }
 
-/** `displayDecimals` aplica al único valor calculado que entra como factor: el porcentaje BPM. */
 function explainFactor(calculation: FactorCalculation, displayDecimals: number): FactorExplanation {
   const { factor, input, selected, points, contribution } = calculation;
   const unit = factor.kind === 'RANGO' ? factor.unit : null;
 
   let explainedInput: FactorExplanation['input'];
   if (input.kind === 'VALOR') {
-    // Un dato capturado (volumen, rechazos) se muestra tal cual; el porcentaje BPM se redondea.
     const value =
       input.value instanceof Decimal
         ? { value: input.value.toString(), exact: true, display: formatNumber(input.value) }

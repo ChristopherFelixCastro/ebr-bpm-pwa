@@ -13,12 +13,10 @@ import {
   type RiskRuleVersion,
 } from '../src/index.js';
 
-/** Copia profunda de datos JSON. */
 export function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-/** Copia editable de la regla inicial v1. */
 export function ruleV1(): RiskRuleVersion {
   return cloneJson(regla) as unknown as RiskRuleVersion;
 }
@@ -27,7 +25,6 @@ export function compiledV1(): CompiledRuleVersion {
   return compileRuleVersion(ruleV1());
 }
 
-/** Ítems con la cantidad pedida de cada respuesta (en orden C, CP, IT, NA). */
 export function bpmItems(counts: Partial<Record<BpmAnswer, number>>): BpmItemSnapshot[] {
   const items: BpmItemSnapshot[] = [];
   let n = 0;
@@ -55,11 +52,6 @@ export function subcategory(
   };
 }
 
-/**
- * Caso de referencia de la hoja de categorización del reto: producto de riesgo alto,
- * volumen micro, sin HACCP, BPM 85 %, suplidor regional del INABIE, 1 rechazo y
- * muestreo solo de materias primas → RE 1.3931, RT 4.1793, MEDIO, SEMESTRAL.
- */
 export function referenceAnswers(): FactorAnswers {
   return {
     VOLUMEN_PRODUCCION: { value: '150000' },
@@ -76,7 +68,6 @@ export function referenceSnapshot(): InspectionSnapshot {
     ruleVersionId: 'regla-riesgo-v1',
     bpm: {
       templateVersionId: 'bpm-plantilla-v1',
-      // 34 C y 6 IT de 40 aplicables = 85 %; los 5 NA no cuentan.
       items: bpmItems({ C: 34, IT: 6, NA: 5 }),
     },
     products: {
@@ -87,7 +78,6 @@ export function referenceSnapshot(): InspectionSnapshot {
   };
 }
 
-/** Ejecuta `fn` y comprueba que lanza un RiskEngineError con ese código. Devuelve el error. */
 export function expectEngineError(fn: () => unknown, code: RiskEngineErrorCode): RiskEngineError {
   try {
     fn();
@@ -99,7 +89,6 @@ export function expectEngineError(fn: () => unknown, code: RiskEngineErrorCode):
   throw new Error(`Se esperaba el error ${code}`);
 }
 
-/** Congela un objeto y todo lo que contiene (para comprobar que el motor no muta la entrada). */
 export function deepFreeze<T>(value: T): T {
   if (typeof value === 'object' && value !== null) {
     Object.freeze(value);
