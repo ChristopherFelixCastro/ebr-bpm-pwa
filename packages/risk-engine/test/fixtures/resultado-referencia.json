@@ -1,0 +1,274 @@
+{
+  "inspectionId": "insp-001",
+  "engineVersion": "0.1.0",
+  "preview": false,
+  "ruleVersion": {
+    "id": "regla-riesgo-v1",
+    "version": "1",
+    "status": "PUBLICADA"
+  },
+  "assignedRuleVersionId": "regla-riesgo-v1",
+  "bpmTemplateVersionId": "bpm-plantilla-v1",
+  "foodCatalogVersionId": "catalogo-v1",
+  "explanation": {
+    "versions": {
+      "engine": "0.1.0",
+      "ruleVersion": {
+        "id": "regla-riesgo-v1",
+        "version": "1",
+        "status": "PUBLICADA"
+      },
+      "assignedRuleVersionId": "regla-riesgo-v1",
+      "bpmTemplateVersionId": "bpm-plantilla-v1",
+      "foodCatalogVersionId": "catalogo-v1",
+      "preview": false
+    },
+    "bpm": {
+      "formula": "porcentaje_bpm = puntos_obtenidos / puntos_posibles × 100 (NA no entra al denominador)",
+      "counts": {
+        "C": 34,
+        "CP": 0,
+        "IT": 6,
+        "NA": 5
+      },
+      "answerPoints": {
+        "C": "1",
+        "CP": "0.5",
+        "IT": "0"
+      },
+      "pointsObtained": "34",
+      "pointsPossible": "40",
+      "applicableItems": 40,
+      "excludedItems": [
+        {
+          "itemId": "item-41",
+          "code": "1.41"
+        },
+        {
+          "itemId": "item-42",
+          "code": "1.42"
+        },
+        {
+          "itemId": "item-43",
+          "code": "1.43"
+        },
+        {
+          "itemId": "item-44",
+          "code": "1.44"
+        },
+        {
+          "itemId": "item-45",
+          "code": "1.45"
+        }
+      ],
+      "percentage": {
+        "value": "85",
+        "exact": true,
+        "display": "85.00"
+      }
+    },
+    "product": {
+      "rule": "riesgo_producto = mayor puntaje entre las subcategorías aplicables (NA no participa)",
+      "points": {
+        "BAJO": "1",
+        "MEDIO": "2",
+        "ALTO": "3"
+      },
+      "applicable": [
+        {
+          "subcategoryId": "leche",
+          "subcategoryName": "Subcategoría leche",
+          "categoryName": "Lácteos",
+          "microbiologicalRisk": "ALTO",
+          "score": "3"
+        },
+        {
+          "subcategoryId": "pan",
+          "subcategoryName": "Subcategoría pan",
+          "categoryName": "Panadería",
+          "microbiologicalRisk": "BAJO",
+          "score": "1"
+        }
+      ],
+      "excluded": [
+        {
+          "subcategoryId": "pure",
+          "subcategoryName": "Subcategoría pure",
+          "categoryName": "Frutas"
+        }
+      ],
+      "score": "3",
+      "level": "ALTO",
+      "determinedBy": [
+        {
+          "subcategoryId": "leche",
+          "subcategoryName": "Subcategoría leche",
+          "categoryName": "Lácteos"
+        }
+      ]
+    },
+    "establishment": {
+      "formula": "RE = Σ (puntos del factor × peso)",
+      "factors": [
+        {
+          "code": "VOLUMEN_PRODUCCION",
+          "name": "Volumen de producción por mes",
+          "input": {
+            "kind": "VALOR",
+            "value": {
+              "value": "150000",
+              "exact": true,
+              "display": "150,000"
+            },
+            "unit": "unidades por mes"
+          },
+          "selected": {
+            "code": "MICRO",
+            "label": "Micro (menos de 200,000)",
+            "range": "≥ 0 y < 200,000 unidades por mes"
+          },
+          "points": "1",
+          "weight": "0.16",
+          "contribution": "0.16"
+        },
+        {
+          "code": "HACCP",
+          "name": "Implementación HACCP",
+          "input": {
+            "kind": "OPCION",
+            "option": "NO_IMPLEMENTADO"
+          },
+          "selected": {
+            "code": "NO_IMPLEMENTADO",
+            "label": "No implementado"
+          },
+          "points": "3",
+          "weight": "0.09",
+          "contribution": "0.27"
+        },
+        {
+          "code": "CUMPLIMIENTO_BPM",
+          "name": "Cumplimiento BPM",
+          "input": {
+            "kind": "VALOR",
+            "value": {
+              "value": "85",
+              "exact": true,
+              "display": "85.00"
+            },
+            "unit": "%"
+          },
+          "selected": {
+            "code": "MAS_DE_80",
+            "label": "Más de 80 %",
+            "range": "> 80 %"
+          },
+          "points": "1",
+          "weight": "0.56",
+          "contribution": "0.56"
+        },
+        {
+          "code": "PROVEEDOR_INABIE",
+          "name": "Proveedor del INABIE",
+          "input": {
+            "kind": "OPCION",
+            "option": "REGIONAL"
+          },
+          "selected": {
+            "code": "REGIONAL",
+            "label": "Suplidor regional"
+          },
+          "points": "2.33",
+          "weight": "0.05",
+          "contribution": "0.1165"
+        },
+        {
+          "code": "RECHAZOS_SANITARIOS",
+          "name": "Rechazos sanitarios por incumplimiento microbiológico (últimos 5 años)",
+          "input": {
+            "kind": "VALOR",
+            "value": {
+              "value": "1",
+              "exact": true,
+              "display": "1"
+            }
+          },
+          "selected": {
+            "code": "UNO",
+            "label": "Uno",
+            "range": "= 1"
+          },
+          "points": "1.67",
+          "weight": "0.06",
+          "contribution": "0.1002"
+        },
+        {
+          "code": "PLAN_MUESTREO",
+          "name": "Plan de muestreo y análisis microbiológico",
+          "input": {
+            "kind": "OPCION",
+            "option": "MATERIAS_PRIMAS"
+          },
+          "selected": {
+            "code": "MATERIAS_PRIMAS",
+            "label": "Solo materias primas"
+          },
+          "points": "2.33",
+          "weight": "0.08",
+          "contribution": "0.1864"
+        }
+      ],
+      "weightSum": "1",
+      "value": {
+        "value": "1.3931",
+        "exact": true,
+        "display": "1.3931"
+      }
+    },
+    "total": {
+      "formula": "RT = riesgo del producto × riesgo del establecimiento",
+      "value": {
+        "value": "4.1793",
+        "exact": true,
+        "display": "4.1793"
+      },
+      "range": {
+        "level": "MEDIO",
+        "frequency": "SEMESTRAL",
+        "months": 6,
+        "label": "> 3.6 y ≤ 6.3"
+      }
+    },
+    "rounding": {
+      "mode": "HALF_UP",
+      "percentageDecimals": 2,
+      "riskDecimals": 4,
+      "storedDecimals": 10,
+      "note": "Las clasificaciones usan el valor exacto; el redondeo solo se aplica al mostrar."
+    }
+  },
+  "status": "CALCULADO",
+  "bpmPercentage": {
+    "value": "85",
+    "exact": true,
+    "display": "85.00"
+  },
+  "productRisk": {
+    "value": "3",
+    "exact": true,
+    "display": "3.0000"
+  },
+  "establishmentRisk": {
+    "value": "1.3931",
+    "exact": true,
+    "display": "1.3931"
+  },
+  "totalRisk": {
+    "value": "4.1793",
+    "exact": true,
+    "display": "4.1793"
+  },
+  "riskLevel": "MEDIO",
+  "frequency": "SEMESTRAL",
+  "frequencyMonths": 6
+}

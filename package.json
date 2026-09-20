@@ -5,8 +5,8 @@
   "description": "Sistema PWA de Evaluacion Basada en Riesgo y BPM",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "validate": "node --version",
+    "validate": "npm run build -w @ebr-bpm/risk-engine && npm run build -w @ebr-bpm/report-engine && npm run validate --workspaces --if-present",
     "test": "npm run validate"
   },
-  "engines": {"node": ">=20"}
+  "engines": {"node": "^20.19.0 || >=22.12.0"}
 }

@@ -1,0 +1,34 @@
+{
+  "name": "@ebr-bpm/report-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generador del informe oficial EBR/BPM del lado servidor",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "validate": "npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "@ebr-bpm/risk-engine": "0.1.0",
+    "pdfkit": "^0.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.13",
+    "@types/pdfkit": "^0.17.5",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}
