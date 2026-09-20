@@ -1,0 +1,150 @@
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import {
+  getInspectionWithTemplate,
+  getResponses,
+  saveResponse,
+  finalizeInspectionOffline,
+} from "../db/repositories";
+import type {
+  BpmTemplateItem,
+  EvaluationResponse,
+  BpmResponseValue,
+  Inspection,
+  BpmTemplate,
+} from "../types";
+
+const OPTIONS: BpmResponseValue[] = ["C", "CP", "IT", "NA"];
+
+export default function InspectionDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const [inspection, setInspection] = useState<Inspection | null>(null);
+  const [template, setTemplate] = useState<BpmTemplate | null>(null);
+  const [responses, setResponses] = useState<
+    Record<string, EvaluationResponse>
+  >({});
+  const [finalized, setFinalized] = useState(false);
+
+  async function load() {
+    if (!id) return;
+    const result = await getInspectionWithTemplate(id);
+    if (!result?.template) return;
+    setInspection(result.inspection);
+    setTemplate(result.template);
+
+    const savedResponses = await getResponses(id);
+    const map: Record<string, EvaluationResponse> = {};
+    savedResponses.forEach((r) => (map[r.bpmItemId] = r));
+    setResponses(map);
+    setFinalized(result.inspection.status === "PENDIENTE_DE_ENVIO");
+  }
+
+  useEffect(() => {
+    load();
+  }, [id]);
+
+  async function handleAnswer(itemId: string, value: BpmResponseValue) {
+    if (!id) return;
+    const observation = responses[itemId]?.observation ?? "";
+    await saveResponse(id, itemId, value, observation);
+    await load();
+  }
+
+  async function handleObservation(itemId: string, observation: string) {
+    if (!id) return;
+    const value = responses[itemId]?.value ?? null;
+    if (!value) return; // no guardamos observación sin respuesta aún
+    await saveResponse(id, itemId, value, observation);
+  }
+
+  async function handleFinalize() {
+    if (!id) return;
+    await finalizeInspectionOffline(id);
+    setFinalized(true);
+  }
+
+  if (!inspection || !template)
+    return <p style={{ padding: 24 }}>Cargando inspección...</p>;
+
+  const evaluableItems = template.items.filter((i) => i.isEvaluable);
+  const answered = evaluableItems.filter((i) => responses[i.id]?.value).length;
+
+  function renderItem(item: BpmTemplateItem) {
+    if (item.type !== "ITEM") {
+      return (
+        <h3 key={item.id} style={{ marginTop: 24 }}>
+          {item.visibleCode} — {item.text}
+        </h3>
+      );
+    }
+    const current = responses[item.id];
+    return (
+      <div
+        key={item.id}
+        style={{
+          border: "1px solid #ddd",
+          padding: 12,
+          marginBottom: 8,
+          borderRadius: 6,
+        }}
+      >
+        <p>
+          <strong>{item.visibleCode}</strong> {item.text}
+        </p>
+        <div style={{ display: "flex", gap: 8 }}>
+          {OPTIONS.map((opt) => (
+            <button
+              key={opt}
+              disabled={finalized}
+              onClick={() => handleAnswer(item.id, opt)}
+              style={{
+                fontWeight: current?.value === opt ? "bold" : "normal",
+                background: current?.value === opt ? "#2563eb" : "#fff",
+                color: current?.value === opt ? "#fff" : "#000",
+                border:
+                  current?.value === opt
+                    ? "2px solid #1e40af"
+                    : "1px solid #999",
+              }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+        <textarea
+          disabled={finalized}
+          placeholder="Observación (opcional)"
+          defaultValue={current?.observation ?? ""}
+          onBlur={(e) => handleObservation(item.id, e.target.value)}
+          style={{ width: "100%", marginTop: 8 }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: 24 }}>
+      <h2>{inspection.establishmentName}</h2>
+      <p>{inspection.establishmentAddress}</p>
+      <p>
+        Progreso: {answered} / {evaluableItems.length} ítems respondidos
+      </p>
+      <p>Estado: {inspection.status}</p>
+
+      {template.items.map(renderItem)}
+
+      {!finalized ? (
+        <button
+          onClick={handleFinalize}
+          disabled={answered < evaluableItems.length}
+        >
+          Finalizar (queda Pendiente de envío)
+        </button>
+      ) : (
+        <p style={{ color: "green" }}>
+          ✅ Finalizada localmente — Pendiente de envío
+        </p>
+      )}
+    </div>
+  );
+}
