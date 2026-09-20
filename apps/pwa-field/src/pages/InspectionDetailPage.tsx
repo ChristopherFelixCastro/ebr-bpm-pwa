@@ -1,3 +1,5 @@
+import LocationCapture from "../components/LocationCapture";
+import EvidenceUploader from "../components/EvidenceUploader";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
@@ -65,7 +67,7 @@ export default function InspectionDetailPage() {
 
   if (!inspection || !template)
     return <p style={{ padding: 24 }}>Cargando inspección...</p>;
-
+  const inspectionId = inspection.id;
   const evaluableItems = template.items.filter((i) => i.isEvaluable);
   const answered = evaluableItems.filter((i) => responses[i.id]?.value).length;
 
@@ -118,6 +120,11 @@ export default function InspectionDetailPage() {
           onBlur={(e) => handleObservation(item.id, e.target.value)}
           style={{ width: "100%", marginTop: 8 }}
         />
+        <EvidenceUploader
+          inspectionId={inspectionId}
+          bpmItemId={item.id}
+          finalized={finalized}
+        />
       </div>
     );
   }
@@ -130,7 +137,7 @@ export default function InspectionDetailPage() {
         Progreso: {answered} / {evaluableItems.length} ítems respondidos
       </p>
       <p>Estado: {inspection.status}</p>
-
+      <LocationCapture inspectionId={inspectionId} />
       {template.items.map(renderItem)}
 
       {!finalized ? (
