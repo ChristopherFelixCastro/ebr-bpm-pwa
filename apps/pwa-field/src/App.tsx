@@ -1,8 +1,12 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import AssignedListPage from "./pages/AssignedListPage";
 import InspectionDetailPage from "./pages/InspectionDetailPage";
+import LoginPage from "./pages/auth/LoginPage";
 import ConnectivityIndicator from "./components/ConnectivityIndicator";
 import SyncPanel from "./components/SyncPanel";
+import { AuthProvider } from "./auth/AuthContext";
+import RequireAuth from "./auth/RequireAuth";
+import AppHeader from "./components/AppHeader";
 
 function Home() {
   return (
@@ -15,15 +19,40 @@ function Home() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <ConnectivityIndicator />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/assigned" element={<AssignedListPage />} />
-        <Route path="/inspection/:id" element={<InspectionDetailPage />} />
-      </Routes>
-      <SyncPanel />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <ConnectivityIndicator />
+        <AppHeader />
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/"
+            element={
+              <RequireAuth>
+                <Home />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/assigned"
+            element={
+              <RequireAuth>
+                <AssignedListPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/inspection/:id"
+            element={
+              <RequireAuth>
+                <InspectionDetailPage />
+              </RequireAuth>
+            }
+          />
+        </Routes>
+        <SyncPanel />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

@@ -116,3 +116,11 @@ export interface SyncLogEntry {
   errorCode?: string;
   occurredAt: string;
 }
+
+export type UserRole = "TECNICO_EVALUADOR" | "UNIVERSAL";
+
+export interface AuthUser {
+  id: string;
+  fullName: string;
+  role: UserRole;
+}

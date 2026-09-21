@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { db } from "../db/schema";
-import { api } from "../api/client";
+import { api, ApiError } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import type { SyncQueueItem } from "../types";
 
 export default function SyncPanel() {
   const [queue, setQueue] = useState<SyncQueueItem[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   async function loadQueue() {
     const all = await db.syncQueue.orderBy("order").toArray();
@@ -24,8 +28,6 @@ export default function SyncPanel() {
       .toArray();
 
     for (const item of pending.sort((a, b) => a.order - b.order)) {
-      // Si perdimos conexión a mitad del lote, detenemos aquí en vez de
-      // seguir intentando (y acumulando fallos) uno por uno.
       if (!navigator.onLine) {
         setLastError(
           "Se perdió la conexión durante la sincronización. Se reintentará automáticamente.",
@@ -34,6 +36,7 @@ export default function SyncPanel() {
       }
 
       await db.syncQueue.update(item.operationId, { status: "ENVIANDO" });
+
       try {
         const result = await api.sendSyncOperation(item);
         if (result.status === 200) {
@@ -46,14 +49,89 @@ export default function SyncPanel() {
             occurredAt: new Date().toISOString(),
           });
         }
-      } catch {
-        await db.syncQueue.update(item.operationId, {
-          status: "REINTENTABLE",
-          attempts: item.attempts + 1,
-        });
-        setLastError(
-          "No se pudo sincronizar una operación. Se reintentará automáticamente.",
-        );
+      } catch (err) {
+        if (err instanceof ApiError) {
+          await db.syncLog.put({
+            id: item.operationId,
+            operationId: item.operationId,
+            result: "ERROR",
+            httpStatus: err.status,
+            errorCode: err.code,
+            occurredAt: new Date().toISOString(),
+          });
+
+          if (err.status === 401) {
+            // Detener toda la cola, no perder datos, pedir login de nuevo
+            await db.syncQueue.update(item.operationId, {
+              status: "REQUIERE_AUTENTICACION",
+            });
+            setLastError(
+              "Tu sesión expiró. Vuelve a iniciar sesión (tu trabajo no se perdió).",
+            );
+            logout();
+            navigate("/login", { state: { from: window.location.pathname } });
+            setSyncing(false);
+            return; // detiene el resto de la cola por completo
+          }
+
+          if (err.status === 403) {
+            await db.syncQueue.update(item.operationId, {
+              status: "RECHAZADA",
+              attempts: item.attempts + 1,
+            });
+            setLastError(
+              "Una operación fue rechazada por permisos. Contacta al Coordinador.",
+            );
+            continue; // no reintenta sola
+          }
+
+          if (err.status === 409) {
+            await db.syncQueue.update(item.operationId, {
+              status: "CONFLICTO",
+              attempts: item.attempts + 1,
+            });
+            setLastError(
+              "Conflicto: otra modificación ya fue confirmada para esta inspección. Revisa el estado actualizado.",
+            );
+            continue; // se bloquea, no se sobrescribe
+          }
+
+          if (err.status === 413) {
+            await db.syncQueue.update(item.operationId, {
+              status: "RECHAZADA",
+              attempts: item.attempts + 1,
+            });
+            setLastError(
+              "Un archivo excede el límite permitido y fue rechazado.",
+            );
+            continue;
+          }
+
+          if (err.status === 422) {
+            await db.syncQueue.update(item.operationId, {
+              status: "RECHAZADA",
+              attempts: item.attempts + 1,
+            });
+            setLastError("La API rechazó la operación: " + err.message);
+            continue;
+          }
+
+          // 5xx u otros: reintentable
+          await db.syncQueue.update(item.operationId, {
+            status: "REINTENTABLE",
+            attempts: item.attempts + 1,
+          });
+          setLastError(
+            "Error temporal del servidor. Se reintentará automáticamente.",
+          );
+        } else {
+          // Error de red genuino (sin conexión real, fetch falló, etc.)
+          await db.syncQueue.update(item.operationId, {
+            status: "REINTENTABLE",
+            attempts: item.attempts + 1,
+          });
+          setLastError("Error de red. Se reintentará automáticamente.");
+        }
       }
     }
 
@@ -61,22 +139,18 @@ export default function SyncPanel() {
     setSyncing(false);
   }
 
-  // Refresca la vista de la cola cada 2s
   useEffect(() => {
     loadQueue();
     const interval = setInterval(loadQueue, 2000);
     return () => clearInterval(interval);
   }, []);
 
-  // Sincroniza al recuperar conexión (evento del navegador)
   useEffect(() => {
     const handleOnline = () => handleSync();
     window.addEventListener("online", handleOnline);
     return () => window.removeEventListener("online", handleOnline);
   }, []);
 
-  // Reintento periódico mientras esté online (cubre señal débil/intermitente,
-  // donde el evento "online" del navegador no siempre se dispara)
   useEffect(() => {
     const retryInterval = setInterval(() => {
       if (navigator.onLine) handleSync();
@@ -84,11 +158,15 @@ export default function SyncPanel() {
     return () => clearInterval(retryInterval);
   }, []);
 
-  const pendingCount = queue.filter(
-    (q) => q.status === "PENDIENTE" || q.status === "REINTENTABLE",
+  const pendingCount = queue.filter((q) =>
+    ["PENDIENTE", "REINTENTABLE", "ENVIANDO"].includes(q.status),
+  ).length;
+  const blockedCount = queue.filter((q) =>
+    ["CONFLICTO", "RECHAZADA", "REQUIERE_AUTENTICACION"].includes(q.status),
   ).length;
 
-  if (pendingCount === 0 && queue.length === 0) return null;
+  if (pendingCount === 0 && blockedCount === 0 && queue.length === 0)
+    return null;
 
   return (
     <div
@@ -103,9 +181,10 @@ export default function SyncPanel() {
       }}
     >
       <p style={{ margin: 0, fontSize: 13 }}>
-        {pendingCount > 0
-          ? `${pendingCount} operación(es) pendiente(s) de sincronizar`
-          : "Todo sincronizado ✅"}
+        {pendingCount > 0 && `${pendingCount} pendiente(s) de sincronizar. `}
+        {blockedCount > 0 &&
+          `⚠️ ${blockedCount} bloqueada(s), requieren atención. `}
+        {pendingCount === 0 && blockedCount === 0 && "Todo sincronizado ✅"}
       </p>
       {lastError && (
         <p style={{ margin: "4px 0 0", fontSize: 12, color: "#f90" }}>
