@@ -5,9 +5,10 @@ import type { InspectionLocation } from "../types";
 
 interface Props {
   inspectionId: string;
+  finalized?: boolean;
 }
 
-export default function LocationCapture({ inspectionId }: Props) {
+export default function LocationCapture({ inspectionId, finalized }: Props) {
   const [location, setLocation] = useState<InspectionLocation | null>(null);
   const [status, setStatus] = useState<"idle" | "pidiendo" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -86,13 +87,15 @@ export default function LocationCapture({ inspectionId }: Props) {
             Lat: {location.latitude.toFixed(5)}, Lng:{" "}
             {location.longitude.toFixed(5)} (±{location.accuracy.toFixed(0)}m)
           </p>
-          <button onClick={handleDiscard}>Descartar</button>
+          <button onClick={handleDiscard} disabled={finalized}>
+            Descartar
+          </button>
         </div>
       ) : (
         <div>
           <button
             onClick={handleRequestLocation}
-            disabled={status === "pidiendo"}
+            disabled={status === "pidiendo" || finalized}
           >
             {status === "pidiendo"
               ? "Obteniendo ubicación..."

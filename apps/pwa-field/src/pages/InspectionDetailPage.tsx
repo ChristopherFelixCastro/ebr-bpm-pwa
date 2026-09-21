@@ -1,6 +1,6 @@
 import LocationCapture from "../components/LocationCapture";
 import EvidenceUploader from "../components/EvidenceUploader";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import {
   getInspectionWithTemplate,
@@ -18,6 +18,14 @@ import type {
 
 const OPTIONS: BpmResponseValue[] = ["C", "CP", "IT", "NA"];
 
+function debounce<T extends (...args: any[]) => void>(fn: T, ms: number) {
+  let timeout: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), ms);
+  };
+}
+
 export default function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [inspection, setInspection] = useState<Inspection | null>(null);
@@ -26,6 +34,10 @@ export default function InspectionDetailPage() {
     Record<string, EvaluationResponse>
   >({});
   const [finalized, setFinalized] = useState(false);
+  const responsesRef = useRef(responses);
+  useEffect(() => {
+    responsesRef.current = responses;
+  }, [responses]);
 
   async function load() {
     if (!id) return;
@@ -52,12 +64,14 @@ export default function InspectionDetailPage() {
     await load();
   }
 
-  async function handleObservation(itemId: string, observation: string) {
-    if (!id) return;
-    const value = responses[itemId]?.value ?? null;
-    if (!value) return; // no guardamos observación sin respuesta aún
-    await saveResponse(id, itemId, value, observation);
-  }
+  const debouncedSaveObservation = useRef(
+    debounce((itemId: string, observation: string) => {
+      if (!id) return;
+      const value = responsesRef.current[itemId]?.value ?? null;
+      if (!value) return;
+      saveResponse(id, itemId, value, observation);
+    }, 600),
+  ).current;
 
   async function handleFinalize() {
     if (!id) return;
@@ -117,7 +131,7 @@ export default function InspectionDetailPage() {
           disabled={finalized}
           placeholder="Observación (opcional)"
           defaultValue={current?.observation ?? ""}
-          onBlur={(e) => handleObservation(item.id, e.target.value)}
+          onChange={(e) => debouncedSaveObservation(item.id, e.target.value)}
           style={{ width: "100%", marginTop: 8 }}
         />
         <EvidenceUploader
@@ -130,14 +144,14 @@ export default function InspectionDetailPage() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 24, paddingBottom: 100 }}>
       <h2>{inspection.establishmentName}</h2>
       <p>{inspection.establishmentAddress}</p>
       <p>
         Progreso: {answered} / {evaluableItems.length} ítems respondidos
       </p>
       <p>Estado: {inspection.status}</p>
-      <LocationCapture inspectionId={inspectionId} />
+      <LocationCapture inspectionId={inspectionId} finalized={finalized} />
       {template.items.map(renderItem)}
 
       {!finalized ? (

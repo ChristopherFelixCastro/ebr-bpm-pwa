@@ -152,4 +152,16 @@ export const MOCK_INSPECTIONS: Inspection[] = [
     scheduledAt: "2026-09-23T14:00:00Z",
     updatedAt: "2026-09-19T12:00:00Z",
   },
+  {
+    id: "insp-mock-3",
+    establishmentName: "Embutidos Dominicanos, S.A.",
+    establishmentAddress:
+      "Zona Industrial de Haina, Bajos de Haina, San Cristóbal",
+    status: "ASIGNADA",
+    entityVersion: 1,
+    templateVersionId: "tpl-v1-mock",
+    assignedEvaluatorId: "tech-mock-1",
+    scheduledAt: "2026-09-24T10:00:00Z",
+    updatedAt: "2026-09-19T12:00:00Z",
+  },
 ];
