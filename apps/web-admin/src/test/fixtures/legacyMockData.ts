@@ -1,4 +1,4 @@
-import type { Company, Establishment, Contact, BPMRequest, User, EvaluationRecord, FoodCategoryCatalog } from '../types';
+import type { Company, Establishment, Contact, BPMRequest, User, EvaluationRecord, FoodCategoryCatalog } from './legacyTypes';
 
 export const INITIAL_COMPANIES: Company[] = [
   {

@@ -106,10 +106,14 @@ export const openApiDocument = {
       },
       CurrentUser: {
         type: 'object',
-        required: ['id', 'role', 'authTime'],
+        additionalProperties: false,
+        required: ['id', 'fullName', 'roleCode', 'status', 'companyId', 'authTime'],
         properties: {
           id: { type: 'string', format: 'uuid' },
-          role: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] },
+          fullName: { type: 'string' },
+          roleCode: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] },
+          status: { type: 'string', enum: ['PENDING_VALIDATION', 'APPROVED', 'REJECTED', 'INACTIVE'] },
+          companyId: { type: ['string', 'null'], format: 'uuid', description: 'Alcance empresarial vigente disponible. No implica asignaciones por establecimiento.' },
           authTime: { type: 'integer', description: 'Fecha Unix de la autenticación de contraseña.' },
         },
       },

@@ -20,6 +20,7 @@ const cookieValue=(req:Request,name:string)=>req.headers.cookie?.split(';').map(
 const refreshCookie=(res:Response,value:string)=>res.cookie('refresh_token',value,{httpOnly:true,secure:env.NODE_ENV==='production',sameSite:'strict',path:'/v1/auth',maxAge:30*24*60*60*1000});
 const validRole=(value:string):value is RoleCode=>(roleCodes as readonly string[]).includes(value);
 type UserRow={id:string;password_hash:string;role:string;status:string};
+type CurrentUserRow={id:string;fullName:string;roleCode:string;status:string;companyId:string|null};
 
 router.post('/login',async(req,res)=>{const parsed=credentials.safeParse(req.body);if(!parsed.success)return error(req,res,400,'VALIDATION_ERROR','La solicitud no es válida.');const result=await query<UserRow>('SELECT u.id,u.password_hash,u.status,r.code AS role FROM users u JOIN roles r ON r.id=u.role_id WHERE u.email_normalized=$1',[parsed.data.email]);const user=result.rows[0];const passwordOk=user?await verifyPassword(user.password_hash,parsed.data.password):false;if(!user||!passwordOk||user.status!=='APPROVED'||!validRole(user.role)){await writeAuthAudit({action:'AUTH_LOGIN_FAILED',outcome:'FAILURE',correlationId:req.context.correlationId});return error(req,res,401,'UNAUTHENTICATED','Credenciales inválidas.')}const refresh=issueOpaqueRefreshToken();await query('INSERT INTO refresh_tokens(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval \'30 days\')',[refresh.tokenId,user.id,refresh.hash]);refreshCookie(res,refresh.token);const accessToken=await signAccessToken(user.id,user.role);await writeAuthAudit({action:'AUTH_LOGIN_SUCCEEDED',outcome:'SUCCESS',correlationId:req.context.correlationId,userId:user.id});return success(res,{accessToken})});
 
@@ -29,5 +30,14 @@ router.post('/logout',requireTrustedOrigin,async(req,res)=>{const parsed=parseOp
 
 router.post('/reauthenticate',authenticate,async(req,res)=>{const parsed=passwordBody.safeParse(req.body);if(!parsed.success)return error(req,res,400,'VALIDATION_ERROR','La solicitud no es válida.');const result=await query<{password_hash:string;role:string}>('SELECT u.password_hash,r.code AS role FROM users u JOIN roles r ON r.id=u.role_id WHERE u.id=$1 AND u.status=\'APPROVED\'',[req.auth!.userId]);const user=result.rows[0];if(!user||!validRole(user.role)||!await verifyPassword(user.password_hash,parsed.data.password))return error(req,res,401,'UNAUTHENTICATED','Credenciales inválidas.');const accessToken=await signAccessToken(req.auth!.userId,user.role,Math.floor(Date.now()/1000));await writeAuthAudit({action:'AUTH_REAUTHENTICATED',outcome:'SUCCESS',correlationId:req.context.correlationId,userId:req.auth!.userId});return success(res,{accessToken})});
 
-router.get('/me',authenticate,(req,res)=>success(res,{id:req.auth!.userId,role:req.auth!.role,authTime:req.auth!.authTime}));
+router.get('/me',authenticate,async(req,res)=>{
+  const result=await query<CurrentUserRow>(`SELECT u.id,u.full_name AS "fullName",r.code AS "roleCode",u.status::text,m.company_id AS "companyId"
+    FROM users u
+    JOIN roles r ON r.id=u.role_id
+    LEFT JOIN user_company_memberships m ON m.user_id=u.id AND m.effective_to IS NULL
+    WHERE u.id=$1`,[req.auth!.userId]);
+  const user=result.rows[0];
+  if(!user||!validRole(user.roleCode))return error(req,res,401,'UNAUTHENTICATED','Autenticación requerida.');
+  return success(res,{...user,roleCode:user.roleCode,authTime:req.auth!.authTime});
+});
 export default router;

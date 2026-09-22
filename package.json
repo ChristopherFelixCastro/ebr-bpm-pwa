@@ -41,7 +41,12 @@
     "db:test:bpm-guidance": "npm run db:test:bpm-guidance --workspace @ebr-bpm/api",
     "import:official:bpm": "npm run import:official:bpm --workspace @ebr-bpm/api --",
     "import:official:risk": "npm run import:official:risk --workspace @ebr-bpm/api --",
-    "bootstrap:universal": "npm run bootstrap:universal --workspace @ebr-bpm/api --"
+    "bootstrap:universal": "npm run bootstrap:universal --workspace @ebr-bpm/api --",
+    "web-admin:generate-api": "npm run generate:api --workspace @ebr-bpm/web-admin",
+    "web-admin:dev": "npm run dev --workspace @ebr-bpm/web-admin",
+    "web-admin:build": "npm run build --workspace @ebr-bpm/web-admin",
+    "web-admin:lint": "npm run lint --workspace @ebr-bpm/web-admin",
+    "web-admin:test": "npm run test --workspace @ebr-bpm/web-admin"
   },
   "engines": {
     "node": ">=20"

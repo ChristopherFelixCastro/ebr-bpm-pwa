@@ -22,5 +22,19 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": [
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/api/**/*.ts",
+    "src/components/AppShell.tsx",
+    "src/context/AuthContext.tsx",
+    "src/context/NotificationContext.tsx",
+    "src/pages/auth/LoginPage.tsx",
+    "src/pages/system/**/*.tsx",
+    "src/routes/**/*.ts",
+    "src/test/setup.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/theme/**/*.ts"
+  ]
 }
