@@ -100,7 +100,10 @@ export const authenticatedFetch: typeof fetch = async (input, init) => {
   const retryHeaders = new Headers(retrySource.headers)
   retryHeaders.set('Authorization', `Bearer ${refreshedToken}`)
   const retryResponse = await globalThis.fetch(new Request(retrySource, { headers: retryHeaders, credentials: 'include' }))
-  if (retryResponse.status === 401) expireSession()
+  if (retryResponse.status === 401) {
+    const retryFailure = await readError(retryResponse)
+    if (retryFailure?.error.code !== 'REAUTHENTICATION_REQUIRED') expireSession()
+  }
   return retryResponse
 }
 

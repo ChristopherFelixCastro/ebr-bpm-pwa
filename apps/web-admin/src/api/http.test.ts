@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { authApi } from './auth'
-import { authenticatedFetch, httpTesting } from './http'
+import { authenticatedFetch, httpTesting, setSessionExpiredHandler } from './http'
 
 const correlationId = '123e4567-e89b-42d3-a456-426614174000'
 const ok = (data: unknown) => new Response(JSON.stringify({ data, meta: { correlationId } }), {
@@ -87,6 +87,25 @@ describe('cliente HTTP y sesión', () => {
     expect((await authenticatedFetch('/v1/forbidden')).status).toBe(403)
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(httpTesting.getAccessToken()).toBe('current')
+  })
+
+  it('conserva la sesión si el único reintento exige reautenticación después del refresh', async () => {
+    httpTesting.setAccessToken('expired')
+    const expiredHandler = vi.fn()
+    setSessionExpiredHandler(expiredHandler)
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(failure(401, 'UNAUTHENTICATED'))
+      .mockResolvedValueOnce(ok({ accessToken: 'fresh' }))
+      .mockResolvedValueOnce(failure(401, 'REAUTHENTICATION_REQUIRED'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await authenticatedFetch('/v1/sensitive')
+
+    expect(response.status).toBe(401)
+    await expect(response.clone().json()).resolves.toEqual(expect.objectContaining({ error: expect.objectContaining({ code: 'REAUTHENTICATION_REQUIRED' }) }))
+    expect(httpTesting.getAccessToken()).toBe('fresh')
+    expect(expiredHandler).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   it('reauthentica con contraseña y reemplaza el access token en memoria', async () => {

@@ -1,4 +1,4 @@
-export type Role = 
+export type Role =
   | 'ADMINISTRADOR'
   | 'ADMIN_EMPRESA'
   | 'DELEGADO'
@@ -6,7 +6,7 @@ export type Role =
   | 'TECNICO_EVALUADOR'
   | 'UNIVERSAL';
 
-export type UserStatus = 
+export type UserStatus =
   | 'PENDIENTE_VALIDACION'
   | 'APROBADO'
   | 'RECHAZADO'
@@ -61,7 +61,7 @@ export interface Establishment {
   createdAt: string;
 }
 
-export type ContactRole = 
+export type ContactRole =
   | 'PROPIETARIO'
   | 'REPRESENTANTE_LEGAL'
   | 'CALIDAD'
