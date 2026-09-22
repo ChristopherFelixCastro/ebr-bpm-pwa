@@ -4,6 +4,7 @@ export type RouteAccess = 'loading' | 'unauthenticated' | 'forbidden' | 'allowed
 
 export const portalRoles = ['ADMIN', 'UNIVERSAL', 'COMPANY_ADMIN', 'DELEGATE'] as const satisfies readonly RoleCode[]
 export const operationalRoles = ['ADMIN', 'UNIVERSAL', 'COMPANY_ADMIN'] as const satisfies readonly RoleCode[]
+export const userManagementRoles = ['ADMIN', 'UNIVERSAL'] as const satisfies readonly RoleCode[]
 
 export const resolveRouteAccess = (
   isLoading: boolean,

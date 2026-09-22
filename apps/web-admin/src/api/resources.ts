@@ -19,6 +19,20 @@ export type CompanyRequestPatch = components['schemas']['CompanyRequestPatch']
 export type RequestContact = components['schemas']['RequestContact']
 export type RequestDocument = components['schemas']['RequestDocument']
 export type DocumentType = RequestDocument['documentType']
+export type User = components['schemas']['User']
+export type UserCreate = components['schemas']['UserCreateRequest']
+export type UserPatch = components['schemas']['UserPatchRequest']
+
+export const usersApi = {
+  list: async (query: { page: number; limit: number; search?: string }) =>
+    unwrapPage<User>(await apiClient.GET('/v1/users', { params: { query } })),
+  get: async (id: string) => unwrap<User>(await apiClient.GET('/v1/users/{id}', { params: { path: { id } } })),
+  create: async (body: UserCreate) => unwrap<User>(await apiClient.POST('/v1/users', { body })),
+  update: async (id: string, body: UserPatch) => unwrap<User>(await apiClient.PATCH('/v1/users/{id}', { params: { path: { id } }, body })),
+  approve: async (id: string, version: number) => unwrap<User>(await apiClient.POST('/v1/users/{id}/approve', { params: { path: { id } }, body: { version } })),
+  reject: async (id: string, version: number) => unwrap<User>(await apiClient.POST('/v1/users/{id}/reject', { params: { path: { id } }, body: { version } })),
+  deactivate: async (id: string, version: number) => unwrap<User>(await apiClient.POST('/v1/users/{id}/deactivate', { params: { path: { id } }, body: { version } })),
+}
 
 export const companiesApi = {
   list: async (query: { page: number; limit: number; search?: string; status?: 'ACTIVE' | 'INACTIVE' }) =>

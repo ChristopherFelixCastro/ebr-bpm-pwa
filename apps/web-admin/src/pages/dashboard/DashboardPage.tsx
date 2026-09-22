@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Grid,
@@ -13,79 +13,79 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Chip,
-  IconButton,
   CircularProgress,
-} from '@mui/material';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
-import AddIcon from '@mui/icons-material/Add';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import { StatusChip } from '../../components/StatusChip';
-import { apiService } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
-import { useNotification } from '../../context/NotificationContext';
-import type { BPMRequest, EvaluationRecord, Company } from '../../types';
+  Stack,
+  Alert,
+} from '@mui/material'
+import AssignmentIcon from '@mui/icons-material/Assignment'
+import BusinessIcon from '@mui/icons-material/Business'
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
+import StoreIcon from '@mui/icons-material/Store'
+import AddIcon from '@mui/icons-material/Add'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import { StatusChip } from '../../components/StatusChip'
+import { requestsApi, companiesApi, establishmentsApi, type CompanyRequest, type Company } from '../../api/resources'
+import { supportMessage, routeForError } from '../../api/presentation'
+import { useAuth } from '../../context/AuthContext'
+import { useNotification } from '../../context/NotificationContext'
 
 export const DashboardPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { currentRole, activeCompanyId } = useAuth();
-  const { showSuccess, showError } = useNotification();
+  const navigate = useNavigate()
+  const { currentUser } = useAuth()
+  const { showError } = useNotification()
 
-  const [loading, setLoading] = useState(true);
-  const [requests, setRequests] = useState<BPMRequest[]>([]);
-  const [evaluations, setEvaluations] = useState<EvaluationRecord[]>([]);
-  const [company, setCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true)
+  const [requests, setRequests] = useState<CompanyRequest[]>([])
+  const [company, setCompany] = useState<Company | null>(null)
+  const [totalCompanies, setTotalCompanies] = useState<number>(0)
+  const [totalEstablishments, setTotalEstablishments] = useState<number>(0)
+
+  const isGlobal = currentUser?.roleCode === 'ADMIN' || currentUser?.roleCode === 'UNIVERSAL'
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      setLoading(true)
+      const [reqsResult, compsResult, estsResult] = await Promise.all([
+        requestsApi.list({ page: 1, limit: 20 }),
+        isGlobal
+          ? companiesApi.list({ page: 1, limit: 100, status: 'ACTIVE' })
+          : currentUser?.companyId
+            ? companiesApi.get(currentUser.companyId).then((c) => ({ data: [c], meta: { total: 1, page: 1, limit: 1, correlationId: '' } }))
+            : Promise.resolve({ data: [] as Company[], meta: { total: 0, page: 1, limit: 1, correlationId: '' } }),
+        establishmentsApi.list({ page: 1, limit: 100, status: 'ACTIVE' }),
+      ])
+
+      setRequests(reqsResult.data)
+      setTotalCompanies(compsResult.meta?.total ?? compsResult.data.length)
+      setTotalEstablishments(estsResult.meta?.total ?? estsResult.data.length)
+
+      if (!isGlobal && compsResult.data.length > 0) {
+        setCompany(compsResult.data[0])
+      }
+    } catch (error) {
+      const route = routeForError(error)
+      if (route) navigate(route, { replace: true })
+      else showError(supportMessage(error, 'Error al cargar datos del panel'))
+    } finally {
+      setLoading(false)
+    }
+  }, [currentUser, isGlobal, navigate, showError])
+
 
   useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        setLoading(true);
-        const targetCompId =
-          currentRole === 'ADMIN_EMPRESA' || currentRole === 'DELEGADO'
-            ? activeCompanyId || 'comp-1'
-            : undefined;
-
-        const [reqs, evals, comps] = await Promise.all([
-          apiService.getRequests(targetCompId),
-          apiService.getEvaluations(targetCompId),
-          apiService.getCompanies(),
-        ]);
-
-        setRequests(reqs);
-        setEvaluations(evals);
-
-        if (targetCompId) {
-          const matched = comps.find((c) => c.id === targetCompId);
-          setCompany(matched || comps[0]);
-        } else {
-          setCompany(comps[0]);
-        }
-      } catch {
-        showError('Error al cargar datos del panel');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDashboard();
-  }, [currentRole, activeCompanyId]);
+    loadDashboard()
+  }, [loadDashboard])
 
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
         <CircularProgress sx={{ color: '#1E3A8A' }} />
       </Box>
-    );
+    )
   }
 
-  const totalRequests = requests.length;
-  const draftRequests = requests.filter((r) => r.status === 'BORRADOR').length;
-  const pendingRequests = requests.filter((r) => r.status === 'PENDIENTE_DE_ASIGNACION').length;
-  const approvedEvaluations = evaluations.filter((e) => e.status === 'APROBADA').length;
+  const draftRequests = requests.filter((r) => r.status === 'DRAFT').length
+  const pendingRequests = requests.filter((r) => r.status === 'PENDING_ASSIGNMENT').length
 
   return (
     <Box>
@@ -95,65 +95,45 @@ export const DashboardPage: React.FC = () => {
           p: 3.5,
           mb: 3.5,
           borderRadius: 2.5,
-          bgcolor: '#1E3A8A', // Barra/Banner Fondo #1E3A8A institucional
+          bgcolor: '#1E3A8A',
           color: '#FFFFFF',
           display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
           justifyContent: 'space-between',
-          alignItems: { md: 'center' },
+          alignItems: 'center',
+          flexWrap: 'wrap',
           gap: 2,
-          boxShadow: '0 4px 12px rgba(30, 58, 138, 0.15)',
         }}
       >
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: '#FFFFFF' }}>
-              Tablero de Control: {currentRole === 'ADMINISTRADOR' ? 'Portal Central EBR/BPM' : company?.legalName || 'Empresa'}
-            </Typography>
-          </Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: '#FFFFFF', mb: 0.5 }}>
+            Bienvenido, {currentUser?.fullName}
+          </Typography>
           <Typography variant="body2" sx={{ color: '#BFDBFE' }}>
-            {currentRole === 'ADMINISTRADOR'
-              ? 'Supervisión general de solicitudes, empresas y validaciones de identidad.'
-              : `RNC: ${company?.rnc} • Gestión de solicitudes higiénico-sanitarias y Buenas Prácticas.`}
+            {isGlobal
+              ? 'Panel de control institucional para administración central de EBR/BPM'
+              : `Portal administrativo corporativo para ${company?.legalName || 'su empresa'}`}
           </Typography>
         </Box>
-
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
+        <Stack direction="row" spacing={1.5}>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate('/requests/new')}
             sx={{
-              bgcolor: '#FFFFFF',
-              color: '#1E3A8A',
+              bgcolor: '#2563EB',
+              '&:hover': { bgcolor: '#1D4ED8' },
               fontWeight: 700,
-              '&:hover': { bgcolor: '#F1F5F9' },
-              px: 2.5,
+              textTransform: 'none',
+              borderRadius: 2,
             }}
           >
-            Radicar Solicitud BPM
+            Nueva Solicitud
           </Button>
-
-          {currentRole !== 'ADMINISTRADOR' && company && (
-            <Button
-              variant="outlined"
-              onClick={() => navigate(`/companies/${company.id}`)}
-              sx={{
-                borderColor: 'rgba(255, 255, 255, 0.4)',
-                color: '#FFFFFF',
-                fontWeight: 600,
-                '&:hover': { borderColor: '#FFFFFF', bgcolor: 'rgba(255, 255, 255, 0.1)' },
-              }}
-            >
-              Mis Establecimientos
-            </Button>
-          )}
-        </Box>
+        </Stack>
       </Box>
 
       {/* KPI Metric Cards */}
       <Grid container spacing={2.5} sx={{ mb: 4 }}>
-        {/* Metric 1 */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
             <CardContent sx={{ p: 2.5 }}>
@@ -166,22 +146,21 @@ export const DashboardPage: React.FC = () => {
                 </Box>
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A' }}>
-                {totalRequests}
+                {requests.length}
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569', mt: 0.5, display: 'block' }}>
-                Trámites radicados en plataforma
+                Trámites registrados en el Core
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Metric 2 */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
             <CardContent sx={{ p: 2.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                 <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Borradores Activos
+                  Borradores
                 </Typography>
                 <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: '#F1F5F9', color: '#64748B' }}>
                   <HourglassEmptyIcon sx={{ fontSize: 20 }} />
@@ -191,13 +170,12 @@ export const DashboardPage: React.FC = () => {
                 {draftRequests}
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569', mt: 0.5, display: 'block' }}>
-                Pendientes de envío final
+                En preparación para envío
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Metric 3 */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
             <CardContent sx={{ p: 2.5 }}>
@@ -213,246 +191,127 @@ export const DashboardPage: React.FC = () => {
                 {pendingRequests}
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569', mt: 0.5, display: 'block' }}>
-                En cola de Coordinador
+                Radicadas con carta válida
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Metric 4 */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
             <CardContent sx={{ p: 2.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                 <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Evaluaciones Concluidas
+                  {isGlobal ? 'Empresas Activas' : 'Establecimientos'}
                 </Typography>
                 <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: '#DCFCE7', color: '#15803D' }}>
-                  <CheckCircleIcon sx={{ fontSize: 20 }} />
+                  {isGlobal ? <BusinessIcon sx={{ fontSize: 20 }} /> : <StoreIcon sx={{ fontSize: 20 }} />}
                 </Box>
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 800, color: '#15803D' }}>
-                {approvedEvaluations}
+                {isGlobal ? totalCompanies : totalEstablishments}
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569', mt: 0.5, display: 'block' }}>
-                Con informe oficial disponible
+                {isGlobal ? 'Entidades registradas activas' : 'Locales y plantas en su alcance'}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Grid: Solicitudes Recientes & Evaluaciones Anteriores */}
+      {/* Tables section */}
       <Grid container spacing={3}>
-        {/* Table 1: Historial de Solicitudes Radicadas */}
-        <Grid size={{ xs: 12, lg: 7 }}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
-            <Box
-              sx={{
-                p: 2.5,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                borderBottom: '1px solid #E2E8F0',
-              }}
-            >
+            <Box sx={{ p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0' }}>
               <Box>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A' }}>
-                  Historial de Solicitudes BPM Radicadas
+                  Solicitudes Recientes
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#475569' }}>
-                  Estado de trámites y asignaciones vigentes
+                  Trámites de registro y renovación radicados en plataforma
                 </Typography>
               </Box>
-              <Button
-                size="small"
-                variant="outlined"
-                color="secondary"
-                onClick={() => navigate('/requests')}
-              >
-                Ver Todas
+              <Button size="small" onClick={() => navigate('/requests')} sx={{ color: '#1E3A8A', fontWeight: 600 }}>
+                Ver todas
               </Button>
             </Box>
 
             <TableContainer>
-              <Table size="small">
+              <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>No. Solicitud</TableCell>
-                    <TableCell>Establecimiento</TableCell>
-                    <TableCell>Motivo</TableCell>
+                    <TableCell>Establecimiento / ID</TableCell>
+                    <TableCell>Tipo</TableCell>
                     <TableCell>Estado</TableCell>
                     <TableCell align="right">Acción</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {requests.slice(0, 5).map((req) => (
-                    <TableRow key={req.id} hover>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 700,
-                            color: '#0F172A',
-                            cursor: 'pointer',
-                            '&:hover': { color: '#3B82F6' },
-                          }}
-                          onClick={() => navigate(`/requests/${req.id}`)}
-                        >
-                          {req.requestNumber}
+                  {requests.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                        <Typography variant="body2" sx={{ color: '#64748B' }}>
+                          No hay solicitudes registradas en su alcance.
                         </Typography>
-                        <Typography variant="caption" sx={{ color: '#64748B' }}>
-                          {new Date(req.createdAt).toLocaleDateString()}
-                        </Typography>
-                      </TableCell>
-
-                      <TableCell>
-                        <Typography variant="body2" sx={{ color: '#0F172A', fontWeight: 600 }}>
-                          {req.establishmentName}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#475569' }}>
-                          {req.companyName}
-                        </Typography>
-                      </TableCell>
-
-                      <TableCell sx={{ maxWidth: 160 }}>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: '#475569',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 1,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {req.reason}
-                        </Typography>
-                      </TableCell>
-
-                      <TableCell>
-                        <StatusChip status={req.status} />
-                      </TableCell>
-
-                      <TableCell align="right">
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/requests/${req.id}`)}
-                          sx={{ color: '#3B82F6' }}
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    requests.slice(0, 5).map((req) => (
+                      <TableRow key={req.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A' }}>
+                            {req.establishmentName}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#64748B' }}>
+                            ID: {req.id.slice(0, 8)}...
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">{req.requestType}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <StatusChip status={req.status} />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<VisibilityIcon fontSize="small" />}
+                            onClick={() => navigate(`/requests/${req.id}`)}
+                            sx={{ fontSize: '0.75rem', py: 0.4 }}
+                          >
+                            Ver
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
           </Card>
         </Grid>
 
-        {/* Table 2: Evaluaciones Anteriores e Historial de Informes */}
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
-            <Box
-              sx={{
-                p: 2.5,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                borderBottom: '1px solid #E2E8F0',
-              }}
-            >
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A' }}>
-                  Evaluaciones Anteriores y Calificaciones
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#475569' }}>
-                  Resultados del motor de riesgo y actas oficiales
-                </Typography>
-              </Box>
-            </Box>
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2, p: 2.5 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A', mb: 1 }}>
+              Estado del Módulo
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#475569', mb: 2 }}>
+              Sesión conectada al Core EBR/BPM con control RBAC de servidor.
+            </Typography>
 
-            <Box sx={{ p: 2 }}>
-              {evaluations.length === 0 ? (
-                <Typography variant="body2" sx={{ color: '#64748B', textAlign: 'center', py: 3 }}>
-                  No se registran evaluaciones cerradas para esta empresa.
-                </Typography>
-              ) : (
-                evaluations.map((ev) => (
-                  <Paper
-                    key={ev.id}
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      mb: 1.5,
-                      borderRadius: 2,
-                      bgcolor: '#F8FAFC',
-                      borderColor: '#E2E8F0',
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A' }}>
-                          {ev.establishmentName}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#64748B' }}>
-                          Inspección: {ev.inspectionDate} • Evaluador: {ev.evaluatorName}
-                        </Typography>
-                      </Box>
+            <Alert severity="info" sx={{ mb: 2, borderRadius: 2, fontSize: '0.82rem' }}>
+              <strong>Ciclo de Inspección:</strong> El módulo de inspecciones en campo, cálculos algorítmicos e informes oficiales se encuentra en desarrollo por el equipo técnico del Core.
+            </Alert>
 
-                      <Chip
-                        label={`${ev.scorePercentage}% BPM`}
-                        size="small"
-                        sx={{
-                          bgcolor: ev.scorePercentage >= 85 ? '#DCFCE7' : '#FEF3C7',
-                          color: ev.scorePercentage >= 85 ? '#15803D' : '#B45309',
-                          fontWeight: 800,
-                          fontSize: '0.75rem',
-                        }}
-                      />
-                    </Box>
-
-                    <Typography variant="caption" sx={{ color: '#475569', display: 'block', mb: 1.5 }}>
-                      {ev.summaryFindings}
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Chip
-                          label={`Riesgo: ${ev.riskLevel}`}
-                          size="small"
-                          sx={{
-                            fontSize: '0.68rem',
-                            height: 20,
-                            bgcolor: ev.riskLevel === 'BAJO' ? '#EFF6FF' : '#FEF3C7',
-                            color: ev.riskLevel === 'BAJO' ? '#1E3A8A' : '#B45309',
-                          }}
-                        />
-                        <Chip
-                          label={`Puntaje EBR: ${ev.riskScore}`}
-                          size="small"
-                          sx={{ fontSize: '0.68rem', height: 20, bgcolor: '#F1F5F9', color: '#475569' }}
-                        />
-                      </Box>
-
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<PictureAsPdfIcon sx={{ color: '#DC2626', fontSize: 16 }} />}
-                        onClick={() => showSuccess('Descargando Informe Oficial de Evaluación BPM...')}
-                        sx={{ fontSize: '0.72rem', py: 0.3, px: 1, borderColor: '#CBD5E1', color: '#1E3A8A' }}
-                      >
-                        Informe PDF
-                      </Button>
-                    </Box>
-                  </Paper>
-                ))
-              )}
-            </Box>
+            <Typography variant="caption" sx={{ color: '#64748B' }}>
+              Rol activo: <strong>{currentUser?.roleCode}</strong>
+            </Typography>
           </Card>
         </Grid>
       </Grid>
     </Box>
-  );
-};
+  )
+}

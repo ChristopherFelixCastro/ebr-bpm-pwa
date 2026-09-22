@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { httpTesting } from './http'
-import { companiesApi, contactsApi, establishmentsApi, requestsApi, validatePrivateFile } from './resources'
+import { companiesApi, contactsApi, establishmentsApi, requestsApi, usersApi, validatePrivateFile } from './resources'
+
 
 const correlationId = '123e4567-e89b-42d3-a456-426614174000'
 const envelope = (data: unknown, meta: Record<string, unknown> = {}) => new Response(JSON.stringify({ data, meta: { correlationId, ...meta } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
@@ -91,4 +92,70 @@ describe('recursos generados del Web Admin', () => {
     await requestsApi.archiveDocument(document.requestId, document.id, 2)
     expect((await requestsApi.downloadUrl(document.requestId, document.id)).expiresInSeconds).toBe(60)
   })
+
+  it('consume operaciones de usuarios con version optimista y manejo de errores', async () => {
+    const user = {
+      id: '99999999-9999-4999-8999-999999999999',
+      email: 'operador@salud.gob.do',
+      fullName: 'Operador Admin',
+      role: 'ADMIN',
+      status: 'PENDING_VALIDATION',
+      version: 1,
+      createdAt: '2026-09-22T00:00:00.000Z',
+      updatedAt: '2026-09-22T00:00:00.000Z',
+    }
+    const approvedUser = { ...user, status: 'APPROVED', version: 2 }
+    const rejectedUser = { ...user, status: 'REJECTED', version: 2 }
+    const inactiveUser = { ...user, status: 'INACTIVE', version: 2 }
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(envelope([user], { page: 1, limit: 10, total: 1 }))
+      .mockResolvedValueOnce(created(user))
+      .mockResolvedValueOnce(envelope({ ...user, fullName: 'Operador Actualizado', version: 2 }))
+      .mockResolvedValueOnce(failure('STALE_VERSION'))
+      .mockResolvedValueOnce(envelope(approvedUser))
+      .mockResolvedValueOnce(envelope(rejectedUser))
+      .mockResolvedValueOnce(envelope(inactiveUser))
+    vi.stubGlobal('fetch', fetchMock)
+
+    // 1. List
+    const listResult = await usersApi.list({ page: 1, limit: 10, search: 'operador' })
+    expect(listResult.data[0].email).toBe('operador@salud.gob.do')
+    expect(requestAt(fetchMock, 0).url).toContain('search=operador')
+
+    // 2. Create
+    const createdUser = await usersApi.create({
+      email: 'operador@salud.gob.do',
+      password: 'SecurePassword123!',
+      fullName: 'Operador Admin',
+      roleCode: 'ADMIN',
+    })
+    expect(createdUser.id).toBe(user.id)
+
+    // 3. Update
+    const updatedUser = await usersApi.update(user.id, { version: 1, fullName: 'Operador Actualizado' })
+    expect(updatedUser.fullName).toBe('Operador Actualizado')
+
+    // 4. Stale version rejection
+    await expect(usersApi.update(user.id, { version: 1, fullName: 'Conflicto' })).rejects.toMatchObject({
+      code: 'STALE_VERSION',
+      correlationId,
+    })
+
+    // 5. Approve
+    const approved = await usersApi.approve(user.id, 1)
+    expect(approved.status).toBe('APPROVED')
+    await expect(requestAt(fetchMock, 4).clone().json()).resolves.toEqual({ version: 1 })
+
+    // 6. Reject
+    const rejected = await usersApi.reject(user.id, 1)
+    expect(rejected.status).toBe('REJECTED')
+    await expect(requestAt(fetchMock, 5).clone().json()).resolves.toEqual({ version: 1 })
+
+    // 7. Deactivate
+    const deactivated = await usersApi.deactivate(user.id, 1)
+    expect(deactivated.status).toBe('INACTIVE')
+    await expect(requestAt(fetchMock, 6).clone().json()).resolves.toEqual({ version: 1 })
+  })
 })
+

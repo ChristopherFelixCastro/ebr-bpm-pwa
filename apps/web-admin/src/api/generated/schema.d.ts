@@ -5522,19 +5522,40 @@ export interface paths {
         /** Listar usuarios */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    page?: number;
+                    limit?: number;
+                    search?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Lista paginada. */
+                /** @description Operación completada. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["User"][];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Consulta inválida. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
                 /** @description Rol no autorizado. */
                 403: {
@@ -5556,14 +5577,26 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UserCreateRequest"];
+                };
+            };
             responses: {
-                /** @description Usuario creado. */
+                /** @description Operación completada. */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["User"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
                 };
                 /** @description Datos inválidos. */
                 400: {
@@ -5610,12 +5643,29 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Usuario. */
+                /** @description Operación completada. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["User"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Identificador inválido. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
                 /** @description No encontrado. */
                 404: {
@@ -5643,14 +5693,44 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UserPatchRequest"];
+                };
+            };
             responses: {
-                /** @description Usuario actualizado. */
+                /** @description Operación completada. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["User"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Modificación inválida. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description No encontrado. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
                 /** @description Versión desactualizada. */
                 409: {
@@ -5679,17 +5759,58 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    id: string;
+                };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VersionRequest"];
+                };
+            };
             responses: {
-                /** @description Usuario aprobado. */
+                /** @description Operación completada. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["User"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Solicitud inválida. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description No encontrado. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Versión desactualizada. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
             };
         };
@@ -5713,17 +5834,58 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    id: string;
+                };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VersionRequest"];
+                };
+            };
             responses: {
-                /** @description Usuario rechazado. */
+                /** @description Operación completada. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["User"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Solicitud inválida. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description No encontrado. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Versión desactualizada. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
             };
         };
@@ -5747,17 +5909,58 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    id: string;
+                };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VersionRequest"];
+                };
+            };
             responses: {
-                /** @description Usuario inactivo. */
+                /** @description Operación completada. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["User"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Solicitud inválida. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description No encontrado. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Versión desactualizada. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
             };
         };
@@ -14656,6 +14859,46 @@ export interface components {
             companyId: string | null;
             /** @description Fecha Unix de la autenticación de contraseña. */
             authTime: number;
+        };
+        User: {
+            /** Format: uuid */
+            id: string;
+            fullName: string;
+            /** Format: email */
+            email: string;
+            phone: string | null;
+            /** @enum {string} */
+            status: "PENDING_VALIDATION" | "APPROVED" | "REJECTED" | "INACTIVE";
+            version: number;
+            /** @enum {string} */
+            roleCode: "ADMIN" | "COMPANY_ADMIN" | "DELEGATE" | "COORDINATOR" | "EVALUATOR" | "UNIVERSAL";
+            /** Format: uuid */
+            companyId: string | null;
+            companyName: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        UserCreateRequest: {
+            fullName: string;
+            /** Format: email */
+            email: string;
+            phone?: string;
+            password: string;
+            /** @enum {string} */
+            roleCode: "ADMIN" | "COMPANY_ADMIN" | "DELEGATE" | "COORDINATOR" | "EVALUATOR" | "UNIVERSAL";
+            /** Format: uuid */
+            companyId?: string;
+        };
+        UserPatchRequest: {
+            version: number;
+            fullName?: string;
+            phone?: string | null;
+            /** @enum {string} */
+            roleCode?: "ADMIN" | "COMPANY_ADMIN" | "DELEGATE" | "COORDINATOR" | "EVALUATOR" | "UNIVERSAL";
+            /** Format: uuid */
+            companyId?: string | null;
         };
         Company: {
             /** Format: uuid */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { operationalRoles, resolveRouteAccess } from './routes/access'
+import { operationalRoles, resolveRouteAccess, userManagementRoles } from './routes/access'
 
 describe('guard de rutas', () => {
   const allowed = ['ADMIN', 'UNIVERSAL', 'COMPANY_ADMIN', 'DELEGATE'] as const
@@ -20,4 +20,14 @@ describe('guard de rutas', () => {
     expect(resolveRouteAccess(false, 'COORDINATOR', operationalRoles)).toBe('forbidden')
     expect(resolveRouteAccess(false, 'EVALUATOR', operationalRoles)).toBe('forbidden')
   })
+
+  it('habilita la gestión de usuarios exclusivamente para ADMIN y UNIVERSAL', () => {
+    expect(resolveRouteAccess(false, 'ADMIN', userManagementRoles)).toBe('allowed')
+    expect(resolveRouteAccess(false, 'UNIVERSAL', userManagementRoles)).toBe('allowed')
+    expect(resolveRouteAccess(false, 'COMPANY_ADMIN', userManagementRoles)).toBe('forbidden')
+    expect(resolveRouteAccess(false, 'DELEGATE', userManagementRoles)).toBe('forbidden')
+    expect(resolveRouteAccess(false, 'COORDINATOR', userManagementRoles)).toBe('forbidden')
+    expect(resolveRouteAccess(false, 'EVALUATOR', userManagementRoles)).toBe('forbidden')
+  })
 })
+

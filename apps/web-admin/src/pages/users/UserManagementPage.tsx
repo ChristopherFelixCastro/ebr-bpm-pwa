@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Box,
   Card,
@@ -9,7 +9,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Tabs,
   Tab,
   Button,
@@ -20,132 +19,213 @@ import {
   DialogContent,
   DialogActions,
   Chip,
-  Alert,
   CircularProgress,
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import { StatusChip } from '../../components/StatusChip';
-import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { apiService } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
-import { useNotification } from '../../context/NotificationContext';
-import type { User } from '../../types';
+  IconButton,
+  MenuItem,
+  Stack,
+} from '@mui/material'
+import SearchIcon from '@mui/icons-material/Search'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import CancelIcon from '@mui/icons-material/Cancel'
+import BlockIcon from '@mui/icons-material/Block'
+import PersonAddIcon from '@mui/icons-material/PersonAdd'
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
+import { StatusChip } from '../../components/StatusChip'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { usersApi, companiesApi, type User, type Company } from '../../api/resources'
+import { supportMessage, routeForError, isStaleVersion } from '../../api/presentation'
+import { useAuth } from '../../context/AuthContext'
+import { useNotification } from '../../context/NotificationContext'
+import { useReauthentication } from '../../context/ReauthenticationContext'
+import { useNavigate } from 'react-router-dom'
 
 export const UserManagementPage: React.FC = () => {
-  const { currentRole, currentUser } = useAuth();
-  const { showSuccess, showError } = useNotification();
+  const { currentUser } = useAuth()
+  const { showSuccess, showError } = useNotification()
+  const { runWithReauthentication } = useReauthentication()
+  const navigate = useNavigate()
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tabValue, setTabValue] = useState(0); // 0: Pendientes de Validación, 1: Todos
-  const [searchTerm, setSearchTerm] = useState('');
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [tabValue, setTabValue] = useState(0) // 0: Pendientes, 1: Todos
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Modals state
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [letterDialogOpen, setLetterDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [approveConfirmOpen, setApproveConfirmOpen] = useState(false)
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+  const [deactivateConfirmOpen, setDeactivateConfirmOpen] = useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
 
-  const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
+  // Create form state
+  const [createForm, setCreateForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    roleCode: 'COMPANY_ADMIN' as User['roleCode'],
+    companyId: '',
+  })
+  const [companies, setCompanies] = useState<Company[]>([])
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
-      setLoading(true);
-      const data = await apiService.getUsers();
-      setUsers(data);
-    } catch {
-      showError('Error al cargar la lista de usuarios');
+      setLoading(true)
+      const res = await usersApi.list({ page: 1, limit: 100, search: searchTerm || undefined })
+      setUsers(res.data)
+    } catch (error) {
+      const route = routeForError(error)
+      if (route) navigate(route, { replace: true })
+      else showError(supportMessage(error, 'Error al cargar la lista de usuarios'))
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }, [searchTerm, navigate, showError])
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchUsers()
+  }, [fetchUsers])
 
-  if (currentRole !== 'ADMINISTRADOR' && currentRole !== 'UNIVERSAL') {
-    return (
-      <Box sx={{ p: 4, textAlign: 'center' }}>
-        <Alert severity="warning" sx={{ maxWidth: 600, mx: 'auto', borderRadius: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Acceso Restringido (403)
-          </Typography>
-          <Typography variant="body2">
-            La gestión y aprobación de usuarios es exclusiva del Administrador Central. Puede cambiar de rol en la barra superior para probar esta función.
-          </Typography>
-        </Alert>
-      </Box>
-    );
+  const loadCompanies = async () => {
+    try {
+      const res = await companiesApi.list({ page: 1, limit: 100, status: 'ACTIVE' })
+      setCompanies(res.data)
+    } catch {
+      // Ignorar fallo de carga de empresas si no hay permisos
+    }
   }
 
-  const pendingUsers = users.filter((u) => u.status === 'PENDIENTE_VALIDACION');
-  const filteredUsers = (tabValue === 0 ? pendingUsers : users).filter(
-    (u) =>
-      u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.identityNumber.includes(searchTerm) ||
-      (u.companyName && u.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
   const handleApprove = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser) return
     try {
-      setActionLoading(true);
-      await apiService.approveUser(selectedUser.id, currentUser?.fullName || 'Administrador Central');
-      showSuccess(`El usuario "${selectedUser.fullName}" ha sido aprobado exitosamente`);
-      setApproveConfirmOpen(false);
-      setSelectedUser(null);
-      await fetchUsers();
-    } catch (err: any) {
-      showError(err.message || 'Error al aprobar usuario');
+      setActionLoading(true)
+      await runWithReauthentication(async () => {
+        await usersApi.approve(selectedUser.id, selectedUser.version)
+      })
+      showSuccess(`El usuario "${selectedUser.fullName}" ha sido aprobado exitosamente`)
+      setApproveConfirmOpen(false)
+      setSelectedUser(null)
+      await fetchUsers()
+    } catch (err: unknown) {
+      if (isStaleVersion(err)) {
+        showError('La versión del usuario cambió. Se actualizará la lista.')
+      } else {
+        showError(supportMessage(err, 'Error al aprobar usuario'))
+      }
+      await fetchUsers()
     } finally {
-      setActionLoading(false);
+      setActionLoading(false)
     }
-  };
+  }
 
   const handleReject = async () => {
-    if (!selectedUser || !rejectionReason.trim()) {
-      showError('Debe ingresar un motivo para el rechazo de la solicitud');
-      return;
-    }
+    if (!selectedUser) return
     try {
-      setActionLoading(true);
-      await apiService.rejectUser(
-        selectedUser.id,
-        rejectionReason,
-        currentUser?.fullName || 'Administrador Central'
-      );
-      showSuccess(`La solicitud de "${selectedUser.fullName}" ha sido rechazada`);
-      setRejectDialogOpen(false);
-      setRejectionReason('');
-      setSelectedUser(null);
-      await fetchUsers();
-    } catch (err: any) {
-      showError(err.message || 'Error al rechazar usuario');
+      setActionLoading(true)
+      await runWithReauthentication(async () => {
+        await usersApi.reject(selectedUser.id, selectedUser.version)
+      })
+      showSuccess(`La solicitud de "${selectedUser.fullName}" ha sido rechazada`)
+      setRejectDialogOpen(false)
+      setSelectedUser(null)
+      await fetchUsers()
+    } catch (err: unknown) {
+      if (isStaleVersion(err)) {
+        showError('La versión del usuario cambió. Se actualizará la lista.')
+      } else {
+        showError(supportMessage(err, 'Error al rechazar usuario'))
+      }
+      await fetchUsers()
     } finally {
-      setActionLoading(false);
+      setActionLoading(false)
     }
-  };
+  }
+
+  const handleDeactivate = async () => {
+    if (!selectedUser) return
+    try {
+      setActionLoading(true)
+      await runWithReauthentication(async () => {
+        await usersApi.deactivate(selectedUser.id, selectedUser.version)
+      })
+      showSuccess(`El usuario "${selectedUser.fullName}" ha sido desactivado`)
+      setDeactivateConfirmOpen(false)
+      setSelectedUser(null)
+      await fetchUsers()
+    } catch (err: unknown) {
+      if (isStaleVersion(err)) {
+        showError('La versión del usuario cambió. Se actualizará la lista.')
+      } else {
+        showError(supportMessage(err, 'Error al desactivar usuario'))
+      }
+      await fetchUsers()
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleCreateUser = async () => {
+    try {
+      setActionLoading(true)
+      const payload = {
+        fullName: createForm.fullName,
+        email: createForm.email,
+        phone: createForm.phone || undefined,
+        password: createForm.password,
+        roleCode: createForm.roleCode,
+        companyId: ['COMPANY_ADMIN', 'DELEGATE'].includes(createForm.roleCode) ? createForm.companyId || undefined : undefined,
+      }
+      await runWithReauthentication(async () => {
+        await usersApi.create(payload)
+      })
+      showSuccess('Usuario creado exitosamente en estado Pendiente de Validación')
+      setCreateDialogOpen(false)
+      setCreateForm({
+        fullName: '',
+        email: '',
+        phone: '',
+        password: '',
+        roleCode: 'COMPANY_ADMIN',
+        companyId: '',
+      })
+      await fetchUsers()
+    } catch (err: unknown) {
+      showError(supportMessage(err, 'Error al crear el usuario'))
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const pendingUsers = users.filter((u) => u.status === 'PENDING_VALIDATION')
+  const displayedUsers = tabValue === 0 ? pendingUsers : users
 
   return (
     <Box>
       {/* Header section */}
-      <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-          <AdminPanelSettingsIcon sx={{ color: '#1E3A8A', fontSize: 32 }} />
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#0F172A' }}>
-            Gestión y Aprobación de Usuarios
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+            <AdminPanelSettingsIcon sx={{ color: '#1E3A8A', fontSize: 32 }} />
+            <Typography variant="h5" sx={{ fontWeight: 700, color: '#0F172A' }}>
+              Gestión y Aprobación de Usuarios
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ color: '#475569' }}>
+            Valide el acceso corporativo, administre estados del sistema EBR/BPM y asigne roles autorizados.
           </Typography>
         </Box>
-        <Typography variant="body2" sx={{ color: '#475569' }}>
-          Valide las solicitudes de acceso corporativo, inspeccione las cartas de autorización y gestione los roles del sistema EBR/BPM.
-        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<PersonAddIcon />}
+          onClick={() => {
+            loadCompanies()
+            setCreateDialogOpen(true)
+          }}
+          sx={{ bgcolor: '#1E3A8A', '&:hover': { bgcolor: '#172554' } }}
+        >
+          Nuevo Usuario
+        </Button>
       </Box>
 
       {/* Tabs and search bar */}
@@ -172,7 +252,7 @@ export const UserManagementPage: React.FC = () => {
             <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <span>Bandeja de Validación</span>
+                  <span>Pendientes de Validación</span>
                   {pendingUsers.length > 0 && (
                     <Chip
                       label={pendingUsers.length}
@@ -187,11 +267,11 @@ export const UserManagementPage: React.FC = () => {
           </Tabs>
 
           <TextField
-            placeholder="Buscar por nombre, correo, cédula o empresa..."
+            placeholder="Buscar por nombre o correo..."
             size="small"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ width: { xs: '100%', sm: 340 } }}
+            sx={{ width: { xs: '100%', sm: 320 } }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -209,39 +289,38 @@ export const UserManagementPage: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Usuario / Identificación</TableCell>
+                <TableCell>Usuario</TableCell>
                 <TableCell>Empresa Asociada</TableCell>
-                <TableCell>Rol Solicitado</TableCell>
-                <TableCell>Carta Poder / Adjunto</TableCell>
+                <TableCell>Rol Asignado</TableCell>
                 <TableCell>Estado</TableCell>
-                <TableCell align="right">Acciones de Validación</TableCell>
+                <TableCell align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                     <CircularProgress size={32} sx={{ color: '#1E3A8A' }} />
                     <Typography variant="body2" sx={{ color: '#64748B', mt: 1 }}>
                       Cargando registros de usuarios...
                     </Typography>
                   </TableCell>
                 </TableRow>
-              ) : filteredUsers.length === 0 ? (
+              ) : displayedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                     <Typography variant="subtitle1" sx={{ color: '#0F172A', fontWeight: 600 }}>
                       No se encontraron usuarios
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#64748B' }}>
                       {tabValue === 0
-                        ? 'No hay registros pendientes de validación en este momento.'
+                        ? 'No hay usuarios pendientes de validación en este momento.'
                         : 'No hay usuarios que coincidan con la búsqueda.'}
                     </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                displayedUsers.map((user) => (
                   <TableRow key={user.id} hover>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -266,7 +345,7 @@ export const UserManagementPage: React.FC = () => {
                             {user.fullName}
                           </Typography>
                           <Typography variant="caption" sx={{ color: '#475569', display: 'block' }}>
-                            {user.email} • Céd: {user.identityNumber}
+                            {user.email}
                           </Typography>
                         </Box>
                       </Box>
@@ -285,41 +364,14 @@ export const UserManagementPage: React.FC = () => {
 
                     <TableCell>
                       <Chip
-                        label={user.role}
+                        label={user.roleCode}
                         size="small"
                         sx={{
                           fontWeight: 600,
-                          bgcolor: user.role === 'ADMINISTRADOR' ? '#EFF6FF' : '#F1F5F9',
-                          color: user.role === 'ADMINISTRADOR' ? '#1E3A8A' : '#334155',
+                          bgcolor: ['ADMIN', 'UNIVERSAL'].includes(user.roleCode) ? '#EFF6FF' : '#F1F5F9',
+                          color: ['ADMIN', 'UNIVERSAL'].includes(user.roleCode) ? '#1E3A8A' : '#334155',
                         }}
                       />
-                    </TableCell>
-
-                    <TableCell>
-                      {user.authorizationLetterName ? (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<PictureAsPdfIcon sx={{ color: '#DC2626' }} />}
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setLetterDialogOpen(true);
-                          }}
-                          sx={{
-                            textTransform: 'none',
-                            fontSize: '0.78rem',
-                            py: 0.3,
-                            px: 1,
-                            borderColor: '#CBD5E1',
-                          }}
-                        >
-                          Ver Carta
-                        </Button>
-                      ) : (
-                        <Typography variant="caption" sx={{ color: '#94A3B8' }}>
-                          No requerida
-                        </Typography>
-                      )}
                     </TableCell>
 
                     <TableCell>
@@ -327,15 +379,15 @@ export const UserManagementPage: React.FC = () => {
                     </TableCell>
 
                     <TableCell align="right">
-                      {user.status === 'PENDIENTE_VALIDACION' ? (
+                      {user.status === 'PENDING_VALIDATION' ? (
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                           <Button
                             variant="contained"
                             size="small"
                             startIcon={<CheckCircleIcon sx={{ fontSize: 16 }} />}
                             onClick={() => {
-                              setSelectedUser(user);
-                              setApproveConfirmOpen(true);
+                              setSelectedUser(user)
+                              setApproveConfirmOpen(true)
                             }}
                             sx={{
                               bgcolor: '#166534',
@@ -351,8 +403,8 @@ export const UserManagementPage: React.FC = () => {
                             size="small"
                             startIcon={<CancelIcon sx={{ fontSize: 16 }} />}
                             onClick={() => {
-                              setSelectedUser(user);
-                              setRejectDialogOpen(true);
+                              setSelectedUser(user)
+                              setRejectDialogOpen(true)
                             }}
                             sx={{
                               color: '#991B1B',
@@ -365,9 +417,21 @@ export const UserManagementPage: React.FC = () => {
                             Rechazar
                           </Button>
                         </Box>
+                      ) : user.status === 'APPROVED' ? (
+                        <IconButton
+                          size="small"
+                          color="error"
+                          title="Desactivar usuario"
+                          onClick={() => {
+                            setSelectedUser(user)
+                            setDeactivateConfirmOpen(true)
+                          }}
+                        >
+                          <BlockIcon fontSize="small" />
+                        </IconButton>
                       ) : (
-                        <Typography variant="caption" sx={{ color: '#64748B' }}>
-                          {user.reviewedBy ? `Validado por ${user.reviewedBy}` : 'Activo'}
+                        <Typography variant="caption" sx={{ color: '#94A3B8' }}>
+                          Sin acciones
                         </Typography>
                       )}
                     </TableCell>
@@ -379,118 +443,133 @@ export const UserManagementPage: React.FC = () => {
         </TableContainer>
       </Card>
 
-      {/* Preview Dialog for Authorization Letter */}
-      <Dialog
-        open={letterDialogOpen}
-        onClose={() => setLetterDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3, p: 1 } } }}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <PictureAsPdfIcon sx={{ color: '#DC2626', fontSize: 30 }} />
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.05rem' }}>
-              Carta de Autorización / Designación
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#64748B' }}>
-              Documento acreditativo de representación jurídica
-            </Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent dividers sx={{ py: 2.5 }}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 3,
-              bgcolor: '#F8FAFC',
-              borderColor: '#CBD5E1',
-              borderRadius: 2,
-              textAlign: 'center',
-            }}
-          >
-            <PictureAsPdfIcon sx={{ fontSize: 60, color: '#DC2626', mb: 1.5 }} />
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A' }}>
-              {selectedUser?.authorizationLetterName || 'Documento_Poder_Corporativo.pdf'}
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 2 }}>
-              Tipo: application/pdf • Tamaño: 2.4 MB • Integridad validada (Hash SHA-256)
-            </Typography>
-
-            <Alert severity="info" sx={{ textAlign: 'left', mb: 2, fontSize: '0.85rem', borderRadius: 2 }}>
-              <strong>Certificación de Validación:</strong> El documento fue cargado directamente con firma del Representante Legal para la empresa <strong>{selectedUser?.companyName}</strong>.
-            </Alert>
-
-            <Button
-              variant="outlined"
-              color="primary"
-              onClick={() => {
-                showSuccess('Descargando copia autorizada para inspección...');
-              }}
-              sx={{ borderColor: '#1E3A8A', color: '#1E3A8A' }}
-            >
-              Descargar Copia Verificada
-            </Button>
-          </Paper>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setLetterDialogOpen(false)} variant="outlined" color="secondary">
-            Cerrar Visor
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Confirmation for Approval */}
       <ConfirmDialog
         open={approveConfirmOpen}
         title="¿Aprobar Acceso de Usuario?"
-        message={`Está a punto de autorizar al usuario "${selectedUser?.fullName}" como "${selectedUser?.role}" para la empresa "${selectedUser?.companyName}". Se habilitará su acceso a la plataforma.`}
-        confirmText="Aprobar y Notificar"
+        message={`Está a punto de autorizar al usuario "${selectedUser?.fullName}" con rol "${selectedUser?.roleCode}". Esta acción requiere reautenticación.`}
+        confirmText="Aprobar Usuario"
         variant="success"
         loading={actionLoading}
         onConfirm={handleApprove}
         onClose={() => setApproveConfirmOpen(false)}
       />
 
-      {/* Dialog for Rejection Reason */}
-      <Dialog
+      {/* Confirmation for Rejection */}
+      <ConfirmDialog
         open={rejectDialogOpen}
+        title="¿Rechazar Solicitud de Usuario?"
+        message={`Está a punto de rechazar la solicitud de acceso para "${selectedUser?.fullName}". Esta acción requiere reautenticación.`}
+        confirmText="Confirmar Rechazo"
+        variant="danger"
+        loading={actionLoading}
+        onConfirm={handleReject}
         onClose={() => setRejectDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700, color: '#991B1B' }}>
-          Rechazar Solicitud de Usuario
-        </DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Typography variant="body2" sx={{ color: '#475569', mb: 2 }}>
-            Indique la razón del rechazo para registrarla en la auditoría inmutable del sistema:
-          </Typography>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            placeholder="Ej. La carta de autorización no cuenta con sello notarial vigente..."
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            required
-          />
+      />
+
+      {/* Confirmation for Deactivation */}
+      <ConfirmDialog
+        open={deactivateConfirmOpen}
+        title="¿Desactivar Usuario?"
+        message={`Está a punto de revocar el acceso para "${selectedUser?.fullName}". Se revocarán todas sus sesiones activas.`}
+        confirmText="Desactivar Usuario"
+        variant="danger"
+        loading={actionLoading}
+        onConfirm={handleDeactivate}
+        onClose={() => setDeactivateConfirmOpen(false)}
+      />
+
+      {/* Create User Dialog */}
+      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Crear Nuevo Usuario</DialogTitle>
+        <DialogContent dividers sx={{ pt: 2 }}>
+          <Stack spacing={2.5}>
+            <TextField
+              label="Nombre Completo"
+              size="small"
+              fullWidth
+              value={createForm.fullName}
+              onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
+              required
+            />
+            <TextField
+              label="Correo Electrónico"
+              type="email"
+              size="small"
+              fullWidth
+              value={createForm.email}
+              onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+              required
+            />
+            <TextField
+              label="Teléfono"
+              size="small"
+              fullWidth
+              value={createForm.phone}
+              onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+            />
+            <TextField
+              label="Contraseña Temporal"
+              type="password"
+              size="small"
+              fullWidth
+              value={createForm.password}
+              onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+              helperText="Mínimo 12 caracteres, con mayúscula, minúscula, número y símbolo."
+              required
+            />
+            <TextField
+              select
+              label="Rol"
+              size="small"
+              fullWidth
+              value={createForm.roleCode}
+              onChange={(e) => setCreateForm({ ...createForm, roleCode: e.target.value as User['roleCode'] })}
+              required
+            >
+              <MenuItem value="COMPANY_ADMIN">Administrador de Empresa</MenuItem>
+              <MenuItem value="DELEGATE">Usuario Delegado</MenuItem>
+              <MenuItem value="COORDINATOR">Coordinador</MenuItem>
+              <MenuItem value="EVALUATOR">Técnico Evaluador</MenuItem>
+              <MenuItem value="ADMIN">Administrador Central</MenuItem>
+              {currentUser?.roleCode === 'UNIVERSAL' && (
+                <MenuItem value="UNIVERSAL">Rol Universal</MenuItem>
+              )}
+            </TextField>
+
+            {['COMPANY_ADMIN', 'DELEGATE'].includes(createForm.roleCode) && (
+              <TextField
+                select
+                label="Empresa Asociada"
+                size="small"
+                fullWidth
+                value={createForm.companyId}
+                onChange={(e) => setCreateForm({ ...createForm, companyId: e.target.value })}
+                required
+              >
+                {companies.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>
+                    {c.legalName} ({c.rnc || 'Sin RNC'})
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button onClick={() => setRejectDialogOpen(false)} variant="outlined" color="secondary">
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setCreateDialogOpen(false)} variant="outlined">
             Cancelar
           </Button>
           <Button
-            onClick={handleReject}
+            onClick={handleCreateUser}
             variant="contained"
-            disabled={actionLoading || !rejectionReason.trim()}
-            sx={{ bgcolor: '#DC2626', '&:hover': { bgcolor: '#B91C1C' } }}
+            disabled={actionLoading || !createForm.fullName || !createForm.email || !createForm.password || (['COMPANY_ADMIN', 'DELEGATE'].includes(createForm.roleCode) && !createForm.companyId)}
+            sx={{ bgcolor: '#1E3A8A', '&:hover': { bgcolor: '#172554' } }}
           >
-            {actionLoading ? 'Procesando...' : 'Confirmar Rechazo'}
+            {actionLoading ? 'Creando...' : 'Crear Usuario'}
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
-  );
-};
+  )
+}

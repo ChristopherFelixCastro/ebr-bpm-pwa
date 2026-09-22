@@ -10,6 +10,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment'
 import LogoutIcon from '@mui/icons-material/Logout'
 import MenuIcon from '@mui/icons-material/Menu'
 import ShieldIcon from '@mui/icons-material/Shield'
+import PeopleIcon from '@mui/icons-material/People'
 import { useAuth } from '../context/AuthContext'
 import { useNotification } from '../context/NotificationContext'
 
@@ -22,6 +23,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const operational = ['ADMIN', 'UNIVERSAL', 'COMPANY_ADMIN'].includes(currentUser?.roleCode ?? '')
+  const canManageUsers = ['ADMIN', 'UNIVERSAL'].includes(currentUser?.roleCode ?? '')
 
   const handleLogout = async () => {
     try {
@@ -69,6 +71,13 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
             </ListItemButton>
           </ListItem>
         </>}
+        {canManageUsers && (
+          <ListItem disablePadding sx={{ mt: 0.5 }}>
+            <ListItemButton selected={location.pathname.startsWith('/users')} onClick={() => { navigate('/users'); setMobileOpen(false) }} sx={{ borderRadius: 2, color: '#FFFFFF', '&.Mui-selected': { bgcolor: 'rgba(255,255,255,.18)' } }}>
+              <ListItemIcon sx={{ minWidth: 38 }}><PeopleIcon sx={{ color: '#FFFFFF' }} /></ListItemIcon><ListItemText primary="Usuarios" />
+            </ListItemButton>
+          </ListItem>
+        )}
       </List>
       <Divider sx={{ borderColor: 'rgba(255,255,255,.15)' }} />
       <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,.15)' }}>

@@ -1,9 +1,8 @@
 import React from 'react';
 import { Chip } from '@mui/material';
-import type { BPMRequestStatus, UserStatus } from '../types';
 
 interface StatusChipProps {
-  status: BPMRequestStatus | UserStatus | string;
+  status: string;
   size?: 'small' | 'medium';
 }
 
@@ -14,7 +13,8 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
   let border = 'transparent';
 
   switch (status) {
-    // BPM Request Statuses
+    // Core BPM Request Statuses
+    case 'DRAFT':
     case 'BORRADOR':
       label = 'Borrador';
       bg = '#F1F5F9';
@@ -22,6 +22,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
       border = '#E2E8F0';
       break;
 
+    case 'PENDING_ASSIGNMENT':
     case 'PENDIENTE_DE_ASIGNACION':
       label = 'Pendiente de asignación';
       bg = '#FEF3C7';
@@ -50,9 +51,17 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
       border = '#E9D5FF';
       break;
 
+    case 'APPROVED':
     case 'APROBADA':
     case 'APROBADO':
-      label = status === 'APROBADO' ? 'Aprobado' : 'Aprobada';
+      label = 'Aprobado';
+      bg = '#DCFCE7';
+      color = '#15803D';
+      border = '#BBF7D0';
+      break;
+
+    case 'ACTIVE':
+      label = 'Activo';
       bg = '#DCFCE7';
       color = '#15803D';
       border = '#BBF7D0';
@@ -73,6 +82,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
       break;
 
     // User Statuses
+    case 'PENDING_VALIDATION':
     case 'PENDIENTE_VALIDACION':
       label = 'Pendiente de validación';
       bg = '#FEF3C7';
@@ -80,6 +90,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
       border = '#FDE68A';
       break;
 
+    case 'REJECTED':
     case 'RECHAZADO':
       label = 'Rechazado';
       bg = '#FEE2E2';
@@ -87,6 +98,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
       border = '#FECACA';
       break;
 
+    case 'INACTIVE':
     case 'INACTIVO':
       label = 'Inactivo';
       bg = '#F1F5F9';
