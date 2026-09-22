@@ -127,4 +127,37 @@ describe('cliente HTTP y sesión', () => {
     await expect(authApi.logout()).rejects.toThrow('network down')
     expect(httpTesting.getAccessToken()).toBeNull()
   })
+
+  it('consume registro público y solicitud de recuperación de contraseña', async () => {
+    const newUser = {
+      id: '99999999-9999-4999-8999-999999999999',
+      fullName: 'Carlos Gerente',
+      email: 'carlos@empresa.com.do',
+      phone: '809-555-0101',
+      status: 'PENDING_VALIDATION',
+      version: 1,
+      roleCode: 'COMPANY_ADMIN',
+      companyId: '22222222-2222-4222-8222-222222222222',
+      companyName: 'Empresa Test',
+      createdAt: '2026-09-22T00:00:00.000Z',
+      updatedAt: '2026-09-22T00:00:00.000Z',
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: newUser, meta: { correlationId } }), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(ok({ requested: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const registered = await authApi.register({
+      fullName: 'Carlos Gerente',
+      email: 'carlos@empresa.com.do',
+      password: 'SecurePassword123!',
+      roleCode: 'COMPANY_ADMIN',
+      companyId: '22222222-2222-4222-8222-222222222222',
+    })
+    expect(registered.status).toBe('PENDING_VALIDATION')
+    expect(registered.fullName).toBe('Carlos Gerente')
+
+    const forgot = await authApi.forgotPassword('carlos@empresa.com.do')
+    expect(forgot.requested).toBe(true)
+  })
 })

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Card,
@@ -11,86 +11,91 @@ import {
   MenuItem,
   Alert,
   Paper,
-} from '@mui/material';
-import ShieldIcon from '@mui/icons-material/Shield';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { FilePicker } from '../../components/FilePicker';
-import { apiService } from '../../services/api';
-import { useNotification } from '../../context/NotificationContext';
-import type { Company, RequestDocument, Role } from '../../types';
+  IconButton,
+} from '@mui/material'
+import ShieldIcon from '@mui/icons-material/Shield'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import DeleteIcon from '@mui/icons-material/Delete'
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile'
+import { authApi } from '../../api/auth'
+import { useNotification } from '../../context/NotificationContext'
+import { supportMessage } from '../../api/presentation'
 
 export const RegisterPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { showSuccess, showError } = useNotification();
+  const navigate = useNavigate()
+  const { showSuccess, showError } = useNotification()
 
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [fullName, setFullName] = useState('');
-  const [identityNumber, setIdentityNumber] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<Role>('ADMIN_EMPRESA');
-  const [companyId, setCompanyId] = useState('');
-  const [customCompanyName, setCustomCompanyName] = useState('');
-  const [authLetter, setAuthLetter] = useState<RequestDocument | null>(null);
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [roleCode, setRoleCode] = useState<'COMPANY_ADMIN' | 'DELEGATE'>('COMPANY_ADMIN')
+  const [companyName, setCompanyName] = useState('')
+  const [authFile, setAuthFile] = useState<File | null>(null)
 
-  const [loading, setLoading] = useState(false);
-  const [registeredSuccess, setRegisteredSuccess] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false)
+  const [registeredSuccess, setRegisteredSuccess] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      const data = await apiService.getCompanies();
-      setCompanies(data);
-      if (data.length > 0) {
-        setCompanyId(data[0].id);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorMessage('La carta de autorización no puede superar los 5 MB.')
+        return
       }
-    };
-    fetchCompanies();
-  }, []);
+      const allowed = ['application/pdf', 'image/jpeg', 'image/png']
+      if (!allowed.includes(file.type)) {
+        setErrorMessage('Formato no válido. Solo se admiten documentos PDF o imágenes JPG/PNG.')
+        return
+      }
+      setErrorMessage(null)
+      setAuthFile(file)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
+    e.preventDefault()
+    setErrorMessage(null)
 
     // Form validations
-    if (!fullName.trim() || !identityNumber.trim() || !email.trim() || !password.trim()) {
-      setErrorMessage('Por favor complete todos los campos obligatorios marcados con (*)');
-      return;
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      setErrorMessage('Por favor complete todos los campos obligatorios marcados con (*).')
+      return
     }
 
-    if (!authLetter) {
-      setErrorMessage('Es obligatorio adjuntar la Carta de Autorización o Poder Notariado de la empresa (máx. 5 MB).');
-      return;
+    if (password.length < 12) {
+      setErrorMessage('La contraseña debe tener al menos 12 caracteres según la política de seguridad.')
+      return
+    }
+
+    if (!authFile) {
+      setErrorMessage('Es obligatorio adjuntar la Carta de Autorización o Poder Notariado de la empresa (máx. 5 MB).')
+      return
     }
 
     try {
-      setLoading(true);
-      const selectedCompany = companies.find((c) => c.id === companyId);
-      const companyName = companyId === 'NEW' ? customCompanyName : selectedCompany?.legalName;
+      setLoading(true)
+      await authApi.register({
+        fullName: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim() || undefined,
+        password,
+        roleCode,
+      })
 
-      await apiService.registerUser({
-        fullName,
-        identityNumber,
-        email,
-        phone,
-        role,
-        companyId: companyId === 'NEW' ? undefined : companyId,
-        companyName,
-        authorizationLetterName: authLetter.name,
-        authorizationLetterUrl: authLetter.url,
-      });
-
-      showSuccess('Solicitud de registro enviada con éxito');
-      setRegisteredSuccess(true);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Error al procesar el registro.');
-      showError(err.message || 'Error al procesar el registro.');
+      showSuccess('Solicitud de registro enviada con éxito')
+      setRegisteredSuccess(true)
+    } catch (err: unknown) {
+      const msg = supportMessage(err, 'Error al procesar el registro.')
+      setErrorMessage(msg)
+      showError(msg)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   if (registeredSuccess) {
     return (
@@ -133,7 +138,7 @@ export const RegisterPage: React.FC = () => {
             Registro en Proceso de Validación
           </Typography>
           <Typography variant="body1" sx={{ color: '#475569', mb: 3 }}>
-            Su solicitud de cuenta con rol <strong>{role}</strong> ha sido registrada con estado{' '}
+            Su solicitud de cuenta con rol <strong>{roleCode === 'COMPANY_ADMIN' ? 'Administrador de Empresa' : 'Delegado de Empresa'}</strong> ha sido registrada con estado{' '}
             <strong style={{ color: '#D97706' }}>PENDIENTE_VALIDACION</strong>.
           </Typography>
           <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC', textAlign: 'left' }}>
@@ -141,9 +146,9 @@ export const RegisterPage: React.FC = () => {
               Pasos siguientes:
             </Typography>
             <Typography variant="body2" sx={{ color: '#475569' }}>
-              1. Un Administrador Central evaluará su Carta de Autorización adjunta.
+              1. Un Administrador Central evaluará su Carta de Autorización y asignará su alcance empresarial.
               <br />
-              2. Una vez aprobada la validación, podrá acceder con sus credenciales.
+              2. Una vez aprobada la validación en el Core, podrá acceder con sus credenciales institucionales.
             </Typography>
           </Paper>
 
@@ -157,7 +162,7 @@ export const RegisterPage: React.FC = () => {
           </Button>
         </Card>
       </Box>
-    );
+    )
   }
 
   return (
@@ -196,7 +201,7 @@ export const RegisterPage: React.FC = () => {
               Registro de Usuario y Empresa
             </Typography>
             <Typography variant="caption" sx={{ color: '#BFDBFE' }}>
-              Portal de Autenticación EBR/BPM - Módulo de Identidad
+              Portal Web EBR/BPM - Módulo de Identidad
             </Typography>
           </Box>
         </Box>
@@ -229,19 +234,6 @@ export const RegisterPage: React.FC = () => {
 
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  Cédula o Pasaporte *
-                </Typography>
-                <TextField
-                  fullWidth
-                  placeholder="Ej. 031-0129482-3"
-                  value={identityNumber}
-                  onChange={(e) => setIdentityNumber(e.target.value)}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
                   Correo Electrónico Corporativo *
                 </Typography>
                 <TextField
@@ -266,23 +258,24 @@ export const RegisterPage: React.FC = () => {
                 />
               </Grid>
 
-              <Grid size={12}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
                   Contraseña Segura *
                 </Typography>
                 <TextField
                   fullWidth
                   type="password"
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Mínimo 12 caracteres"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  helperText="Mínimo 12 caracteres (política Core EBR/BPM)"
                   required
                 />
               </Grid>
             </Grid>
 
             <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A', mb: 2 }}>
-              2. Rol y Empresa Asociada
+              2. Rol y Empresa Representada
             </Typography>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -293,71 +286,82 @@ export const RegisterPage: React.FC = () => {
                 <TextField
                   select
                   fullWidth
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as Role)}
+                  value={roleCode}
+                  onChange={(e) => setRoleCode(e.target.value as 'COMPANY_ADMIN' | 'DELEGATE')}
                 >
-                  <MenuItem value="ADMIN_EMPRESA">Administrador de Empresa (Gestor Principal)</MenuItem>
-                  <MenuItem value="DELEGADO">Usuario Delegado (Representante de Sede)</MenuItem>
+                  <MenuItem value="COMPANY_ADMIN">Administrador de Empresa (Gestor Principal)</MenuItem>
+                  <MenuItem value="DELEGATE">Usuario Delegado (Representante de Sede)</MenuItem>
                 </TextField>
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  Empresa Representada *
+                  Razón Social de la Empresa *
                 </Typography>
                 <TextField
-                  select
                   fullWidth
-                  value={companyId}
-                  onChange={(e) => setCompanyId(e.target.value)}
-                >
-                  {companies.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.legalName} ({c.rnc})
-                    </MenuItem>
-                  ))}
-                  <MenuItem value="NEW">+ Registrar Nueva Empresa</MenuItem>
-                </TextField>
+                  placeholder="Ej. Industrias Lácteas Dominicanas, S.R.L."
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  helperText="Se asociará durante la validación del Administrador"
+                />
               </Grid>
-
-              {companyId === 'NEW' && (
-                <Grid size={12}>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                    Nombre o Razón Social de la Nueva Empresa *
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    placeholder="Ej. Industrias Agroalimentarias del Norte, S.R.L."
-                    value={customCompanyName}
-                    onChange={(e) => setCustomCompanyName(e.target.value)}
-                  />
-                </Grid>
-              )}
             </Grid>
 
             <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A', mb: 1 }}>
               3. Carta de Autorización Obligatoria
             </Typography>
             <Typography variant="body2" sx={{ color: '#475569', mb: 2 }}>
-              Debe adjuntar la Carta de Designación o Poder Notariado firmado por el Representante Legal que acredita su facultad para radicar solicitudes BPM en nombre de la empresa.
+              Debe adjuntar la Carta de Designación o Poder Notariado firmado por el Representante Legal que acredita su facultad para radicar trámites BPM en nombre de la empresa.
             </Typography>
 
-            <FilePicker
-              label="Carta de Designación / Autorización Corporativa"
-              documentType="Carta de Autorización"
-              required
-              helperText="PDF o Imagen escaneada, máx. 5 MB"
-              onFileUploaded={(doc) => setAuthLetter(doc)}
-              onFileRemoved={() => setAuthLetter(null)}
-              existingDocument={authLetter}
-            />
+            <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 2, bgcolor: '#F8FAFC' }}>
+              {authFile ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <InsertDriveFileIcon sx={{ color: '#1E3A8A', fontSize: 32 }} />
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A' }}>
+                        {authFile.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748B' }}>
+                        {(authFile.size / 1024).toFixed(1)} KB · Documento cargado
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <IconButton color="error" onClick={() => setAuthFile(null)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 2 }}>
+                  <Button
+                    component="label"
+                    variant="outlined"
+                    startIcon={<CloudUploadIcon />}
+                    sx={{ textTransform: 'none', borderRadius: 2, borderColor: '#CBD5E1', color: '#1E3A8A' }}
+                  >
+                    Seleccionar Carta de Autorización (PDF, JPG, PNG)
+                    <input
+                      type="file"
+                      hidden
+                      accept="application/pdf,image/jpeg,image/png"
+                      onChange={handleFileChange}
+                    />
+                  </Button>
+                  <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#64748B' }}>
+                    Máximo 5 MB por archivo.
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
 
             <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Button
                 variant="outlined"
-                color="secondary"
                 startIcon={<ArrowBackIcon />}
                 onClick={() => navigate('/login')}
+                sx={{ textTransform: 'none' }}
               >
                 Volver al Login
               </Button>
@@ -365,12 +369,12 @@ export const RegisterPage: React.FC = () => {
               <Button
                 type="submit"
                 variant="contained"
-                color="primary"
                 disabled={loading}
                 sx={{
                   px: 4,
                   py: 1.2,
                   bgcolor: '#1E3A8A',
+                  textTransform: 'none',
                   '&:hover': { bgcolor: '#1E40AF' },
                 }}
               >
@@ -381,5 +385,5 @@ export const RegisterPage: React.FC = () => {
         </CardContent>
       </Card>
     </Box>
-  );
-};
+  )
+}

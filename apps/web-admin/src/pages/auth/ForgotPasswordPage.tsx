@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Card,
@@ -9,58 +9,44 @@ import {
   Button,
   Alert,
   Paper,
-} from '@mui/material';
-import LockResetIcon from '@mui/icons-material/LockReset';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useNotification } from '../../context/NotificationContext';
+} from '@mui/material'
+import LockResetIcon from '@mui/icons-material/LockReset'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import { authApi } from '../../api/auth'
+import { useNotification } from '../../context/NotificationContext'
+import { supportMessage } from '../../api/presentation'
 
 export const ForgotPasswordPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { showSuccess } = useNotification();
+  const navigate = useNavigate()
+  const { showSuccess, showError } = useNotification()
 
-  const [step, setStep] = useState<1 | 2>(1);
-  const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [requestedSuccess, setRequestedSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleRequestToken = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!email.trim()) {
-      setError('Por favor ingrese su correo electrónico registrado');
-      return;
+      setError('Por favor ingrese su correo electrónico registrado.')
+      return
     }
-    setError(null);
-    setLoading(true);
+    setError(null)
+    setLoading(true)
 
-    setTimeout(() => {
-      setLoading(false);
-      setStep(2);
-      showSuccess('Se ha enviado un código de recuperación a su correo');
-    }, 400);
-  };
-
-  const handleResetPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token.trim() || !newPassword.trim()) {
-      setError('Complete todos los campos');
-      return;
+    try {
+      await authApi.forgotPassword(email.trim().toLowerCase())
+      showSuccess('Solicitud enviada exitosamente.')
+      setRequestedSuccess(true)
+    } catch (err: unknown) {
+      const msg = supportMessage(err, 'No fue posible tramitar la solicitud.')
+      setError(msg)
+      showError(msg)
+    } finally {
+      setLoading(false)
     }
-    if (newPassword !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-    setError(null);
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-      showSuccess('Contraseña restablecida exitosamente');
-      navigate('/login');
-    }, 500);
-  };
+  }
 
   return (
     <Box
@@ -95,7 +81,7 @@ export const ForgotPasswordPage: React.FC = () => {
             Recuperación de Contraseña
           </Typography>
           <Typography variant="caption" sx={{ color: '#BFDBFE' }}>
-            Portal EBR/BPM - Módulo de Identidad
+            Portal Web EBR/BPM - Módulo de Identidad
           </Typography>
         </Box>
 
@@ -106,10 +92,47 @@ export const ForgotPasswordPage: React.FC = () => {
             </Alert>
           )}
 
-          {step === 1 ? (
-            <Box component="form" onSubmit={handleRequestToken}>
+          {requestedSuccess ? (
+            <Box sx={{ textAlign: 'center' }}>
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  bgcolor: '#DCFCE7',
+                  color: '#15803D',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mb: 2,
+                }}
+              >
+                <CheckCircleIcon sx={{ fontSize: 36 }} />
+              </Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A', mb: 1 }}>
+                Solicitud Procesada
+              </Typography>
               <Typography variant="body2" sx={{ color: '#475569', mb: 3 }}>
-                Ingrese su correo institucional o corporativo registrado para recibir el enlace y código de restablecimiento.
+                Si el correo <strong>{email}</strong> se encuentra registrado en el sistema oficial EBR/BPM, recibirá instrucciones de seguridad para restablecer su acceso.
+              </Typography>
+              <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC', textAlign: 'left' }}>
+                <Typography variant="caption" sx={{ color: '#64748B' }}>
+                  Por motivos de seguridad y privacidad, el sistema no confirma públicamente la existencia de cuentas individuales. Si necesita asistencia inmediata, comuníquese con el Administrador Central de su entidad.
+                </Typography>
+              </Paper>
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={() => navigate('/login')}
+                sx={{ py: 1.2, bgcolor: '#1E3A8A', textTransform: 'none' }}
+              >
+                Volver a Iniciar Sesión
+              </Button>
+            </Box>
+          ) : (
+            <Box component="form" onSubmit={handleRequest} noValidate>
+              <Typography variant="body2" sx={{ color: '#475569', mb: 3 }}>
+                Ingrese su correo institucional o corporativo registrado para tramitar el restablecimiento seguro de su contraseña.
               </Typography>
 
               <Box sx={{ mb: 3 }}>
@@ -130,87 +153,26 @@ export const ForgotPasswordPage: React.FC = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                color="primary"
                 disabled={loading}
-                sx={{ py: 1.2, bgcolor: '#1E3A8A', '&:hover': { bgcolor: '#1E40AF' } }}
+                sx={{ py: 1.2, bgcolor: '#1E3A8A', textTransform: 'none', '&:hover': { bgcolor: '#1E40AF' } }}
               >
-                {loading ? 'Enviando...' : 'Enviar Código de Recuperación'}
+                {loading ? 'Enviando...' : 'Solicitar Restablecimiento'}
               </Button>
-            </Box>
-          ) : (
-            <Box component="form" onSubmit={handleResetPassword}>
-              <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#EFF6FF', borderColor: '#BFDBFE' }}>
-                <Typography variant="caption" sx={{ color: '#1E3A8A', fontWeight: 600 }}>
-                  Código de demostración generado: <strong>EBR-7892</strong>
-                </Typography>
-              </Paper>
 
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  Código de Verificación
-                </Typography>
-                <TextField
-                  fullWidth
-                  placeholder="EBR-XXXX"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  required
-                />
+              <Box sx={{ mt: 3, textAlign: 'center' }}>
+                <Button
+                  variant="text"
+                  startIcon={<ArrowBackIcon />}
+                  onClick={() => navigate('/login')}
+                  sx={{ color: '#475569', fontSize: '0.85rem', textTransform: 'none' }}
+                >
+                  Volver a Iniciar Sesión
+                </Button>
               </Box>
-
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  Nueva Contraseña
-                </Typography>
-                <TextField
-                  fullWidth
-                  type="password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                />
-              </Box>
-
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  Confirmar Contraseña
-                </Typography>
-                <TextField
-                  fullWidth
-                  type="password"
-                  placeholder="Repita la nueva contraseña"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </Box>
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="primary"
-                disabled={loading}
-                sx={{ py: 1.2, bgcolor: '#1E3A8A', '&:hover': { bgcolor: '#1E40AF' } }}
-              >
-                {loading ? 'Restableciendo...' : 'Restablecer Contraseña'}
-              </Button>
             </Box>
           )}
-
-          <Box sx={{ mt: 3, textAlign: 'center' }}>
-            <Button
-              variant="text"
-              startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/login')}
-              sx={{ color: '#475569', fontSize: '0.85rem' }}
-            >
-              Volver a Iniciar Sesión
-            </Button>
-          </Box>
         </CardContent>
       </Card>
     </Box>
-  );
-};
+  )
+}

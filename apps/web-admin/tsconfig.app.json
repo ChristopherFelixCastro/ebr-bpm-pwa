@@ -33,7 +33,7 @@
     "src/context/AuthContext.tsx",
     "src/context/NotificationContext.tsx",
     "src/context/ReauthenticationContext.tsx",
-    "src/pages/auth/LoginPage.tsx",
+    "src/pages/auth/**/*.tsx",
     "src/pages/companies/**/*.tsx",
     "src/pages/dashboard/**/*.tsx",
     "src/pages/requests/**/*.tsx",

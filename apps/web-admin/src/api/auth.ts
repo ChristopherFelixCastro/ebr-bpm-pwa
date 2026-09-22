@@ -3,6 +3,8 @@ import { apiClient, clearAccessToken, restoreAccessToken, setAccessToken, unwrap
 
 export type CurrentUser = components['schemas']['CurrentUser']
 export type RoleCode = CurrentUser['roleCode']
+export type RegisterRequest = components['schemas']['RegisterRequest']
+export type User = components['schemas']['User']
 
 const currentUser = async () => unwrap<CurrentUser>(await apiClient.GET('/v1/auth/me'))
 
@@ -16,6 +18,14 @@ export const authApi = {
       clearAccessToken()
       throw error
     }
+  },
+
+  async register(body: RegisterRequest): Promise<User> {
+    return unwrap<User>(await apiClient.POST('/v1/auth/register', { body }))
+  },
+
+  async forgotPassword(email: string): Promise<{ requested: boolean }> {
+    return unwrap<{ requested: boolean }>(await apiClient.POST('/v1/auth/forgot-password', { body: { email } }))
   },
 
   async restore(): Promise<CurrentUser | null> {

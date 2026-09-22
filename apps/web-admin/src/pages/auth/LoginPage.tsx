@@ -83,11 +83,33 @@ export const LoginPage = () => {
               } }}
               sx={{ mb: 3 }}
             />
-            <Button type="submit" fullWidth variant="contained" disabled={loading} sx={{ py: 1.3, bgcolor: '#1E3A8A' }}>
+            <Box sx={{ mt: 1.5, textAlign: 'right' }}>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/forgot-password')}
+                sx={{ textTransform: 'none', color: '#1E3A8A', fontSize: '0.85rem' }}
+              >
+                ¿Olvidó su contraseña?
+              </Button>
+            </Box>
+            <Button type="submit" fullWidth variant="contained" disabled={loading} sx={{ mt: 2, py: 1.3, bgcolor: '#1E3A8A' }}>
               {loading ? 'Verificando…' : 'Acceder al sistema'}
             </Button>
           </Box>
-          <Alert severity="info" sx={{ mt: 3 }}>Registro público y recuperación de contraseña: módulos en integración.</Alert>
+          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #E2E8F0', textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ color: '#64748B' }}>
+              ¿Aún no tiene cuenta empresarial?{' '}
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/register')}
+                sx={{ textTransform: 'none', color: '#1E3A8A', fontWeight: 600, p: 0, minWidth: 'auto', verticalAlign: 'baseline' }}
+              >
+                Regístrese aquí
+              </Button>
+            </Typography>
+          </Box>
         </CardContent>
       </Card>
     </Box>

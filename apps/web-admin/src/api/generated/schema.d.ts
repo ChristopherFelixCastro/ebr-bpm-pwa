@@ -6133,6 +6133,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registro público de usuario empresarial
+         * @description Crea un usuario en estado PENDING_VALIDATION con rol COMPANY_ADMIN o DELEGATE.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RegisterRequest"];
+                };
+            };
+            responses: {
+                /** @description Operación completada. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["User"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Datos inválidos. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Correo duplicado. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Solicitud pública de recuperación de contraseña
+         * @description Siempre responde éxito no enumerable protegiendo contra enumeración de cuentas.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ForgotPasswordRequest"];
+                };
+            };
+            responses: {
+                /** @description Operación completada. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @constant */
+                                requested: true;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Correo inválido. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/refresh": {
         parameters: {
             query?: never;
@@ -14839,6 +14967,21 @@ export interface components {
              * @example PruebaSegura123!
              */
             password: string;
+        };
+        RegisterRequest: {
+            fullName: string;
+            /** Format: email */
+            email: string;
+            phone?: string;
+            password: string;
+            /** @enum {string} */
+            roleCode: "COMPANY_ADMIN" | "DELEGATE";
+            /** Format: uuid */
+            companyId?: string;
+        };
+        ForgotPasswordRequest: {
+            /** Format: email */
+            email: string;
         };
         AccessToken: {
             /** @description JWT de acceso de corta duración. */

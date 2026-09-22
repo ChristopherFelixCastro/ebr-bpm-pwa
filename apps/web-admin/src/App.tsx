@@ -6,13 +6,15 @@ import { AppShell } from './components/AppShell'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
 import { ReauthenticationProvider } from './context/ReauthenticationContext'
-import { ForbiddenPage, NotFoundPage, UnavailablePage } from './pages/system/SystemPages'
+import { ForbiddenPage, NotFoundPage } from './pages/system/SystemPages'
 import { operationalRoles, portalRoles, userManagementRoles, resolveRouteAccess } from './routes/access'
 import type { RoleCode } from './api/auth'
 import { theme } from './theme/muiTheme'
 
 // Code-splitting mediante lazy imports
 const LoginPage = lazy(() => import('./pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })))
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const CompanyListPage = lazy(() => import('./pages/companies/CompanyListPage').then((m) => ({ default: m.CompanyListPage })))
 const CompanyDetailPage = lazy(() => import('./pages/companies/CompanyDetailPage').then((m) => ({ default: m.CompanyDetailPage })))
@@ -56,8 +58,8 @@ export const App = () => (
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-                <Route path="/register" element={<UnavailablePage title="Registro público" />} />
-                <Route path="/forgot-password" element={<UnavailablePage title="Recuperación de contraseña" />} />
+                <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+                <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute allowedRoles={portalRoles}><DashboardPage /></ProtectedRoute>} />
                 <Route path="/companies" element={<ProtectedRoute allowedRoles={operationalRoles}><CompanyListPage /></ProtectedRoute>} />
                 <Route path="/companies/:id" element={<ProtectedRoute allowedRoles={operationalRoles}><CompanyDetailPage /></ProtectedRoute>} />
