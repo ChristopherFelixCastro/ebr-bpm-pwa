@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npm run build -w @ebr-bpm/risk-engine && vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",

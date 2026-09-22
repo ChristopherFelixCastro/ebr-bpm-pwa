@@ -28,7 +28,7 @@ const ancho = 264;
 
 const opciones = [
   { ruta: '/', etiqueta: 'Panel analítico', icono: <SpaceDashboardRoundedIcon /> },
-  { ruta: '/demo', etiqueta: 'Recorrido MVP', icono: <RouteRoundedIcon /> },
+  { ruta: '/demo', etiqueta: 'Guía del avance', icono: <RouteRoundedIcon /> },
   { ruta: '/core', etiqueta: 'Core en vivo', icono: <HubRoundedIcon /> },
   { ruta: '/evaluaciones', etiqueta: 'Evaluaciones', icono: <FactCheckRoundedIcon /> },
   { ruta: '/informes', etiqueta: 'Informes', icono: <DescriptionRoundedIcon /> },

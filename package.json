@@ -15,7 +15,7 @@
     "test:api:db": "npm run test -w @ebr-bpm/api",
     "test": "npm run validate",
     "demo": "npm run demo:analytics",
-    "demo:analytics": "npm run build -w @ebr-bpm/risk-engine && npm run dev -w @ebr-bpm/web-analytics -- --host 127.0.0.1 --port 5175 --strictPort",
+    "demo:analytics": "npm run dev -w @ebr-bpm/web-analytics -- --host 127.0.0.1 --port 5175 --strictPort",
     "demo:coordinator": "npm run dev -w @ebr-bpm/web-coordinator -- --host 127.0.0.1 --port 5174 --strictPort",
     "demo:field": "npm run dev -w @ebr-bpm/pwa-field -- --host 127.0.0.1 --port 5173 --strictPort",
     "db:migrate": "npm run db:migrate --workspace @ebr-bpm/api",

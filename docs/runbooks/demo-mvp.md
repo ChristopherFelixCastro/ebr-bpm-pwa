@@ -10,7 +10,7 @@ npm run validate
 npm run demo
 ```
 
-Abra la URL indicada por Vite y seleccione **Recorrido MVP**.
+Abra la URL indicada por Vite y seleccione **Guía del avance**. Es un mapa opcional de navegación, no un orden obligatorio para hablar con el profesor.
 
 ## Recorrido recomendado (5–7 minutos)
 
