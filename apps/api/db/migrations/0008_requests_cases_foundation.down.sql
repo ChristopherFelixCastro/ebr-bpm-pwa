@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS case_status_transitions;
+DROP TABLE IF EXISTS request_status_transitions;
+DROP TABLE IF EXISTS complaints;
+DROP TABLE IF EXISTS health_alerts;
+DROP TABLE IF EXISTS institutional_program_cases;
+DROP TABLE IF EXISTS cases;
+DROP TABLE IF EXISTS request_contacts;
+DROP TABLE IF EXISTS request_documents;
+DROP TABLE IF EXISTS company_requests;
+DROP FUNCTION IF EXISTS sync_case_from_complaint(); DROP FUNCTION IF EXISTS sync_case_from_health_alert(); DROP FUNCTION IF EXISTS record_case_status_transition(); DROP FUNCTION IF EXISTS record_request_status_transition(); DROP FUNCTION IF EXISTS origin_integrity_guard(); DROP FUNCTION IF EXISTS case_state_guard(); DROP FUNCTION IF EXISTS request_case_guard();
+DROP TYPE IF EXISTS complaint_decision; DROP TYPE IF EXISTS health_alert_decision; DROP TYPE IF EXISTS document_status; DROP TYPE IF EXISTS request_document_type; DROP TYPE IF EXISTS priority_level; DROP TYPE IF EXISTS case_status; DROP TYPE IF EXISTS case_origin; DROP TYPE IF EXISTS request_status;

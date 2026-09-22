@@ -1,0 +1,13 @@
+INSERT INTO roles(code,name,is_universal) VALUES ('BPM_TEST','BPM prueba',false);
+INSERT INTO users(role_id,full_name,email,password_hash,status) SELECT id,'Publicador BPM','bpm.publisher@example.test','hash','APPROVED' FROM roles WHERE code='BPM_TEST';
+INSERT INTO bpm_templates(code,name) VALUES ('BPM_TEST','Plantilla BPM');
+INSERT INTO bpm_template_versions(template_id,version_number) SELECT id,1 FROM bpm_templates WHERE code='BPM_TEST';
+DO $$ DECLARE v uuid; u uuid; root uuid; BEGIN SELECT v.id INTO v FROM bpm_template_versions v JOIN bpm_templates t ON t.id=v.template_id WHERE t.code='BPM_TEST'; SELECT id INTO u FROM users WHERE email_normalized='bpm.publisher@example.test';
+ INSERT INTO bpm_template_items(template_version_id,source_code,display_code,title,sort_order,item_kind,is_evaluable,default_criticality,source_reference,source_row_number) VALUES(v,'1.1','1.1','Raíz',1,'SECTION',false,NULL,'AllItems',1) RETURNING id INTO root;
+ INSERT INTO bpm_template_items(template_version_id,parent_item_id,source_code,display_code,title,sort_order,item_kind,is_evaluable,default_criticality,source_reference,source_row_number) VALUES(v,root,'1.1.0','1.1.0','Subsección',1,'SUBSECTION',false,NULL,'AllItems',2) RETURNING id INTO root;
+ INSERT INTO bpm_template_items(template_version_id,parent_item_id,source_code,display_code,title,sort_order,item_kind,is_evaluable,default_criticality,source_reference,source_row_number) VALUES(v,root,'1.1.1','1.1.1','Criterio',1,'CRITERION',true,'MAYOR','AllItems',3);
+ BEGIN INSERT INTO bpm_template_items(template_version_id,parent_item_id,title,sort_order,item_kind,is_evaluable,default_criticality) VALUES(v,root,'Sin crítica',2,'CRITERION',true,NULL); RAISE EXCEPTION 'criterion without criticality'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO bpm_template_items(template_version_id,title,sort_order,item_kind,is_evaluable,default_criticality) VALUES(v,'Nodo crítico',2,'GROUP',false,'MAYOR'); RAISE EXCEPTION 'node criticality accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
+ UPDATE bpm_template_versions SET status='PUBLISHED',published_at=clock_timestamp(),published_by_user_id=u WHERE id=v;
+ BEGIN UPDATE bpm_template_items SET title='Cambio' WHERE template_version_id=v; RAISE EXCEPTION 'published item changed'; EXCEPTION WHEN raise_exception OR object_not_in_prerequisite_state THEN NULL; END;
+END $$;

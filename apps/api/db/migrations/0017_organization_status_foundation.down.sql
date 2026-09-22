@@ -1,0 +1,10 @@
+DROP TRIGGER IF EXISTS establishments_status_guard ON establishments;
+DROP TRIGGER IF EXISTS companies_status_guard ON companies;
+DROP FUNCTION IF EXISTS establishment_status_guard();
+DROP FUNCTION IF EXISTS company_status_guard();
+DROP FUNCTION IF EXISTS validate_company_establishment_status(uuid);
+DROP INDEX IF EXISTS establishments_company_status_idx;
+DROP INDEX IF EXISTS companies_status_idx;
+ALTER TABLE establishments DROP COLUMN status;
+ALTER TABLE companies DROP COLUMN status;
+DROP TYPE organization_status;

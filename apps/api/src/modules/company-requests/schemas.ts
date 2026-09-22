@@ -1,0 +1,10 @@
+import {z} from 'zod';
+export const id=z.string().uuid(); const text=(max:number)=>z.string().trim().min(1).max(max); export const status=z.enum(['DRAFT','PENDING_ASSIGNMENT']);
+export const createRequest=z.object({companyId:id.optional(),establishmentId:id,requestType:text(80),reason:text(2000),observations:z.string().trim().max(5000).nullable().optional()}).strict();
+export const patchRequest=z.object({version:z.number().int().positive(),establishmentId:id.optional(),requestType:text(80).optional(),reason:text(2000).optional(),observations:z.string().trim().max(5000).nullable().optional()}).strict().refine(v=>Object.keys(v).length>1);
+export const listRequest=z.object({page:z.coerce.number().int().positive().default(1),limit:z.coerce.number().int().min(1).max(100).default(20),status:status.optional(),establishmentId:id.optional(),requestType:text(80).optional(),search:z.string().trim().min(1).max(100).optional()}).strict();
+export const version=z.object({version:z.number().int().positive()}).strict();
+export const addContact=z.object({contactId:id,relationshipType:z.enum(['LEGAL_REPRESENTATIVE','QUALITY_CONTACT','PRIMARY_CONTACT','OWNER','REPRESENTATIVE']),isPrimary:z.boolean()}).strict();
+export const rejectDocument=z.object({version:z.number().int().positive(),reason:text(1000)}).strict();
+export const documentType=z.enum(['AUTHORIZATION_LETTER','SUPPORTING_DOCUMENT']);
+export type CreateInput=z.infer<typeof createRequest>;export type PatchInput=z.infer<typeof patchRequest>;export type ListInput=z.infer<typeof listRequest>;

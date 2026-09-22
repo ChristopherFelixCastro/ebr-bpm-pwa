@@ -1,0 +1,24 @@
+DROP FUNCTION IF EXISTS effective_risk_rule_version(timestamptz);
+DROP FUNCTION IF EXISTS effective_bpm_template_version(timestamptz);
+DROP TRIGGER IF EXISTS catalog_versions_guard ON catalog_versions;
+ALTER TABLE risk_rule_versions DROP CONSTRAINT IF EXISTS risk_versions_no_effective_overlap;
+ALTER TABLE bpm_template_versions DROP CONSTRAINT IF EXISTS bpm_versions_no_effective_overlap;
+ALTER TABLE catalog_versions DROP CONSTRAINT IF EXISTS catalog_versions_no_effective_overlap;
+DROP INDEX IF EXISTS catalog_entries_sibling_order_idx;
+DROP INDEX IF EXISTS food_risk_subcategories_order_idx;
+DROP INDEX IF EXISTS food_risk_categories_order_idx;
+DROP INDEX IF EXISTS risk_versions_one_draft_idx;
+DROP INDEX IF EXISTS bpm_versions_one_draft_idx;
+DROP INDEX IF EXISTS catalog_versions_one_draft_idx;
+ALTER TABLE food_risk_subcategories DROP CONSTRAINT IF EXISTS food_risk_subcategories_null_pair;
+ALTER TABLE risk_rule_versions DROP CONSTRAINT IF EXISTS risk_versions_administration_state;
+ALTER TABLE bpm_template_versions DROP CONSTRAINT IF EXISTS bpm_versions_administration_state;
+ALTER TABLE catalog_versions DROP CONSTRAINT IF EXISTS catalog_versions_administration_state;
+ALTER TABLE risk_rule_versions DROP COLUMN retired_by_user_id,DROP COLUMN retired_at,DROP COLUMN effective_to,DROP COLUMN effective_from;
+ALTER TABLE bpm_template_versions DROP COLUMN retired_by_user_id,DROP COLUMN retired_at,DROP COLUMN effective_to,DROP COLUMN effective_from;
+ALTER TABLE catalog_versions DROP COLUMN retired_by_user_id,DROP COLUMN retired_at,DROP COLUMN effective_to,DROP COLUMN effective_from;
+
+CREATE OR REPLACE FUNCTION catalog_version_guard() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF TG_OP='DELETE' AND OLD.status='PUBLISHED' THEN RAISE EXCEPTION 'published catalog version is immutable'; END IF; IF TG_OP='UPDATE' THEN IF OLD.status='PUBLISHED' THEN RAISE EXCEPTION 'published catalog version is immutable'; END IF; IF NEW.status='DRAFT' THEN RETURN NEW; END IF; IF NEW.status<>'PUBLISHED' OR NEW.catalog_id IS DISTINCT FROM OLD.catalog_id OR NEW.version_number IS DISTINCT FROM OLD.version_number OR NEW.id IS DISTINCT FROM OLD.id OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN RAISE EXCEPTION 'invalid catalog publication transition'; END IF; END IF; RETURN NEW; END $$;
+CREATE TRIGGER catalog_versions_guard BEFORE UPDATE OR DELETE ON catalog_versions FOR EACH ROW EXECUTE FUNCTION catalog_version_guard();
+CREATE OR REPLACE FUNCTION bpm_version_guard() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF TG_OP='DELETE' AND OLD.status='PUBLISHED' THEN RAISE EXCEPTION 'published version immutable'; END IF; IF TG_OP='UPDATE' THEN IF OLD.status='PUBLISHED' THEN RAISE EXCEPTION 'published version immutable'; END IF; IF NEW.status='PUBLISHED' AND NOT EXISTS(SELECT 1 FROM bpm_template_items WHERE template_version_id=NEW.id AND item_kind='CRITERION' AND is_evaluable) THEN RAISE EXCEPTION 'published version requires criterion'; END IF; IF NEW.status='PUBLISHED' AND (NEW.template_id IS DISTINCT FROM OLD.template_id OR NEW.version_number IS DISTINCT FROM OLD.version_number) THEN RAISE EXCEPTION 'invalid publication transition'; END IF; END IF; RETURN NEW; END $$;
+CREATE OR REPLACE FUNCTION risk_version_guard() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF TG_OP='DELETE' AND OLD.status='PUBLISHED' THEN RAISE EXCEPTION 'published risk version immutable'; END IF; IF TG_OP='UPDATE' THEN IF OLD.status='PUBLISHED' THEN RAISE EXCEPTION 'published risk version immutable'; END IF; IF NEW.status='PUBLISHED' THEN IF NEW.risk_rule_set_id IS DISTINCT FROM OLD.risk_rule_set_id OR NEW.version_number IS DISTINCT FROM OLD.version_number THEN RAISE EXCEPTION 'invalid publication'; END IF; IF (SELECT count(*) FROM risk_factors WHERE risk_rule_version_id=NEW.id)<>6 OR (SELECT array_agg(code::text ORDER BY code) FROM risk_factors WHERE risk_rule_version_id=NEW.id)<>ARRAY['BPM','HACCP','INABIE','REJECTIONS','SAMPLING','VOLUME']::text[] OR (SELECT sum(weight) FROM risk_factors WHERE risk_rule_version_id=NEW.id)<>1.0000 THEN RAISE EXCEPTION 'invalid factors'; END IF; IF EXISTS(SELECT 1 FROM risk_factors f WHERE f.risk_rule_version_id=NEW.id AND (SELECT array_agg(score ORDER BY score) FROM risk_factor_options WHERE risk_factor_id=f.id)<>ARRAY[1.00::numeric,1.67::numeric,2.33::numeric,3.00::numeric]) THEN RAISE EXCEPTION 'invalid options'; END IF; END IF; END IF; RETURN NEW; END $$;

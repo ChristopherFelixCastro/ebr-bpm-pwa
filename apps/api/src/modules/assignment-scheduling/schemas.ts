@@ -1,0 +1,11 @@
+import{z}from'zod';
+export const uuid=z.string().uuid();const text=z.string().trim().min(1).max(500);const iso=z.string().datetime({offset:true});const page=z.coerce.number().int().min(1).default(1),limit=z.coerce.number().int().min(1).max(100).default(20);const bool=z.preprocess(v=>v==='true'?true:v==='false'?false:v,z.boolean());
+export const assignmentListSchema=z.object({page,limit,active:bool.optional(),evaluatorUserId:uuid.optional(),caseId:uuid.optional(),origin:z.enum(['COMPANY_REQUEST','INSTITUTIONAL_PROGRAM','HEALTH_ALERT','COMPLAINT']).optional(),assignedFrom:iso.optional(),assignedTo:iso.optional()}).strict();
+export const scheduleListSchema=z.object({page,limit,status:z.enum(['SCHEDULED','RESCHEDULED','CANCELLED']).optional(),evaluatorUserId:uuid.optional(),caseId:uuid.optional(),startFrom:iso.optional(),startTo:iso.optional()}).strict();
+export const assignSchema=z.object({evaluatorUserId:uuid,reason:text.optional()}).strict();
+export const reassignSchema=z.object({newEvaluatorUserId:uuid,currentAssignmentVersion:z.number().int().positive(),reason:text}).strict();
+export const scheduleSchema=z.object({scheduledStartAt:iso,scheduledEndAt:iso,notes:z.string().trim().max(2000).optional()}).strict();
+export const rescheduleSchema=z.object({version:z.number().int().positive(),scheduledStartAt:iso,scheduledEndAt:iso,reason:text,notes:z.string().trim().max(2000).optional()}).strict();
+export const cancelSchema=z.object({version:z.number().int().positive(),reason:text}).strict();
+export const caseIdSchema=uuid;export const scheduleIdSchema=uuid;
+export type AssignmentList=z.infer<typeof assignmentListSchema>;export type ScheduleList=z.infer<typeof scheduleListSchema>;export type AssignInput=z.infer<typeof assignSchema>;export type ReassignInput=z.infer<typeof reassignSchema>;export type ScheduleInput=z.infer<typeof scheduleSchema>;export type RescheduleInput=z.infer<typeof rescheduleSchema>;export type CancelInput=z.infer<typeof cancelSchema>;
