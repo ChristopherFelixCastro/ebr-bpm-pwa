@@ -46,7 +46,11 @@
     "web-admin:dev": "npm run dev --workspace @ebr-bpm/web-admin",
     "web-admin:build": "npm run build --workspace @ebr-bpm/web-admin",
     "web-admin:lint": "npm run lint --workspace @ebr-bpm/web-admin",
-    "web-admin:test": "npm run test --workspace @ebr-bpm/web-admin"
+    "web-admin:test": "npm run test --workspace @ebr-bpm/web-admin",
+    "coordinator:dev": "npm run dev --workspace @ebr-bpm/web-coordinator",
+    "coordinator:build": "npm run build --workspace @ebr-bpm/web-coordinator",
+    "coordinator:lint": "npm run lint --workspace @ebr-bpm/web-coordinator",
+    "coordinator:test": "npm run test --workspace @ebr-bpm/web-coordinator"
   },
   "engines": {
     "node": ">=20"
