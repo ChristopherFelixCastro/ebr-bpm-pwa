@@ -26,4 +26,37 @@ it('reauthentica y UNIVERSAL supera RBAC',async()=>{mocks.query.mockResolvedValu
 it('devuelve el perfil mínimo real para navegación',async()=>{mocks.query.mockResolvedValueOnce({rows:[{id:'11111111-1111-4111-8111-111111111111',fullName:'Ana Empresa',roleCode:'COMPANY_ADMIN',status:'APPROVED',companyId:'22222222-2222-4222-8222-222222222222'}]});const access=await signAccessToken('11111111-1111-4111-8111-111111111111','COMPANY_ADMIN',123);const response=await request(makeApp()).get('/v1/auth/me').set('Authorization',`Bearer ${access}`);expect(response.status).toBe(200);expect(response.body.data).toEqual({id:'11111111-1111-4111-8111-111111111111',fullName:'Ana Empresa',roleCode:'COMPANY_ADMIN',status:'APPROVED',companyId:'22222222-2222-4222-8222-222222222222',authTime:123});expect(response.body.data).not.toHaveProperty('establishmentIds')});
 it('rechaza /me cuando el usuario ya no está APPROVED',async()=>{mocks.query.mockResolvedValueOnce({rows:[]});const access=await signAccessToken('11111111-1111-4111-8111-111111111111','COMPANY_ADMIN',123);const response=await request(makeApp()).get('/v1/auth/me').set('Authorization',`Bearer ${access}`);expect(mocks.query.mock.calls[0][0]).toContain("u.status='APPROVED'");expect(response.status).toBe(401);expect(response.body.error.code).toBe('UNAUTHENTICATED')});
 it('rechaza /me cuando el rol vigente ya no coincide con el JWT',async()=>{mocks.query.mockResolvedValueOnce({rows:[{id:'11111111-1111-4111-8111-111111111111',fullName:'Ana Empresa',roleCode:'ADMIN',status:'APPROVED',companyId:null}]});const access=await signAccessToken('11111111-1111-4111-8111-111111111111','COMPANY_ADMIN',123);const response=await request(makeApp()).get('/v1/auth/me').set('Authorization',`Bearer ${access}`);expect(response.status).toBe(401);expect(response.body.error.code).toBe('UNAUTHENTICATED')});
+
+it('registra públicamente usuario empresarial con estado PENDING_VALIDATION', async () => {
+  mocks.clientQuery.mockResolvedValueOnce({ rows: [{ id: 'role-123' }] }).mockResolvedValueOnce({ rows: [{ id: 'new-user-123' }] }).mockResolvedValueOnce({ rows: [] });
+  mocks.query.mockResolvedValueOnce({ rows: [{ id: 'new-user-123', fullName: 'Nuevo Usuario', email: 'registro@empresa.local', status: 'PENDING_VALIDATION', roleCode: 'COMPANY_ADMIN', companyId: '22222222-2222-4222-8222-222222222222' }] });
+  const response = await request(makeApp()).post('/v1/auth/register').send({
+    fullName: 'Nuevo Usuario',
+    email: 'registro@empresa.local',
+    password: 'SecurePassword123!',
+    roleCode: 'COMPANY_ADMIN',
+    companyId: '22222222-2222-4222-8222-222222222222',
+  });
+  expect(response.status).toBe(201);
+  expect(response.body.data.status).toBe('PENDING_VALIDATION');
+  expect(response.body.data.email).toBe('registro@empresa.local');
+});
+
+it('rechaza registro público con rol administrativo no permitido', async () => {
+  const response = await request(makeApp()).post('/v1/auth/register').send({
+    fullName: 'Intento Admin',
+    email: 'admin@hack.local',
+    password: 'SecurePassword123!',
+    roleCode: 'ADMIN',
+  });
+  expect(response.status).toBe(400);
+});
+
+it('solicita restablecimiento de contraseña de forma no enumerable', async () => {
+  mocks.query.mockResolvedValueOnce({ rows: [{ id: '11111111-1111-4111-8111-111111111111' }] });
+  const response = await request(makeApp()).post('/v1/auth/forgot-password').send({ email: 'user@example.test' });
+  expect(response.status).toBe(200);
+  expect(response.body.data).toEqual({ requested: true });
+  expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ action: 'AUTH_FORGOT_PASSWORD_REQUESTED' }));
+});
 });

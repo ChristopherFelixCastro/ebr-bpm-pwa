@@ -99,6 +99,27 @@ export const openApiDocument = {
           password: { type: 'string', format: 'password', writeOnly: true, example: 'PruebaSegura123!' },
         },
       },
+      RegisterRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['fullName', 'email', 'password', 'roleCode'],
+        properties: {
+          fullName: { type: 'string', minLength: 1, maxLength: 200 },
+          email: { type: 'string', format: 'email', maxLength: 320 },
+          phone: { type: 'string', minLength: 1, maxLength: 40 },
+          password: { type: 'string', minLength: 12, maxLength: 1024 },
+          roleCode: { type: 'string', enum: ['COMPANY_ADMIN', 'DELEGATE'] },
+          companyId: { type: 'string', format: 'uuid' },
+        },
+      },
+      ForgotPasswordRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email', maxLength: 320 },
+        },
+      },
       AccessToken: {
         type: 'object',
         required: ['accessToken'],
@@ -429,6 +450,22 @@ export const openApiDocument = {
         tags: ['Auth'], summary: 'Iniciar sesión',
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/Credentials' } } } },
         responses: { '200': successResponse({ $ref: '#/components/schemas/AccessToken' }), '400': errorResponse('Solicitud inválida.'), '401': errorResponse('Credenciales inválidas.') },
+      },
+    },
+    '/v1/auth/register': {
+      post: {
+        tags: ['Auth'], summary: 'Registro público de usuario empresarial',
+        description: 'Crea un usuario en estado PENDING_VALIDATION con rol COMPANY_ADMIN o DELEGATE.',
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/RegisterRequest' } } } },
+        responses: { '201': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Datos inválidos.'), '409': errorResponse('Correo duplicado.') },
+      },
+    },
+    '/v1/auth/forgot-password': {
+      post: {
+        tags: ['Auth'], summary: 'Solicitud pública de recuperación de contraseña',
+        description: 'Siempre responde éxito no enumerable protegiendo contra enumeración de cuentas.',
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/ForgotPasswordRequest' } } } },
+        responses: { '200': successResponse({ type: 'object', required: ['requested'], properties: { requested: { const: true } } }), '400': errorResponse('Correo inválido.') },
       },
     },
     '/v1/auth/refresh': {
