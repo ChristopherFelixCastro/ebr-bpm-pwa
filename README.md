@@ -53,6 +53,8 @@ npm run demo:coordinator  # Coordinación:  http://127.0.0.1:5174
 npm run demo:analytics    # Analítica:     http://127.0.0.1:5175/demo
 ```
 
+`demo:analytics` compila automáticamente `@ebr-bpm/risk-engine` antes de iniciar Vite; en una clonación nueva no hace falta generar `packages/risk-engine/dist` manualmente. Si el servidor ya estaba abierto antes de actualizar la rama, deténgalo con `Ctrl+C` y vuelva a ejecutar el comando.
+
 Los clientes todavía operan con servicios de demostración aislados. La integración real con autenticación, OpenAPI y PostgreSQL se hará después de estabilizar los workspaces y preservar un recorrido ejecutable para la presentación.
 
 `npm run validate` no requiere base de datos. Para comprobar también las pruebas de integración del Core, configure PostgreSQL y ejecute `npm run test:api:db`.

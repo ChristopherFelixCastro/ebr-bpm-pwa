@@ -59,4 +59,6 @@ npm run demo:field
 npm run demo:analytics
 ```
 
+`demo:analytics` compila el motor de riesgo antes de iniciar. Si una terminal anterior sigue abierta tras actualizar la rama, deténgala con `Ctrl+C` y arránquela otra vez.
+
 El recorrido principal funciona sin PostgreSQL. Para enseñar las vistas «Core en vivo», se necesita además el entorno de base de datos y `.env` configurados, `npm run dev -w @ebr-bpm/api`, `http://127.0.0.1:3000/health/ready` respondiendo correctamente y un usuario institucional de prueba. No compartir contraseñas por WhatsApp.
