@@ -50,7 +50,7 @@ export function GuiaDemostracion() {
         <Typography color="text.secondary">Un flujo corto para enseñar lo que funciona hoy sin confundir datos semilla con una integración terminada.</Typography>
       </Box>
       <Alert severity="warning">
-        Alcance honesto: este recorrido valida el motor y la experiencia del módulo analítico con datos de demostración. La conexión con el Core, un entorno PostgreSQL/Supabase compartido y la sincronización real de campo siguen pendientes.
+        Alcance honesto: este recorrido usa datos de demostración. La vista «Core en vivo» ya consulta la API real cuando hay servidor, base de datos y usuario institucional; la sincronización real de campo sigue pendiente.
       </Alert>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2 }}>
         {pasos.map((paso) => (
@@ -70,7 +70,7 @@ export function GuiaDemostracion() {
         ))}
       </Box>
       <Alert severity="info">
-        Mensaje sugerido: “Esta vertical ya calcula, explica y revisa una evaluación. El Core ya tiene una base fusionada; el siguiente hito es conectar los clientes a su contrato OpenAPI y completar la captura PWA offline.”
+        Mensaje sugerido: “Esta vertical ya calcula, explica y revisa una evaluación. También conectamos analítica y coordinación a lecturas reales del Core; el siguiente hito es operar el flujo completo con PostgreSQL y la PWA.”
       </Alert>
     </Box>
   );

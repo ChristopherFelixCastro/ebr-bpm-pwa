@@ -11,6 +11,7 @@
     "validate": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
+    "@ebr-bpm/core-client": "0.1.0",
     "@ebr-bpm/risk-engine": "0.1.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",

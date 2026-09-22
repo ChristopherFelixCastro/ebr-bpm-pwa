@@ -15,6 +15,7 @@ import BusinessIcon from '@mui/icons-material/Business'
 import EventNoteIcon from '@mui/icons-material/EventNote'
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import HubIcon from '@mui/icons-material/Hub'
 
 import { NavLink, Outlet } from 'react-router-dom'
 
@@ -60,6 +61,11 @@ const menuItems = [
     text: 'Calendario',
     path: '/calendar',
     icon: <CalendarMonthIcon />,
+  },
+  {
+    text: 'Core en vivo',
+    path: '/core',
+    icon: <HubIcon />,
   },
 ]
 

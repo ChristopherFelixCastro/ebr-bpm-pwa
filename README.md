@@ -43,6 +43,8 @@ La configuracion inicial de cada aplicacion se documentara en su carpeta. Antes 
 
 La rama `integration/mvp-demo` reúne temporalmente el Core y los módulos demostrables sin sustituir el flujo de pull requests hacia `main`.
 
+La rama `integration/core-portals` añade pantallas de conexión directa al Core en Coordinación (`/core`) y Analítica (`/core`). Véase [integración MVP](docs/runbooks/integracion-mvp.md) para preparar la API y conocer el alcance.
+
 ```bash
 npm install --ignore-scripts
 npm run validate

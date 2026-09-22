@@ -10,6 +10,7 @@ const Revision = lazy(() => import('./paginas/Revision').then((modulo) => ({ def
 const Informes = lazy(() => import('./paginas/Informes').then((modulo) => ({ default: modulo.Informes })));
 const Historial = lazy(() => import('./paginas/Historial').then((modulo) => ({ default: modulo.Historial })));
 const GuiaDemostracion = lazy(() => import('./paginas/GuiaDemostracion').then((modulo) => ({ default: modulo.GuiaDemostracion })));
+const CoreEnVivo = lazy(() => import('./paginas/CoreEnVivo').then((modulo) => ({ default: modulo.CoreEnVivo })));
 const NoEncontrada = lazy(() => import('./paginas/NoEncontrada').then((modulo) => ({ default: modulo.NoEncontrada })));
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
         <Route element={<DisenoPrincipal />}>
           <Route index element={<PanelAnalitico />} />
           <Route path="demo" element={<GuiaDemostracion />} />
+          <Route path="core" element={<CoreEnVivo />} />
           <Route path="evaluaciones" element={<Evaluaciones />} />
           <Route path="evaluaciones/:id" element={<DetalleEvaluacion />} />
           <Route path="evaluaciones/:id/revision" element={<Revision />} />

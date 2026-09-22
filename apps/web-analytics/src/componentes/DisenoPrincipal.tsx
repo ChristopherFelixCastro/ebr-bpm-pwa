@@ -22,12 +22,14 @@ import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
 import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import RouteRoundedIcon from '@mui/icons-material/RouteRounded';
+import HubRoundedIcon from '@mui/icons-material/HubRounded';
 
 const ancho = 264;
 
 const opciones = [
   { ruta: '/', etiqueta: 'Panel analítico', icono: <SpaceDashboardRoundedIcon /> },
   { ruta: '/demo', etiqueta: 'Recorrido MVP', icono: <RouteRoundedIcon /> },
+  { ruta: '/core', etiqueta: 'Core en vivo', icono: <HubRoundedIcon /> },
   { ruta: '/evaluaciones', etiqueta: 'Evaluaciones', icono: <FactCheckRoundedIcon /> },
   { ruta: '/informes', etiqueta: 'Informes', icono: <DescriptionRoundedIcon /> },
   { ruta: '/historial', etiqueta: 'Consulta histórica', icono: <HistoryRoundedIcon /> },
@@ -35,6 +37,7 @@ const opciones = [
 
 function Navegacion({ cerrar }: { cerrar?: () => void }) {
   const ubicacion = useLocation();
+  const esCore = ubicacion.pathname.startsWith('/core');
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#103c49', color: '#f8fafc' }}>
       <Box sx={{ p: 3 }}>
@@ -65,9 +68,9 @@ function Navegacion({ cerrar }: { cerrar?: () => void }) {
       </List>
       <Box sx={{ mt: 'auto', p: 2 }}>
         <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,.07)', borderRadius: 2 }}>
-          <Typography variant="caption" sx={{ color: '#b9d4dc' }}>Sesión de demostración</Typography>
-          <Typography variant="body2" fontWeight={700}>Coordinador</Typography>
-          <Typography variant="caption" sx={{ color: '#b9d4dc' }}>Permisos de revisión y cierre</Typography>
+          <Typography variant="caption" sx={{ color: '#b9d4dc' }}>{esCore ? 'Conexión independiente' : 'Sesión de demostración'}</Typography>
+          <Typography variant="body2" fontWeight={700}>{esCore ? 'API Core' : 'Coordinador'}</Typography>
+          <Typography variant="caption" sx={{ color: '#b9d4dc' }}>{esCore ? 'Autenticación en esta vista' : 'Permisos de revisión y cierre'}</Typography>
         </Box>
       </Box>
     </Box>
@@ -76,6 +79,7 @@ function Navegacion({ cerrar }: { cerrar?: () => void }) {
 
 export function DisenoPrincipal() {
   const [abierto, setAbierto] = useState(false);
+  const esCore = useLocation().pathname.startsWith('/core');
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <AppBar position="fixed" color="inherit" elevation={0} sx={{ width: { md: `calc(100% - ${ancho}px)` }, ml: { md: `${ancho}px` }, borderBottom: '1px solid #d9e3e6', bgcolor: 'rgba(255,255,255,.94)', backdropFilter: 'blur(12px)' }}>
@@ -85,8 +89,8 @@ export function DisenoPrincipal() {
             <Typography fontWeight={750}>Evaluación basada en riesgo</Typography>
             <Typography variant="caption" color="text.secondary">Resultados, revisión, informes y cierre</Typography>
           </Box>
-          <Tooltip title="Los datos actuales son demostrativos hasta integrar la API Core">
-            <Chip label="Demostración" size="small" color="warning" variant="outlined" />
+          <Tooltip title={esCore ? 'Esta vista consulta la API Core cuando está disponible; las otras pantallas siguen en demostración.' : 'Los datos de esta vista son demostrativos.'}>
+            <Chip label={esCore ? 'Vista Core' : 'Demostración'} size="small" color={esCore ? 'primary' : 'warning'} variant="outlined" />
           </Tooltip>
         </Toolbar>
       </AppBar>

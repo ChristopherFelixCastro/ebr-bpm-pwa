@@ -15,6 +15,7 @@ import InstitutionalPage from '../features/institutional/InstitutionalPage'
 import SchedulingPage from '../features/scheduling/SchedulingPage'
 import AssignmentsPage from '../features/assignments/AssignmentsPage'
 import CalendarPage from '../features/calendar/CalendarPage'
+import CoreIntegrationPage from '../features/core/CoreIntegrationPage'
 
 function AppRouter() {
   return (
@@ -63,6 +64,11 @@ function AppRouter() {
         <Route
           path="/calendar"
           element={<CalendarPage />}
+        />
+
+        <Route
+          path="/core"
+          element={<CoreIntegrationPage />}
         />
       </Route>
 
