@@ -21,7 +21,7 @@ const requestContact='66666666-6666-4666-8666-666666666666';
 const documentId='77777777-7777-4777-8777-777777777777';
 const caseId='88888888-8888-4888-8888-888888888888';
 const requestRow={id:requestId,companyId:company,establishmentId:establishment,establishmentName:'Planta',requestType:'REGISTRATION',reason:'Registro',observations:null,status:'DRAFT',submittedAt:null,createdByUserId:actor,version:1,createdAt:new Date(),updatedAt:new Date()};
-const documentRow={id:documentId,requestId,documentType:'AUTHORIZATION_LETTER',mimeType:'application/pdf',sizeBytes:9,status:'PENDING',uploadedAt:new Date(),validatedAt:null,validatedByUserId:null,rejectionReason:null,archivedAt:null,version:1,createdAt:new Date(),updatedAt:new Date()};
+const documentRow={id:documentId,requestId,documentType:'AUTHORIZATION_LETTER',fileName:'letter.pdf',mimeType:'application/pdf',sizeBytes:9,status:'PENDING',uploadedAt:new Date(),validatedAt:null,validatedByUserId:null,rejectionReason:null,archivedAt:null,version:1,createdAt:new Date(),updatedAt:new Date()};
 const createBody={companyId:company,establishmentId:establishment,requestType:'REGISTRATION',reason:'Registro'};
 const app=()=>{const a=express();a.use(express.json());a.use((q,s,n)=>{q.context={correlationId:'123e4567-e89b-42d3-a456-426614174000'};s.locals.correlationId=q.context.correlationId;n()});a.use('/v1/company-requests',routes);return a};
 const token=(role:any)=>signAccessToken(actor,role,Math.floor(Date.now()/1000));
@@ -100,7 +100,7 @@ describe('company requests HTTP',()=>{
     mocks.clientQuery.mockResolvedValueOnce({rows:[{id:documentId}]}).mockResolvedValueOnce({rows:[documentRow]});
     const pdf=Buffer.from('%PDF-1.7\n');
     let r=await request(app()).post(`/v1/company-requests/${requestId}/documents`).set(await auth('ADMIN')).field('documentType','AUTHORIZATION_LETTER').attach('file',pdf,{filename:'letter.pdf',contentType:'application/pdf'});
-    expect(r.status).toBe(201);expect(mocks.upload).toHaveBeenCalled();expect(r.body.data).not.toHaveProperty('storagePath');expect(JSON.stringify(mocks.audit.mock.calls)).not.toContain('storagePath');
+    expect(r.status).toBe(201);expect(r.body.data.fileName).toBe('letter.pdf');expect(String(mocks.clientQuery.mock.calls[1][0])).toContain('file_name AS "fileName"');expect(mocks.upload).toHaveBeenCalled();expect(r.body.data).not.toHaveProperty('storagePath');expect(JSON.stringify(mocks.audit.mock.calls)).not.toContain('storagePath');
     r=await request(app()).post(`/v1/company-requests/${requestId}/documents`).set(await auth('ADMIN')).field('documentType','SUPPORTING_DOCUMENT').attach('file',Buffer.from('not-a-pdf'),{filename:'bad.pdf',contentType:'application/pdf'});expect(r.status).toBe(400);
     r=await request(app()).post(`/v1/company-requests/${requestId}/documents`).set(await auth('ADMIN')).field('documentType','SUPPORTING_DOCUMENT').attach('file',Buffer.alloc(5*1024*1024+1),{filename:'large.pdf',contentType:'application/pdf'});expect(r.status).toBe(413);
   });
