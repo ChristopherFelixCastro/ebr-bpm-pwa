@@ -1,10 +1,13 @@
 import {
   Box,
+  Button,
+  Chip,
   Divider,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Typography,
 } from '@mui/material'
 
 import DashboardIcon from '@mui/icons-material/Dashboard'
@@ -15,8 +18,11 @@ import BusinessIcon from '@mui/icons-material/Business'
 import EventNoteIcon from '@mui/icons-material/EventNote'
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import LogoutIcon from '@mui/icons-material/Logout'
+import PersonIcon from '@mui/icons-material/Person'
 
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/useAuth'
 
 const drawerWidth = 260
 
@@ -64,6 +70,14 @@ const menuItems = [
 ]
 
 function CoordinatorLayout() {
+  const { currentUser, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <Box
       sx={{
@@ -80,6 +94,8 @@ function CoordinatorLayout() {
           bgcolor: '#0b2545',
           color: 'white',
           flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <Box sx={{ px: 3, py: 3 }}>
@@ -118,6 +134,7 @@ function CoordinatorLayout() {
           sx={{
             px: 1.5,
             pt: 2,
+            flexGrow: 1,
           }}
         >
           {menuItems.map((item) => (
@@ -165,6 +182,48 @@ function CoordinatorLayout() {
             </ListItemButton>
           ))}
         </List>
+
+        <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.2)' }}>
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+            <PersonIcon sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 20 }} />
+            <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+              <Typography noWrap variant="body2" sx={{ fontWeight: 600, color: 'white' }}>
+                {currentUser?.fullName || 'Coordinador General'}
+              </Typography>
+              <Chip
+                label={currentUser?.roleCode || 'COORDINATOR'}
+                size="small"
+                sx={{
+                  height: 18,
+                  fontSize: '0.65rem',
+                  bgcolor: 'rgba(255,255,255,0.15)',
+                  color: '#bfdbfe',
+                  mt: 0.5,
+                }}
+              />
+            </Box>
+          </Box>
+          <Button
+            fullWidth
+            variant="outlined"
+            size="small"
+            onClick={handleLogout}
+            startIcon={<LogoutIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              color: 'rgba(255,255,255,0.85)',
+              borderColor: 'rgba(255,255,255,0.25)',
+              textTransform: 'none',
+              fontSize: '0.8rem',
+              '&:hover': {
+                borderColor: 'rgba(255,255,255,0.5)',
+                bgcolor: 'rgba(255,255,255,0.05)',
+              },
+            }}
+          >
+            Cerrar Sesión
+          </Button>
+        </Box>
       </Box>
 
       <Box

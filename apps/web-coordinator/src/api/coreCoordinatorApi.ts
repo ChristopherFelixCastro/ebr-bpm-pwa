@@ -144,8 +144,8 @@ export const coreCoordinatorApi = {
           establishmentAddress: (source?.establishmentAddress as string) || 'Dirección registrada',
           priority: mapCorePriorityToCoordinator(item.priority),
           status: mapCoreStatusToCoordinator(item.status),
-          referenceCode: source?.programReference || source?.alertNumber || source?.complaintType || undefined,
-          description: source?.reason || source?.description || source?.productDescription || undefined,
+          referenceCode: (source?.programReference || source?.alertNumber || source?.complaintType) as string | undefined,
+          description: (source?.reason || source?.description || source?.productDescription) as string | undefined,
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
         }
@@ -262,8 +262,11 @@ export const coreCoordinatorApi = {
 
     if (caseRecord.origin === 'ALERTA_LAPCH') {
       const decision = input.decision === 'PROCEDE_EVALUACION' ? 'PROCEEDS' : 'NOT_PROCEEDS'
-      await apiClient.POST('/v1/health-alerts/{caseId}/decide', {
-        params: { path: { caseId: input.caseId } as Record<string, string> },
+      const client = apiClient as unknown as {
+        POST: (url: string, init: Record<string, unknown>) => Promise<{ data?: unknown; error?: unknown; response: Response }>
+      }
+      await client.POST('/v1/health-alerts/{caseId}/decide', {
+        params: { path: { caseId: input.caseId } },
         body: {
           version: 1,
           decision,
@@ -277,8 +280,11 @@ export const coreCoordinatorApi = {
           ? 'REFERRED'
           : 'NOT_PROCEEDS'
 
-      await apiClient.POST('/v1/complaints/{caseId}/decide', {
-        params: { path: { caseId: input.caseId } as Record<string, string> },
+      const client = apiClient as unknown as {
+        POST: (url: string, init: Record<string, unknown>) => Promise<{ data?: unknown; error?: unknown; response: Response }>
+      }
+      await client.POST('/v1/complaints/{caseId}/decide', {
+        params: { path: { caseId: input.caseId } },
         body: {
           version: 1,
           decision,
