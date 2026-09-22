@@ -117,6 +117,49 @@ export const openApiDocument = {
           authTime: { type: 'integer', description: 'Fecha Unix de la autenticación de contraseña.' },
         },
       },
+      User: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['id', 'fullName', 'email', 'phone', 'status', 'version', 'roleCode', 'companyId', 'companyName', 'createdAt', 'updatedAt'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          fullName: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          phone: { type: ['string', 'null'] },
+          status: { type: 'string', enum: ['PENDING_VALIDATION', 'APPROVED', 'REJECTED', 'INACTIVE'] },
+          version: { type: 'integer', minimum: 1 },
+          roleCode: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] },
+          companyId: { type: ['string', 'null'], format: 'uuid' },
+          companyName: { type: ['string', 'null'] },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      UserCreateRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['fullName', 'email', 'password', 'roleCode'],
+        properties: {
+          fullName: { type: 'string', minLength: 1, maxLength: 200 },
+          email: { type: 'string', format: 'email', maxLength: 320 },
+          phone: { type: 'string', minLength: 1, maxLength: 40 },
+          password: { type: 'string', minLength: 12, maxLength: 1024 },
+          roleCode: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] },
+          companyId: { type: 'string', format: 'uuid' },
+        },
+      },
+      UserPatchRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['version'],
+        properties: {
+          version: { type: 'integer', minimum: 1 },
+          fullName: { type: 'string', minLength: 1, maxLength: 200 },
+          phone: { type: ['string', 'null'] },
+          roleCode: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] },
+          companyId: { type: ['string', 'null'], format: 'uuid' },
+        },
+      },
       Company: {
         type: 'object', additionalProperties: false,
         required: ['id', 'legalName', 'tradeName', 'rnc', 'address', 'phone', 'email', 'economicActivityCode', 'status', 'version', 'createdAt', 'updatedAt', 'establishmentCount', 'activeEstablishmentCount'],
@@ -327,16 +370,58 @@ export const openApiDocument = {
       },
     },
     '/v1/users': {
-      get: { tags: ['Users'], summary: 'Listar usuarios', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Lista paginada.' }, '403': errorResponse('Rol no autorizado.') } },
-      post: { tags: ['Users'], summary: 'Crear usuario pendiente', security: [{ bearerAuth: [] }], responses: { '201': { description: 'Usuario creado.' }, '400': errorResponse('Datos inválidos.'), '409': errorResponse('Correo duplicado.') } },
+      get: {
+        tags: ['Users'], summary: 'Listar usuarios', security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string', maxLength: 100 } },
+        ],
+        responses: { '200': successResponse({ type: 'array', items: { $ref: '#/components/schemas/User' } }), '400': errorResponse('Consulta inválida.'), '403': errorResponse('Rol no autorizado.') },
+      },
+      post: {
+        tags: ['Users'], summary: 'Crear usuario pendiente', security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UserCreateRequest' } } } },
+        responses: { '201': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Datos inválidos.'), '409': errorResponse('Correo duplicado.') },
+      },
     },
     '/v1/users/{id}': {
-      get: { tags: ['Users'], summary: 'Consultar usuario', security: [{ bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { '200': { description: 'Usuario.' }, '404': errorResponse('No encontrado.') } },
-      patch: { tags: ['Users'], summary: 'Modificar usuario con versión optimista', security: [{ bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { '200': { description: 'Usuario actualizado.' }, '409': errorResponse('Versión desactualizada.') } },
+      get: {
+        tags: ['Users'], summary: 'Consultar usuario', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Identificador inválido.'), '404': errorResponse('No encontrado.') },
+      },
+      patch: {
+        tags: ['Users'], summary: 'Modificar usuario con versión optimista', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UserPatchRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Modificación inválida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
+      },
     },
-    '/v1/users/{id}/approve': { post: { tags: ['Users'], summary: 'Aprobar usuario', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Usuario aprobado.' } } } },
-    '/v1/users/{id}/reject': { post: { tags: ['Users'], summary: 'Rechazar usuario', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Usuario rechazado.' } } } },
-    '/v1/users/{id}/deactivate': { post: { tags: ['Users'], summary: 'Desactivar usuario y revocar sesiones', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Usuario inactivo.' } } } },
+    '/v1/users/{id}/approve': {
+      post: {
+        tags: ['Users'], summary: 'Aprobar usuario', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
+      },
+    },
+    '/v1/users/{id}/reject': {
+      post: {
+        tags: ['Users'], summary: 'Rechazar usuario', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
+      },
+    },
+    '/v1/users/{id}/deactivate': {
+      post: {
+        tags: ['Users'], summary: 'Desactivar usuario y revocar sesiones', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
+      },
+    },
     '/health/live': { get: { summary: 'Comprobar que el proceso está activo', responses: { '200': successResponse({ type: 'object', properties: { status: { const: 'ok' } } }) } } },
     '/health/ready': { get: { summary: 'Comprobar la conexión con PostgreSQL', responses: { '200': successResponse({ type: 'object', properties: { status: { const: 'ready' } } }), '500': errorResponse('La API no está lista.') } } },
     '/v1/auth/login': {
