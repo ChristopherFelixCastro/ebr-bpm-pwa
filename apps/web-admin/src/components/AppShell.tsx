@@ -5,6 +5,8 @@ import {
   ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography,
 } from '@mui/material'
 import DashboardIcon from '@mui/icons-material/Dashboard'
+import BusinessIcon from '@mui/icons-material/Business'
+import AssignmentIcon from '@mui/icons-material/Assignment'
 import LogoutIcon from '@mui/icons-material/Logout'
 import MenuIcon from '@mui/icons-material/Menu'
 import ShieldIcon from '@mui/icons-material/Shield'
@@ -19,6 +21,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   const { showError, showSuccess } = useNotification()
   const navigate = useNavigate()
   const location = useLocation()
+  const operational = ['ADMIN', 'UNIVERSAL', 'COMPANY_ADMIN'].includes(currentUser?.roleCode ?? '')
 
   const handleLogout = async () => {
     try {
@@ -54,6 +57,18 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
             <ListItemText primary="Inicio" />
           </ListItemButton>
         </ListItem>
+        {operational && <>
+          <ListItem disablePadding sx={{ mt: 0.5 }}>
+            <ListItemButton selected={location.pathname.startsWith('/companies') || location.pathname.startsWith('/establishments')} onClick={() => { navigate('/companies'); setMobileOpen(false) }} sx={{ borderRadius: 2, color: '#FFFFFF', '&.Mui-selected': { bgcolor: 'rgba(255,255,255,.18)' } }}>
+              <ListItemIcon sx={{ minWidth: 38 }}><BusinessIcon sx={{ color: '#FFFFFF' }} /></ListItemIcon><ListItemText primary="Empresas" />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding sx={{ mt: 0.5 }}>
+            <ListItemButton selected={location.pathname.startsWith('/requests')} onClick={() => { navigate('/requests'); setMobileOpen(false) }} sx={{ borderRadius: 2, color: '#FFFFFF', '&.Mui-selected': { bgcolor: 'rgba(255,255,255,.18)' } }}>
+              <ListItemIcon sx={{ minWidth: 38 }}><AssignmentIcon sx={{ color: '#FFFFFF' }} /></ListItemIcon><ListItemText primary="Solicitudes" />
+            </ListItemButton>
+          </ListItem>
+        </>}
       </List>
       <Divider sx={{ borderColor: 'rgba(255,255,255,.15)' }} />
       <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,.15)' }}>

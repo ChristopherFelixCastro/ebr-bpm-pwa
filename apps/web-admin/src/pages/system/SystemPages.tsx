@@ -16,6 +16,7 @@ const CenteredCard = ({ children }: { children: ReactNode }) => (
 
 export const IntegrationPage = () => {
   const { currentUser } = useAuth()
+  const operational = ['ADMIN', 'UNIVERSAL', 'COMPANY_ADMIN'].includes(currentUser?.roleCode ?? '')
   return (
     <Box>
       <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A', mb: 1 }}>Bienvenido, {currentUser?.fullName}</Typography>
@@ -23,8 +24,8 @@ export const IntegrationPage = () => {
       <Card sx={{ maxWidth: 760, borderRadius: 3, border: '1px solid #BFDBFE', boxShadow: 'none' }}>
         <CardContent sx={{ p: 3 }}>
           <ConstructionIcon sx={{ color: '#2563EB', fontSize: 38, mb: 1 }} />
-          <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Módulos operativos en integración</Typography>
-          <Typography sx={{ color: '#475569', mb: 2 }}>Empresas, contactos, solicitudes, documentos y dashboard se habilitarán en entregas posteriores con contratos reales. Esta pantalla no presenta datos simulados.</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>{operational ? 'Módulos operativos disponibles' : 'Módulo en integración'}</Typography>
+          <Typography sx={{ color: '#475569', mb: 2 }}>{operational ? 'Use la navegación para administrar empresas, establecimientos, contactos, solicitudes y documentos mediante contratos reales del Core.' : 'La navegación de delegados permanece deshabilitada hasta disponer de asignación explícita por establecimiento.'}</Typography>
           <Chip label={`Rol: ${currentUser?.roleCode}`} color="primary" variant="outlined" />
           {currentUser?.companyId && <Chip label="Alcance empresarial disponible" color="success" variant="outlined" sx={{ ml: 1 }} />}
         </CardContent>

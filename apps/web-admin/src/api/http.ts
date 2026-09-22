@@ -2,6 +2,7 @@ import createClient from 'openapi-fetch'
 import type { components, paths } from './generated/schema'
 
 type ErrorPayload = components['schemas']['ErrorResponse']
+export type ResponseMeta = { correlationId: string; page?: number; limit?: number; total?: number }
 
 const apiBaseUrl = (
   import.meta.env.VITE_API_BASE_URL
@@ -127,15 +128,31 @@ export const setAccessToken = (token: string) => {
 
 export const restoreAccessToken = () => refreshAccessToken()
 
-export const unwrap = <T>(result: { data?: { data: T }; error?: unknown; response: Response }): T => {
-  if (result.data !== undefined) return result.data.data
+const apiErrorFrom = (payload: Partial<ErrorPayload> | undefined, status: number) => new ApiError(
+  payload?.error?.message ?? 'No fue posible completar la solicitud.',
+  status,
+  payload?.error?.code ?? 'REQUEST_FAILED',
+  payload?.meta?.correlationId,
+)
+
+export const unwrap = <T>(result: { data?: unknown; error?: unknown; response: Response }): T => {
+  if (result.data !== undefined) return (result.data as { data: T }).data
   const payload = result.error as Partial<ErrorPayload> | undefined
-  throw new ApiError(
-    payload?.error?.message ?? 'No fue posible completar la solicitud.',
-    result.response.status,
-    payload?.error?.code ?? 'REQUEST_FAILED',
-    payload?.meta?.correlationId,
-  )
+  throw apiErrorFrom(payload, result.response.status)
+}
+
+export const unwrapPage = <T>(result: { data?: unknown; error?: unknown; response: Response }) => {
+  if (result.data !== undefined) {
+    const envelope = result.data as { data: T[]; meta: ResponseMeta }
+    return envelope
+  }
+  throw apiErrorFrom(result.error as Partial<ErrorPayload> | undefined, result.response.status)
+}
+
+export const parseResponse = async <T>(response: Response): Promise<T> => {
+  const payload = await response.json() as { data?: T; error?: ErrorPayload['error']; meta?: ResponseMeta }
+  if (response.ok && payload.data !== undefined) return payload.data
+  throw apiErrorFrom(payload as Partial<ErrorPayload>, response.status)
 }
 
 export const httpTesting = {

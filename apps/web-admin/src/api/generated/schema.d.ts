@@ -3331,7 +3331,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            data: components["schemas"]["CompanyRequest"];
+                            data: components["schemas"]["CompanyRequestDetail"];
                             meta: {
                                 /** Format: uuid */
                                 correlationId: string;
@@ -3447,12 +3447,20 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Solicitud enviada y caseId creado. */
+                /** @description Operación completada. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["CompanyRequestSubmitResult"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
                 };
                 /** @description Fuera de alcance o rol sin escritura. */
                 403: {
@@ -3516,12 +3524,20 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Contacto vinculado con snapshots obtenidos por el servidor. */
+                /** @description Operación completada. */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["RequestContactLinkResult"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
                 };
                 /** @description Payload inválido. */
                 400: {
@@ -4031,12 +4047,20 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description signedUrl temporal y expiresInSeconds=60. */
+                /** @description Operación completada. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DownloadUrl"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
                 };
                 /** @description Fuera de alcance. */
                 403: {
@@ -4074,19 +4098,31 @@ export interface paths {
         /** Listar contactos en alcance */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    page?: number;
+                    limit?: number;
+                    search?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Lista paginada. */
+                /** @description Operación completada. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Contact"][];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
                 };
                 /** @description Fuera de alcance. */
                 403: {
@@ -4150,7 +4186,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         /**
@@ -4161,7 +4199,9 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    id: string;
+                };
                 cookie?: never;
             };
             requestBody?: never;
@@ -4202,10 +4242,16 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    id: string;
+                };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ContactPatchRequest"];
+                };
+            };
             responses: {
                 /** @description Operación completada. */
                 200: {
@@ -4239,7 +4285,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                companyId: string;
+            };
             cookie?: never;
         };
         /** Listar relaciones de empresa */
@@ -4247,11 +4295,29 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    companyId: string;
+                };
                 cookie?: never;
             };
             requestBody?: never;
-            responses: never;
+            responses: {
+                /** @description Operación completada. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["ContactRelation"][];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+            };
         };
         put?: never;
         /** Vincular contacto reutilizable a empresa */
@@ -4259,7 +4325,9 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    companyId: string;
+                };
                 cookie?: never;
             };
             requestBody: {
@@ -4267,7 +4335,41 @@ export interface paths {
                     "application/json": components["schemas"]["ContactLinkRequest"];
                 };
             };
-            responses: never;
+            responses: {
+                /** @description Operación completada. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["ContactRelation"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Contacto o empresa fuera de alcance. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Relación en conflicto. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
         };
         delete?: never;
         options?: never;
@@ -4279,7 +4381,10 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                companyId: string;
+                relationId: string;
+            };
             cookie?: never;
         };
         get?: never;
@@ -4292,11 +4397,46 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    companyId: string;
+                    relationId: string;
+                };
                 cookie?: never;
             };
-            requestBody?: never;
-            responses: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ContactRelationEndRequest"];
+                };
+            };
+            responses: {
+                /** @description Operación completada. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @constant */
+                                ended: true;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Versión o fecha en conflicto. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
         };
         delete?: never;
         options?: never;
@@ -4308,7 +4448,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                establishmentId: string;
+            };
             cookie?: never;
         };
         /** Listar relaciones de establecimiento */
@@ -4316,11 +4458,29 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    establishmentId: string;
+                };
                 cookie?: never;
             };
             requestBody?: never;
-            responses: never;
+            responses: {
+                /** @description Operación completada. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["ContactRelation"][];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+            };
         };
         put?: never;
         /** Vincular contacto a establecimiento */
@@ -4328,7 +4488,9 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    establishmentId: string;
+                };
                 cookie?: never;
             };
             requestBody: {
@@ -4336,7 +4498,41 @@ export interface paths {
                     "application/json": components["schemas"]["ContactLinkRequest"];
                 };
             };
-            responses: never;
+            responses: {
+                /** @description Operación completada. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["ContactRelation"];
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Contacto o establecimiento fuera de alcance. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Relación en conflicto. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
         };
         delete?: never;
         options?: never;
@@ -4348,7 +4544,10 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                establishmentId: string;
+                relationId: string;
+            };
             cookie?: never;
         };
         get?: never;
@@ -4358,11 +4557,46 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    establishmentId: string;
+                    relationId: string;
+                };
                 cookie?: never;
             };
-            requestBody?: never;
-            responses: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ContactRelationEndRequest"];
+                };
+            };
+            responses: {
+                /** @description Operación completada. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @constant */
+                                ended: true;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                correlationId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Versión o fecha en conflicto. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
         };
         delete?: never;
         options?: never;
@@ -14593,6 +14827,14 @@ export interface components {
             /** Format: email */
             email?: string | null;
         };
+        ContactPatchRequest: {
+            version: number;
+            fullName?: string;
+            identityDocument?: string | null;
+            phone?: string | null;
+            /** Format: email */
+            email?: string | null;
+        };
         ContactLinkRequest: {
             /** Format: uuid */
             contactId?: string;
@@ -14602,6 +14844,28 @@ export interface components {
             isPrimary: boolean;
             /** Format: date */
             effectiveFrom: string;
+        };
+        ContactRelation: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            companyId?: string;
+            /** Format: uuid */
+            establishmentId?: string;
+            /** @enum {string} */
+            relationshipType: "LEGAL_REPRESENTATIVE" | "QUALITY_CONTACT" | "PRIMARY_CONTACT" | "OWNER" | "REPRESENTATIVE";
+            isPrimary: boolean;
+            /** Format: date */
+            effectiveFrom: string;
+            /** Format: date */
+            effectiveTo: string | null;
+            version: number;
+            contact: components["schemas"]["Contact"];
+        };
+        ContactRelationEndRequest: {
+            version: number;
+            /** Format: date */
+            effectiveTo: string;
         };
         CompanyRequest: {
             /** Format: uuid */
@@ -14653,6 +14917,44 @@ export interface components {
             relationshipType: "LEGAL_REPRESENTATIVE" | "QUALITY_CONTACT" | "PRIMARY_CONTACT" | "OWNER" | "REPRESENTATIVE";
             isPrimary: boolean;
         };
+        RequestContactLinkResult: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            contactId: string;
+            /** @enum {string} */
+            relationshipType: "LEGAL_REPRESENTATIVE" | "QUALITY_CONTACT" | "PRIMARY_CONTACT" | "OWNER" | "REPRESENTATIVE";
+            isPrimary: boolean;
+        };
+        RequestContact: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            contactId: string;
+            /** @enum {string} */
+            relationshipType: "LEGAL_REPRESENTATIVE" | "QUALITY_CONTACT" | "PRIMARY_CONTACT" | "OWNER" | "REPRESENTATIVE";
+            fullName: string;
+            phone: string | null;
+            /** Format: email */
+            email: string | null;
+            isPrimary: boolean;
+            /** Format: date-time */
+            removedAt: string | null;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        RequestDocumentSummary: {
+            total: number;
+            pending: number;
+            valid: number;
+            rejected: number;
+            archived: number;
+        };
+        CompanyRequestDetail: components["schemas"]["CompanyRequest"] & {
+            contacts: components["schemas"]["RequestContact"][];
+            documentSummary: components["schemas"]["RequestDocumentSummary"];
+        };
         RequestDocument: {
             /** Format: uuid */
             id: string;
@@ -14660,23 +14962,40 @@ export interface components {
             requestId: string;
             /** @enum {string} */
             documentType: "AUTHORIZATION_LETTER" | "SUPPORTING_DOCUMENT";
+            fileName: string;
             /** @enum {string} */
             mimeType: "application/pdf" | "image/jpeg" | "image/png";
             sizeBytes: number;
             /** @enum {string} */
             status: "PENDING" | "VALID" | "REJECTED" | "ARCHIVED";
             /** Format: date-time */
-            validatedAt?: string | null;
-            /** Format: uuid */
-            validatedByUserId?: string | null;
-            rejectionReason?: string | null;
+            uploadedAt: string;
             /** Format: date-time */
-            archivedAt?: string | null;
+            validatedAt: string | null;
+            /** Format: uuid */
+            validatedByUserId: string | null;
+            rejectionReason: string | null;
+            /** Format: date-time */
+            archivedAt: string | null;
             version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         DocumentDecision: {
             version: number;
             reason?: string;
+        };
+        CompanyRequestSubmitResult: {
+            request: components["schemas"]["CompanyRequest"];
+            /** Format: uuid */
+            caseId: string;
+        };
+        DownloadUrl: {
+            /** Format: uri */
+            signedUrl: string;
+            expiresInSeconds: number;
         };
         IntakeOrganization: {
             /** Format: uuid */

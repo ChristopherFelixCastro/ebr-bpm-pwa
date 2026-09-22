@@ -5,12 +5,20 @@ import { CssBaseline, ThemeProvider } from '@mui/material'
 import { AppShell } from './components/AppShell'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
+import { ReauthenticationProvider } from './context/ReauthenticationContext'
 import { LoginPage } from './pages/auth/LoginPage'
+import { CompanyDetailPage } from './pages/companies/CompanyDetailPage'
+import { CompanyListPage } from './pages/companies/CompanyListPage'
+import { EstablishmentDetailPage } from './pages/companies/EstablishmentDetailPage'
+import { RequestDetailPage } from './pages/requests/RequestDetailPage'
+import { RequestFormPage } from './pages/requests/RequestFormPage'
+import { RequestListPage } from './pages/requests/RequestListPage'
 import { ForbiddenPage, IntegrationPage, NotFoundPage, UnavailablePage } from './pages/system/SystemPages'
-import { portalRoles, resolveRouteAccess } from './routes/access'
+import { operationalRoles, portalRoles, resolveRouteAccess } from './routes/access'
+import type { RoleCode } from './api/auth'
 import { theme } from './theme/muiTheme'
 
-const ProtectedRoute = ({ children, allowedRoles }: { children: ReactNode; allowedRoles: typeof portalRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles }: { children: ReactNode; allowedRoles: readonly RoleCode[] }) => {
   const { currentUser, isLoading } = useAuth()
   const access = resolveRouteAccess(isLoading, currentUser?.roleCode ?? null, allowedRoles)
 
@@ -33,18 +41,27 @@ export const App = () => (
     <CssBaseline />
     <NotificationProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
+        <ReauthenticationProvider>
+          <BrowserRouter>
+            <Routes>
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<UnavailablePage title="Registro público" />} />
             <Route path="/forgot-password" element={<UnavailablePage title="Recuperación de contraseña" />} />
             <Route path="/dashboard" element={<ProtectedRoute allowedRoles={portalRoles}><IntegrationPage /></ProtectedRoute>} />
+            <Route path="/companies" element={<ProtectedRoute allowedRoles={operationalRoles}><CompanyListPage /></ProtectedRoute>} />
+            <Route path="/companies/:id" element={<ProtectedRoute allowedRoles={operationalRoles}><CompanyDetailPage /></ProtectedRoute>} />
+            <Route path="/establishments/:id" element={<ProtectedRoute allowedRoles={operationalRoles}><EstablishmentDetailPage /></ProtectedRoute>} />
+            <Route path="/requests" element={<ProtectedRoute allowedRoles={operationalRoles}><RequestListPage /></ProtectedRoute>} />
+            <Route path="/requests/new" element={<ProtectedRoute allowedRoles={operationalRoles}><RequestFormPage /></ProtectedRoute>} />
+            <Route path="/requests/:id/edit" element={<ProtectedRoute allowedRoles={operationalRoles}><RequestFormPage /></ProtectedRoute>} />
+            <Route path="/requests/:id" element={<ProtectedRoute allowedRoles={operationalRoles}><RequestDetailPage /></ProtectedRoute>} />
             <Route path="/403" element={<ForbiddenPage />} />
             <Route path="/404" element={<NotFoundPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </ReauthenticationProvider>
       </AuthProvider>
     </NotificationProvider>
   </ThemeProvider>
