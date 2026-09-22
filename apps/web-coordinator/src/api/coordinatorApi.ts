@@ -21,9 +21,14 @@ import type {
   ScheduleHistory,
   ScheduleInspectionInput,
 } from './types'
+import { hasAccessToken } from './http'
+import { coreCoordinatorApi } from './coreCoordinatorApi'
 
 const delay = (ms = 250) =>
   new Promise((resolve) => setTimeout(resolve, ms))
+
+const shouldUseCoreApi = () =>
+  hasAccessToken() && !import.meta.env.VITE_USE_MOCK
 
 let cases: CoordinatorCase[] = [...MOCK_CASES]
 
@@ -265,6 +270,10 @@ export const coordinatorApi = {
   async getCases(): Promise<
     CoordinatorCase[]
   > {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.getCases()
+    }
+
     await delay()
 
     return [...cases]
@@ -273,6 +282,10 @@ export const coordinatorApi = {
   async createCase(
     input: CreateCaseInput,
   ): Promise<CoordinatorCase> {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.createCase(input)
+    }
+
     await delay()
 
     if (!input.companyName.trim()) {
@@ -330,6 +343,10 @@ export const coordinatorApi = {
   ): Promise<
     CoordinatorCase | undefined
   > {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.getCaseById(id)
+    }
+
     await delay()
 
     return cases.find(
@@ -373,6 +390,10 @@ export const coordinatorApi = {
   async registerCaseDecision(
     input: CaseDecisionInput,
   ): Promise<CoordinatorCase> {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.registerCaseDecision(input)
+    }
+
     await delay()
 
     const caseIndex =
@@ -463,6 +484,10 @@ export const coordinatorApi = {
   async getEvaluators(): Promise<
     Evaluator[]
   > {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.getEvaluators()
+    }
+
     await delay()
 
     return [...MOCK_EVALUATORS]
@@ -471,6 +496,10 @@ export const coordinatorApi = {
   async getInspections(): Promise<
     Inspection[]
   > {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.getInspections()
+    }
+
     await delay()
 
     return [...inspections]
@@ -493,6 +522,11 @@ export const coordinatorApi = {
   async getSchedulableCases(): Promise<
     CoordinatorCase[]
   > {
+    if (shouldUseCoreApi()) {
+      const allCases = await coreCoordinatorApi.getCases()
+      return allCases.filter((item) => item.status === 'PROCEDE_EVALUACION')
+    }
+
     await delay()
 
     return cases.filter(
@@ -521,6 +555,10 @@ export const coordinatorApi = {
   async scheduleInspection(
     input: ScheduleInspectionInput,
   ): Promise<Inspection> {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.scheduleInspection(input)
+    }
+
     await delay()
 
     const caseData = cases.find(
@@ -685,6 +723,10 @@ export const coordinatorApi = {
   async rescheduleInspection(
     input: RescheduleInspectionInput,
   ): Promise<Inspection> {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.rescheduleInspection(input)
+    }
+
     await delay()
 
     const inspection =
@@ -815,6 +857,10 @@ export const coordinatorApi = {
   async cancelInspection(
     input: CancelInspectionInput,
   ): Promise<Inspection> {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.cancelInspection(input)
+    }
+
     await delay()
 
     const inspection =
@@ -872,10 +918,8 @@ export const coordinatorApi = {
         inspectionId:
           input.inspectionId,
         action: 'CANCELACION',
-        previousScheduledAt:
-          inspection.scheduledAt,
-        previousScheduledEndAt:
-          inspection.scheduledEndAt,
+        previousScheduledAt: inspection.scheduledAt,
+        previousScheduledEndAt: inspection.scheduledEndAt,
         reason:
           input.reason.trim(),
         conflictAcknowledged: false,
@@ -937,6 +981,10 @@ export const coordinatorApi = {
   async updateAssignment(
     input: AssignInspectionInput,
   ): Promise<Inspection> {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.updateAssignment(input)
+    }
+
     await delay()
 
     const inspection =
@@ -1066,6 +1114,10 @@ export const coordinatorApi = {
   async getDashboard(): Promise<
     DashboardSummary
   > {
+    if (shouldUseCoreApi()) {
+      return coreCoordinatorApi.getDashboard()
+    }
+
     await delay()
 
     const pendingCases =
