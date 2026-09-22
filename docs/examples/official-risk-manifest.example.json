@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "importType": "RISK",
+  "catalog": {
+    "code": "FOOD_RISK_OFFICIAL",
+    "name": "Matriz oficial de riesgo de alimentos"
+  },
+  "riskRuleSet": {
+    "code": "RISK_RULES_OFFICIAL",
+    "name": "Reglas oficiales de categorización y frecuencia"
+  },
+  "matrix": {
+    "logicalName": "foodMatrix",
+    "path": "../../sources/food-risk-matrix.xlsx",
+    "sheet": "Categorización_de_alimentos"
+  },
+  "rules": {
+    "logicalName": "riskRules",
+    "path": "../../sources/risk-frequency-form.xlsx",
+    "sheet": "Frecuencia Inspección"
+  },
+  "factorOptionColumn": "AO",
+  "factorOptionRanges": [
+    { "factorCode": "VOLUME", "startRow": 19, "endRow": 22 },
+    { "factorCode": "HACCP", "startRow": 23, "endRow": 26 },
+    { "factorCode": "BPM", "startRow": 27, "endRow": 29 },
+    { "factorCode": "INABIE", "startRow": 30, "endRow": 33 },
+    { "factorCode": "REJECTIONS", "startRow": 34, "endRow": 37 },
+    { "factorCode": "SAMPLING", "startRow": 38, "endRow": 41 }
+  ],
+  "standaloneCategoryLeaves": [
+    {
+      "sourceRow": 102,
+      "expectedCategory": "Alimentos preparados",
+      "subcategory": "Alimentos preparados",
+      "expectedRisk": "BAJO",
+      "expectedScore": 1
+    }
+  ],
+  "additionalFactorOptions": [
+    {
+      "factorCode": "BPM",
+      "label": "96% - 100%",
+      "score": 1,
+      "code": "LOW"
+    }
+  ]
+}

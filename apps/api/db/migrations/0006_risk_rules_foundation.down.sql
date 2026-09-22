@@ -1,0 +1,13 @@
+DROP TABLE IF EXISTS inspection_frequency_ranges;
+DROP TABLE IF EXISTS food_risk_subcategories;
+DROP TABLE IF EXISTS food_risk_categories;
+DROP TABLE IF EXISTS risk_factor_options;
+DROP TABLE IF EXISTS risk_factors;
+ALTER TABLE risk_rule_sets DROP CONSTRAINT IF EXISTS risk_rule_sets_current_fk;
+DROP TABLE IF EXISTS risk_rule_versions;
+DROP TABLE IF EXISTS risk_rule_sets;
+DROP FUNCTION IF EXISTS risk_child_guard();
+DROP FUNCTION IF EXISTS risk_version_guard();
+DROP TYPE IF EXISTS inspection_frequency;
+DROP TYPE IF EXISTS microbiological_risk;
+DROP TYPE IF EXISTS risk_rule_status;

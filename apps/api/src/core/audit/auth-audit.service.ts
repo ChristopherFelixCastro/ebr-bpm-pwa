@@ -1,0 +1,3 @@
+import type { PoolClient } from 'pg'; import { query } from '../../db/client.js'; import type { AuthAuditAction } from './auth-events.js';
+type Outcome='SUCCESS'|'FAILURE'|'DENIED';
+export async function writeAuthAudit(input:{action:AuthAuditAction;outcome:Outcome;correlationId:string;userId?:string;client?:PoolClient}){const run=input.client?input.client.query.bind(input.client):query;await run('INSERT INTO audit_events(actor_user_id,actor_type,correlation_id,action,outcome,source,metadata) VALUES($1,$2,$3,$4,$5,\'HTTP\',\'{}\'::jsonb)',[input.userId??null,input.userId?'USER':'SYSTEM',input.correlationId,input.action,input.outcome])}

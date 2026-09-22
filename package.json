@@ -3,10 +3,56 @@
   "version": "0.1.0",
   "private": true,
   "description": "Sistema PWA de Evaluacion Basada en Riesgo y BPM",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "validate": "node --version",
-    "test": "npm run validate"
+    "test": "npm run validate",
+    "db:migrate": "npm run db:migrate --workspace @ebr-bpm/api",
+    "db:verify": "npm run db:verify --workspace @ebr-bpm/api",
+    "db:seed": "npm run db:seed --workspace @ebr-bpm/api --",
+    "db:test:constraints": "npm run db:test:constraints --workspace @ebr-bpm/api",
+    "db:test:audit": "npm run db:test:audit --workspace @ebr-bpm/api",
+    "db:test:catalog": "npm run db:test:catalog --workspace @ebr-bpm/api",
+    "db:test:bpm": "npm run db:test:bpm --workspace @ebr-bpm/api",
+    "db:test:risk": "npm run db:test:risk --workspace @ebr-bpm/api",
+    "db:test:requests": "npm run db:test:requests --workspace @ebr-bpm/api",
+    "db:test:assignments": "npm run db:test:assignments --workspace @ebr-bpm/api",
+    "db:test:inspections": "npm run db:test:inspections --workspace @ebr-bpm/api",
+    "db:test:calculations": "npm run db:test:calculations --workspace @ebr-bpm/api",
+    "db:test:reviews": "npm run db:test:reviews --workspace @ebr-bpm/api",
+    "db:test:clean": "npm run db:test:clean --workspace @ebr-bpm/api",
+    "db:test:identity-scope": "npm run db:test:identity-scope --workspace @ebr-bpm/api",
+    "db:test:organization-status": "npm run db:test:organization-status --workspace @ebr-bpm/api",
+    "db:test:universal-guard": "npm run db:test:universal-guard --workspace @ebr-bpm/api",
+    "db:test:company-requests-guards": "npm run db:test:company-requests-guards --workspace @ebr-bpm/api",
+    "db:test:company-request-integrity": "npm run db:test:company-request-integrity --workspace @ebr-bpm/api",
+    "db:test:intake-cases": "npm run db:test:intake-cases --workspace @ebr-bpm/api",
+    "db:test:intake-decision-integrity": "npm run db:test:intake-decision-integrity --workspace @ebr-bpm/api",
+    "db:test:assignment-scheduling-api": "npm run db:test:assignment-scheduling-api --workspace @ebr-bpm/api",
+    "db:test:assignment-closure-compatibility": "npm run db:test:assignment-closure-compatibility --workspace @ebr-bpm/api",
+    "db:test:inspection-execution-calculations": "npm run db:test:inspection-execution-calculations --workspace @ebr-bpm/api",
+    "db:test:reviews-reports-closure-api": "npm run db:test:reviews-reports-closure-api --workspace @ebr-bpm/api",
+    "db:test:versioned-definitions-admin": "npm run db:test:versioned-definitions-admin --workspace @ebr-bpm/api",
+    "db:test:default-versioned-definitions": "npm run db:test:default-versioned-definitions --workspace @ebr-bpm/api",
+    "db:test:official-imports": "npm run db:test:official-imports --workspace @ebr-bpm/api",
+    "db:test:bpm-guidance": "npm run db:test:bpm-guidance --workspace @ebr-bpm/api",
+    "import:official:bpm": "npm run import:official:bpm --workspace @ebr-bpm/api --",
+    "import:official:risk": "npm run import:official:risk --workspace @ebr-bpm/api --",
+    "bootstrap:universal": "npm run bootstrap:universal --workspace @ebr-bpm/api --"
   },
-  "engines": {"node": ">=20"}
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.2.2",
+    "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "argon2": "^0.45.1",
+    "jose": "^6.2.12"
+  }
 }

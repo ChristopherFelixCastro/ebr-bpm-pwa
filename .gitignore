@@ -29,6 +29,7 @@ Thumbs.db
 *.sqlite3
 .cache/
 uploads/
+postgres-data/
 
 # Generated reports
 reports/

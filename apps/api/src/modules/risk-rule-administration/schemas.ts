@@ -1,0 +1,23 @@
+import { z } from 'zod';
+
+export const uuid=z.string().uuid();
+const text=(n:number)=>z.string().trim().min(1).max(n);
+const nullable=(n:number)=>z.string().trim().max(n).nullable().optional();
+const version=z.number().int().positive();
+export const createSetSchema=z.object({code:text(80).transform(x=>x.toUpperCase()),name:text(200)}).strict();
+export const createVersionSchema=z.object({cloneFromVersionId:uuid.optional()}).strict();
+export const publishSchema=z.object({version,effectiveFrom:z.string().datetime({offset:true}),publicationNote:nullable(2000)}).strict();
+export const retireSchema=z.object({version}).strict();
+export const factorCreateSchema=z.object({code:z.enum(['VOLUME','HACCP','BPM','INABIE','REJECTIONS','SAMPLING']),name:text(160),weight:z.number().positive().max(1),sortOrder:z.number().int().min(0)}).strict();
+export const factorPatchSchema=factorCreateSchema.partial().extend({version}).strict();
+export const optionCreateSchema=z.object({code:text(80).transform(x=>x.toUpperCase()),label:text(300),score:z.union([z.literal(1),z.literal(1.67),z.literal(2.33),z.literal(3)]),sortOrder:z.number().int().min(0)}).strict();
+export const optionPatchSchema=optionCreateSchema.partial().extend({version}).strict();
+export const categoryCreateSchema=z.object({code:text(120).transform(x=>x.toUpperCase()),name:text(300),sortOrder:z.number().int().min(0),sourceFile:nullable(300),sourceSheet:nullable(160),sourceRowNumber:z.number().int().positive().nullable().optional()}).strict();
+export const categoryPatchSchema=categoryCreateSchema.partial().extend({version}).strict();
+const subcategoryBase=z.object({name:text(700),microbiologicalRisk:z.enum(['LOW','MEDIUM','HIGH']).nullable(),riskScore:z.union([z.literal(1),z.literal(2),z.literal(3)]).nullable(),sortOrder:z.number().int().min(0),sourceFile:nullable(300),sourceSheet:nullable(160),sourceRowNumber:z.number().int().positive().nullable().optional()}).strict();
+export const subcategoryCreateSchema=subcategoryBase.refine(x=>(x.microbiologicalRisk===null)===(x.riskScore===null));
+export const subcategoryPatchSchema=subcategoryBase.partial().extend({version}).strict().refine(x=>!((x.microbiologicalRisk===null)!==(x.riskScore===null)&&x.microbiologicalRisk!==undefined&&x.riskScore!==undefined));
+export const rangeCreateSchema=z.object({lowerBound:z.number().min(0),upperBound:z.number().positive().nullable(),lowerInclusive:z.boolean(),upperInclusive:z.boolean(),frequency:z.enum(['ANNUAL','SEMIANNUAL','QUARTERLY']),label:text(100),sortOrder:z.number().int().min(0)}).strict();
+export const rangePatchSchema=rangeCreateSchema.partial().extend({version}).strict();
+export const deleteSchema=z.object({version:z.coerce.number().int().positive()}).strict();
+export const moveSchema=z.object({version,sortOrder:z.number().int().min(0)}).strict();

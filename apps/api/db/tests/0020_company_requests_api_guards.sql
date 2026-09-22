@@ -1,0 +1,26 @@
+DO $$
+DECLARE test_role_id uuid; test_user_id uuid; test_company_id uuid; test_establishment_id uuid; test_request_id uuid; test_contact_id uuid; test_doc_id uuid; i integer;
+BEGIN
+ SELECT id INTO test_role_id FROM roles WHERE code='ADMIN'; INSERT INTO users(role_id,full_name,email,password_hash,status) VALUES(test_role_id,'Requests Guard','requests.guard@example.test','hash','APPROVED') RETURNING id INTO test_user_id;
+ INSERT INTO companies(legal_name,rnc) VALUES('Requests Guard Company','999002000') RETURNING id INTO test_company_id; INSERT INTO establishments(company_id,name) VALUES(test_company_id,'Requests Guard Plant') RETURNING id INTO test_establishment_id;
+ INSERT INTO contacts(full_name) VALUES('Requests Guard Contact') RETURNING id INTO test_contact_id;
+ INSERT INTO company_requests(company_id,establishment_id,request_type,reason,created_by_user_id) VALUES(test_company_id,test_establishment_id,'REGISTRATION','Reason',test_user_id) RETURNING id INTO test_request_id;
+ FOR i IN 1..10 LOOP INSERT INTO request_documents(request_id,document_type,storage_path,file_name,mime_type,size_bytes) VALUES(test_request_id,'SUPPORTING_DOCUMENT','request-document/00000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-'||lpad(i::text,12,'0')||'.pdf','a.pdf','application/pdf',10); END LOOP;
+ BEGIN INSERT INTO request_documents(request_id,document_type,storage_path,file_name,mime_type,size_bytes) VALUES(test_request_id,'SUPPORTING_DOCUMENT','request-document/00000000-0000-4000-8000-000000000001/10000000-0000-4000-8000-000000000001.pdf','a.pdf','application/pdf',10); RAISE EXCEPTION 'eleventh active document accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
+ UPDATE request_documents SET status='REJECTED',validated_at=clock_timestamp(),validated_by_user_id=test_user_id,rejection_reason='Rejected for capacity test' WHERE id=(SELECT rd.id FROM request_documents rd WHERE rd.request_id=test_request_id AND rd.status='PENDING' LIMIT 1);
+ UPDATE request_documents SET status='ARCHIVED',archived_at=clock_timestamp(),archived_by_user_id=test_user_id,deleted_at=clock_timestamp() WHERE id=(SELECT rd.id FROM request_documents rd WHERE rd.request_id=test_request_id AND rd.status='REJECTED' LIMIT 1);
+ INSERT INTO request_documents(request_id,document_type,storage_path,file_name,mime_type,size_bytes) VALUES(test_request_id,'AUTHORIZATION_LETTER','request-document/00000000-0000-4000-8000-000000000001/20000000-0000-4000-8000-000000000001.pdf','letter.pdf','application/pdf',10) RETURNING id INTO test_doc_id;
+ UPDATE request_documents SET status='REJECTED',validated_at=clock_timestamp(),validated_by_user_id=test_user_id,rejection_reason='Rejected for uniqueness test' WHERE id=(SELECT rd.id FROM request_documents rd WHERE rd.request_id=test_request_id AND rd.status='PENDING' AND rd.document_type='SUPPORTING_DOCUMENT' LIMIT 1);
+ UPDATE request_documents SET status='ARCHIVED',archived_at=clock_timestamp(),archived_by_user_id=test_user_id,deleted_at=clock_timestamp() WHERE id=(SELECT rd.id FROM request_documents rd WHERE rd.request_id=test_request_id AND rd.status='REJECTED' LIMIT 1);
+ BEGIN INSERT INTO request_documents(request_id,document_type,storage_path,file_name,mime_type,size_bytes) VALUES(test_request_id,'AUTHORIZATION_LETTER','request-document/00000000-0000-4000-8000-000000000001/30000000-0000-4000-8000-000000000001.pdf','letter2.pdf','application/pdf',10); RAISE EXCEPTION 'second active letter accepted'; EXCEPTION WHEN unique_violation THEN NULL; END;
+ BEGIN UPDATE request_documents SET status='VALID' WHERE id=test_doc_id; RAISE EXCEPTION 'invalid VALID state accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
+ UPDATE request_documents SET status='VALID',validated_at=clock_timestamp(),validated_by_user_id=test_user_id WHERE id=test_doc_id;
+ INSERT INTO request_contacts(request_id,contact_id,relationship_type,full_name_snapshot,is_primary) VALUES(test_request_id,test_contact_id,'PRIMARY_CONTACT','Snapshot',true);
+ UPDATE request_contacts SET removed_at=clock_timestamp(),removed_by_user_id=test_user_id WHERE request_id=test_request_id AND contact_id=test_contact_id;
+ INSERT INTO request_contacts(request_id,contact_id,relationship_type,full_name_snapshot,is_primary) VALUES(test_request_id,test_contact_id,'PRIMARY_CONTACT','Snapshot',true);
+ UPDATE company_requests SET status='PENDING_ASSIGNMENT',submitted_at=clock_timestamp() WHERE id=test_request_id;
+ INSERT INTO cases(origin,request_id,company_id,establishment_id,priority,status) VALUES('COMPANY_REQUEST',test_request_id,test_company_id,test_establishment_id,'MEDIUM','PENDING_ASSIGNMENT'); SET CONSTRAINTS ALL IMMEDIATE; SET CONSTRAINTS ALL DEFERRED;
+ BEGIN UPDATE company_requests SET reason='Changed' WHERE id=test_request_id; RAISE EXCEPTION 'submitted request changed'; EXCEPTION WHEN object_not_in_prerequisite_state THEN NULL; END;
+ BEGIN INSERT INTO request_contacts(request_id,contact_id,relationship_type,full_name_snapshot) VALUES(test_request_id,test_contact_id,'OWNER','X'); RAISE EXCEPTION 'submitted contact added'; EXCEPTION WHEN object_not_in_prerequisite_state THEN NULL; END;
+ BEGIN UPDATE request_documents SET file_name='x.pdf' WHERE id=test_doc_id; RAISE EXCEPTION 'submitted document changed'; EXCEPTION WHEN object_not_in_prerequisite_state THEN NULL; END;
+END $$;

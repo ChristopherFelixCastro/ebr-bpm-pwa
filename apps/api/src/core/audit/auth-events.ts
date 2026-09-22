@@ -1,0 +1,1 @@
+export const authAuditActions=['AUTH_LOGIN_SUCCEEDED','AUTH_LOGIN_FAILED','AUTH_LOGOUT','AUTH_REFRESH_SUCCEEDED','AUTH_REFRESH_REJECTED','AUTH_REAUTHENTICATED','AUTH_FORBIDDEN'] as const; export type AuthAuditAction=typeof authAuditActions[number];
