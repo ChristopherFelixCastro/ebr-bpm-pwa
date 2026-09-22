@@ -38,3 +38,19 @@ docs/
 ## Inicio local
 
 La configuracion inicial de cada aplicacion se documentara en su carpeta. Antes de ejecutar cualquier servicio, copie el archivo de ejemplo de variables de entorno correspondiente y complete solo sus valores locales.
+
+## Rama de integración del MVP
+
+La rama `integration/mvp-demo` reúne temporalmente el Core y los módulos demostrables sin sustituir el flujo de pull requests hacia `main`.
+
+```bash
+npm install --ignore-scripts
+npm run validate
+npm run demo:field        # PWA de campo: http://127.0.0.1:5173
+npm run demo:coordinator  # Coordinación:  http://127.0.0.1:5174
+npm run demo:analytics    # Analítica:     http://127.0.0.1:5175/demo
+```
+
+Los clientes todavía operan con servicios de demostración aislados. La integración real con autenticación, OpenAPI y PostgreSQL se hará después de estabilizar los workspaces y preservar un recorrido ejecutable para la presentación.
+
+`npm run validate` no requiere base de datos. Para comprobar también las pruebas de integración del Core, configure PostgreSQL y ejecute `npm run test:api:db`.

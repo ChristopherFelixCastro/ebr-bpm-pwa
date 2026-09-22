@@ -1,0 +1,150 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #24333b;
+  background: #edf4f4;
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(14, 116, 144, 0.1), transparent 34rem),
+    #edf4f4;
+}
+
+#root {
+  width: min(100%, 960px);
+  min-height: 100vh;
+  margin: 0 auto;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(27, 62, 68, 0.06), 0 18px 48px rgba(25, 55, 60, 0.12);
+}
+
+h1,
+h2,
+h3 {
+  color: #17313a;
+  line-height: 1.2;
+}
+
+h2 {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.55rem, 4vw, 2.1rem);
+  letter-spacing: -0.025em;
+}
+
+h3 {
+  margin-bottom: 0.85rem;
+  padding-left: 0.75rem;
+  border-left: 4px solid #0f7c86;
+  font-size: 1.08rem;
+}
+
+p {
+  line-height: 1.55;
+}
+
+a {
+  color: #08737d;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  min-height: 40px;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #0d6972;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #0d6972;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+button:hover:not(:disabled) {
+  background: #095861;
+  box-shadow: 0 5px 14px rgba(13, 105, 114, 0.2);
+  transform: translateY(-1px);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(14, 165, 174, 0.3);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+input,
+textarea {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #b9c9cc;
+  border-radius: 8px;
+  color: #24333b;
+  background: #ffffff;
+}
+
+textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+input[type="file"] {
+  width: 100%;
+  padding: 0.45rem;
+  background: #f5f9f9;
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.5rem 0.7rem;
+  border: 0;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #48666c;
+  font-weight: 700;
+}
+
+form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  body {
+    background: #ffffff;
+  }
+
+  #root {
+    box-shadow: none;
+  }
+
+  button {
+    min-height: 44px;
+  }
+}

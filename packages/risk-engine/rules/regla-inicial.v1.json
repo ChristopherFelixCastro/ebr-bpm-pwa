@@ -1,0 +1,106 @@
+{
+  "id": "regla-riesgo-v1",
+  "version": "1",
+  "status": "PUBLICADA",
+  "name": "Categorización del establecimiento y frecuencia de inspección — versión inicial",
+  "bpmAnswerPoints": { "C": "1", "CP": "0.5", "IT": "0" },
+  "productRiskPoints": { "BAJO": "1", "MEDIO": "2", "ALTO": "3" },
+  "display": { "percentageDecimals": 2, "riskDecimals": 4 },
+  "factors": [
+    {
+      "code": "VOLUMEN_PRODUCCION",
+      "name": "Volumen de producción por mes",
+      "weight": "0.16",
+      "kind": "RANGO",
+      "unit": "unidades por mes",
+      "bands": [
+        { "code": "MICRO", "label": "Micro (menos de 200,000)", "points": "1",
+          "range": { "min": "0", "minInclusive": true, "max": "200000", "maxInclusive": false } },
+        { "code": "PEQUENO", "label": "Pequeño (de 200,000 a menos de 800,000)", "points": "1.67",
+          "range": { "min": "200000", "minInclusive": true, "max": "800000", "maxInclusive": false } },
+        { "code": "MEDIANO", "label": "Mediano (de 800,000 a 2,000,000)", "points": "2.33",
+          "range": { "min": "800000", "minInclusive": true, "max": "2000000", "maxInclusive": true } },
+        { "code": "GRANDE", "label": "Grande (más de 2,000,000)", "points": "3",
+          "range": { "min": "2000000", "minInclusive": false, "max": null, "maxInclusive": false } }
+      ]
+    },
+    {
+      "code": "HACCP",
+      "name": "Implementación HACCP",
+      "weight": "0.09",
+      "kind": "OPCION",
+      "options": [
+        { "code": "TODAS_LAS_LINEAS", "label": "Implementado en todas las líneas", "points": "1" },
+        { "code": "LINEAS_75", "label": "Implementado en el 75 % de las líneas", "points": "1.67" },
+        { "code": "LINEAS_25", "label": "Implementado en el 25 % de las líneas", "points": "2.33" },
+        { "code": "NO_IMPLEMENTADO", "label": "No implementado", "points": "3" }
+      ]
+    },
+    {
+      "code": "CUMPLIMIENTO_BPM",
+      "name": "Cumplimiento BPM",
+      "weight": "0.56",
+      "kind": "RANGO",
+      "unit": "%",
+      "bands": [
+        { "code": "HASTA_60", "label": "60 % o menos", "points": "3",
+          "range": { "min": "0", "minInclusive": true, "max": "60", "maxInclusive": true } },
+        { "code": "DE_60_A_70", "label": "Más de 60 % hasta 70 %", "points": "2.33",
+          "range": { "min": "60", "minInclusive": false, "max": "70", "maxInclusive": true } },
+        { "code": "DE_70_A_80", "label": "Más de 70 % hasta 80 %", "points": "1.67",
+          "range": { "min": "70", "minInclusive": false, "max": "80", "maxInclusive": true } },
+        { "code": "MAS_DE_80", "label": "Más de 80 %", "points": "1",
+          "range": { "min": "80", "minInclusive": false, "max": null, "maxInclusive": false } }
+      ]
+    },
+    {
+      "code": "PROVEEDOR_INABIE",
+      "name": "Proveedor del INABIE",
+      "weight": "0.05",
+      "kind": "OPCION",
+      "options": [
+        { "code": "NO_SUPLIDOR", "label": "No es suplidor", "points": "1" },
+        { "code": "LOCAL", "label": "Suplidor local", "points": "1.67" },
+        { "code": "REGIONAL", "label": "Suplidor regional", "points": "2.33" },
+        { "code": "NACIONAL", "label": "Suplidor nacional", "points": "3" }
+      ]
+    },
+    {
+      "code": "RECHAZOS_SANITARIOS",
+      "name": "Rechazos sanitarios por incumplimiento microbiológico (últimos 5 años)",
+      "weight": "0.06",
+      "kind": "RANGO",
+      "integerOnly": true,
+      "bands": [
+        { "code": "NINGUNO", "label": "Ninguno", "points": "1",
+          "range": { "min": "0", "minInclusive": true, "max": "1", "maxInclusive": false } },
+        { "code": "UNO", "label": "Uno", "points": "1.67",
+          "range": { "min": "1", "minInclusive": true, "max": "2", "maxInclusive": false } },
+        { "code": "DOS", "label": "Dos", "points": "2.33",
+          "range": { "min": "2", "minInclusive": true, "max": "3", "maxInclusive": false } },
+        { "code": "MAS_DE_DOS", "label": "Más de dos", "points": "3",
+          "range": { "min": "3", "minInclusive": true, "max": null, "maxInclusive": false } }
+      ]
+    },
+    {
+      "code": "PLAN_MUESTREO",
+      "name": "Plan de muestreo y análisis microbiológico",
+      "weight": "0.08",
+      "kind": "OPCION",
+      "options": [
+        { "code": "COMPLETO", "label": "Completo: materias primas, proceso y producto terminado", "points": "1" },
+        { "code": "PROCESO_Y_PRODUCTO_TERMINADO", "label": "Áreas de proceso y producto terminado", "points": "1.67" },
+        { "code": "MATERIAS_PRIMAS", "label": "Solo materias primas", "points": "2.33" },
+        { "code": "INEXISTENTE", "label": "No tiene plan de muestreo", "points": "3" }
+      ]
+    }
+  ],
+  "frequencyRanges": [
+    { "level": "BAJO", "frequency": "ANUAL", "months": 12,
+      "range": { "min": "1", "minInclusive": true, "max": "3.6", "maxInclusive": true } },
+    { "level": "MEDIO", "frequency": "SEMESTRAL", "months": 6,
+      "range": { "min": "3.6", "minInclusive": false, "max": "6.3", "maxInclusive": true } },
+    { "level": "ALTO", "frequency": "TRIMESTRAL", "months": 3,
+      "range": { "min": "6.3", "minInclusive": false, "max": null, "maxInclusive": false } }
+  ]
+}

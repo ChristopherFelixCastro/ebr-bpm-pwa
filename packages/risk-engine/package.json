@@ -1,0 +1,35 @@
+{
+  "name": "@ebr-bpm/risk-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Motor de cálculo EBR/BPM: cumplimiento BPM, riesgo del producto, riesgo del establecimiento y frecuencia de inspección",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./rules/*": "./rules/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "rules"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:dist": "node scripts/check-dist.mjs",
+    "validate": "npm run typecheck && npm run test && npm run build && npm run check:dist"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}

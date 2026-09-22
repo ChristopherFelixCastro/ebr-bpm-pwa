@@ -8,8 +8,16 @@
     "packages/*"
   ],
   "scripts": {
-    "validate": "node --version",
+    "build:shared": "npm run build -w @ebr-bpm/risk-engine && npm run build -w @ebr-bpm/report-engine",
+    "validate": "npm run build:shared && npm run test:shared && npm run typecheck -w @ebr-bpm/api && npm run test:api:local && npm run validate -w @ebr-bpm/web-analytics && npm run validate -w @ebr-bpm/web-coordinator && npm run validate -w @ebr-bpm/pwa-field",
+    "test:shared": "npm run test -w @ebr-bpm/risk-engine && npm run test -w @ebr-bpm/report-engine",
+    "test:api:local": "npm run test -w @ebr-bpm/api -- src/tests/storage-path.test.ts src/tests/integration/bootstrap-universal.test.ts src/tests/integration/official-import-parsers.test.ts",
+    "test:api:db": "npm run test -w @ebr-bpm/api",
     "test": "npm run validate",
+    "demo": "npm run demo:analytics",
+    "demo:analytics": "npm run dev -w @ebr-bpm/web-analytics -- --host 127.0.0.1 --port 5175 --strictPort",
+    "demo:coordinator": "npm run dev -w @ebr-bpm/web-coordinator -- --host 127.0.0.1 --port 5174 --strictPort",
+    "demo:field": "npm run dev -w @ebr-bpm/pwa-field -- --host 127.0.0.1 --port 5173 --strictPort",
     "db:migrate": "npm run db:migrate --workspace @ebr-bpm/api",
     "db:verify": "npm run db:verify --workspace @ebr-bpm/api",
     "db:seed": "npm run db:seed --workspace @ebr-bpm/api --",
@@ -44,7 +52,7 @@
     "bootstrap:universal": "npm run bootstrap:universal --workspace @ebr-bpm/api --"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "devDependencies": {
     "@types/supertest": "^7.2.1",
