@@ -76,6 +76,7 @@ router.post('/register', async (req, res) => {
       }
       await writeDomainAudit({
         action: 'USER_REGISTERED_PUBLIC',
+        actorUserId: user.rows[0].id,
         correlationId: req.context.correlationId,
         entityType: 'USER',
         entityId: user.rows[0].id,
