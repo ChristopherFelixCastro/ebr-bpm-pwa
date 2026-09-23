@@ -51,7 +51,10 @@
     "coordinator:dev": "npm run dev --workspace @ebr-bpm/web-coordinator",
     "coordinator:build": "npm run build --workspace @ebr-bpm/web-coordinator",
     "coordinator:lint": "npm run lint --workspace @ebr-bpm/web-coordinator",
-    "coordinator:test": "npm run test --workspace @ebr-bpm/web-coordinator"
+    "coordinator:test": "npm run test --workspace @ebr-bpm/web-coordinator",
+    "analytics:dev": "npm run dev --workspace @ebr-bpm/web-analytics",
+    "analytics:build": "npm run build --workspace @ebr-bpm/web-analytics",
+    "analytics:test": "npm run test --workspace @ebr-bpm/web-analytics"
   },
   "engines": {
     "node": ">=20"
