@@ -13,12 +13,13 @@ export type Actor={userId:string;role:RoleCode;authTime:number};
 export type ReviewErrorCode='FORBIDDEN'|'NOT_FOUND'|'CONFLICT'|'STALE_VERSION'|'VALIDATION_ERROR'|'REAUTHENTICATION_REQUIRED'|'PAYLOAD_TOO_LARGE';
 export class ReviewError extends Error{constructor(public code:ReviewErrorCode,public details?:unknown){super(code)}}
 const globalRoles=new Set<RoleCode>(['ADMIN','UNIVERSAL','COORDINATOR']);
+const operationalRoles=new Set<RoleCode>(['UNIVERSAL','COORDINATOR']);
 const internalRoles=new Set<RoleCode>([...globalRoles,'EVALUATOR']);
 const audit=(client:PoolClient|undefined,action:string,actor:Actor,correlationId:string,entityType:string,entityId:string,metadata:Record<string,string|number|boolean|null>)=>writeDomainAudit({action,actorUserId:actor.userId,correlationId,entityType,entityId,metadata,client});
 const exceptional=(actor:Actor)=>actor.role==='ADMIN'||actor.role==='UNIVERSAL';
 const runQuery=<T extends import('pg').QueryResultRow=any>(client:PoolClient|undefined,sql:string,values:unknown[]=[])=>client?client.query<T>(sql,values):query<T>(sql,values);
 function readRole(actor:Actor){if(!internalRoles.has(actor.role))throw new ReviewError('FORBIDDEN')}
-function globalRole(actor:Actor){if(!globalRoles.has(actor.role))throw new ReviewError('FORBIDDEN')}
+function globalRole(actor:Actor){if(!operationalRoles.has(actor.role))throw new ReviewError('FORBIDDEN')}
 function requireRecentExceptional(actor:Actor){globalRole(actor);if(exceptional(actor)&&Math.floor(Date.now()/1000)-actor.authTime>env.JWT_REAUTH_MAX_AGE_MINUTES*60)throw new ReviewError('REAUTHENTICATION_REQUIRED')}
 async function inspectionAccess(id:string,actor:Actor,client?:PoolClient,lock=false){readRole(actor);const result=await runQuery(client,`SELECT i.id,i.case_id AS "caseId",i.evaluator_user_id AS "evaluatorUserId",i.status::text,i.version,i.content_revision AS "contentRevision" FROM inspections i WHERE i.id=$1${lock?' FOR UPDATE':''}`,[id]);const row=result.rows[0];if(!row)throw new ReviewError('NOT_FOUND');if(actor.role==='EVALUATOR'&&row.evaluatorUserId!==actor.userId)throw new ReviewError('FORBIDDEN');return row}
 const reviewProjection=`r.id,r.inspection_id AS "inspectionId",r.cycle_number AS "cycleNumber",r.status::text,r.reviewer_user_id AS "reviewerUserId",r.initial_calculation_id AS "initialCalculationId",r.current_calculation_id AS "currentCalculationId",r.return_count AS "returnCount",r.return_reason AS "returnReason",r.resubmitted_at AS "resubmittedAt",r.approved_at AS "approvedAt",r.approved_by_user_id AS "approvedByUserId",r.version,r.created_at AS "createdAt",r.updated_at AS "updatedAt"`;

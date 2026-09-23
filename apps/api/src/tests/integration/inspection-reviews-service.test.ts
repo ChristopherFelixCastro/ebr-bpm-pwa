@@ -210,7 +210,7 @@ describe('review, official report and closure service with PostgreSQL',()=>{
     await expect(service.reviews(fixture.inspectionId,actor(fixture.adminId,'DELEGATE'))).rejects.toMatchObject({code:'FORBIDDEN'});
     await expect(service.openReview(fixture.inspectionId,actor(fixture.evaluatorId,'EVALUATOR'),correlationId)).rejects.toMatchObject({code:'FORBIDDEN'});
     env.JWT_REAUTH_MAX_AGE_MINUTES=15;
-    await expect(service.returnReview(fixture.inspectionId,randomUUID(),{reason:'x',bpmItemIds:[fixture.itemId]},actor(fixture.adminId,'ADMIN',16*60),correlationId)).rejects.toMatchObject({code:'REAUTHENTICATION_REQUIRED'});
+    await expect(service.returnReview(fixture.inspectionId,randomUUID(),{reason:'x',bpmItemIds:[fixture.itemId]},actor(fixture.adminId,'ADMIN',16*60),correlationId)).rejects.toMatchObject({code:'FORBIDDEN'});
     await expect(service.officialize(fixture.inspectionId,randomUUID(),actor(fixture.adminId,'UNIVERSAL',16*60),correlationId)).rejects.toMatchObject({code:'REAUTHENTICATION_REQUIRED'});
   });
 });
