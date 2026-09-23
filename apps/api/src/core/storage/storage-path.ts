@@ -7,6 +7,9 @@ const extensionByMimeType = {
   'application/pdf': 'pdf',
   'image/jpeg': 'jpg',
   'image/png': 'png',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
 } as const;
 
 export type AllowedPrivateMimeType = keyof typeof extensionByMimeType;
@@ -15,7 +18,7 @@ export const MAX_PRIVATE_OBJECT_BYTES = 5 * 1024 * 1024;
 export function assertPrivateObject(path: string, mimeType: string, byteLength: number) {
   if (!(mimeType in extensionByMimeType)) throw new Error('UNSUPPORTED_STORAGE_MIME_TYPE');
   if (!Number.isInteger(byteLength) || byteLength <= 0 || byteLength > MAX_PRIVATE_OBJECT_BYTES) throw new Error('INVALID_STORAGE_OBJECT_SIZE');
-  if (!/^[a-z0-9-]+\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(pdf|jpg|png)$/i.test(path) || path.includes('..')) throw new Error('INVALID_STORAGE_PATH');
+  if (!/^[a-z0-9-]+\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(pdf|jpg|png|webp|mp4|webm)$/i.test(path) || path.includes('..')) throw new Error('INVALID_STORAGE_PATH');
 }
 
 export function createUploadPath(scope: PrivateObjectScope, ownerId: string, mimeType: AllowedPrivateMimeType) {

@@ -30,6 +30,16 @@ export const foodSnapshotSchema = z.object({
   baseVersion: z.number().int().positive(), foodRiskSubcategoryId: uuid,
 }).strict();
 
+export const locationSchema = z.object({
+  operationId: uuid,
+  baseVersion: z.number().int().positive(),
+  payloadHash: z.string().regex(/^[0-9a-f]{64}$/),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracyMeters: z.number().positive(),
+  capturedAt: iso,
+}).strict();
+
 export const evidenceDeleteSchema = z.object({
   version: z.number().int().positive(), baseVersion: z.number().int().positive(),
 }).strict();

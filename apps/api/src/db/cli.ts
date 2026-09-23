@@ -16,6 +16,8 @@ import {
   testDefaultVersionedDefinitions,
   testOfficialImports,
   testBpmGuidance,
+  testInspectionLocation,
+  testEvidenceCriterion,
   testRequestsConstraints, testReviewsConstraints, testRiskConstraints, verify,
 } from './runner.js';
 
@@ -50,6 +52,8 @@ try {
   else if (command === 'test:default-versioned-definitions') await testDefaultVersionedDefinitions();
   else if (command === 'test:official-imports') await testOfficialImports();
   else if (command === 'test:bpm-guidance') await testBpmGuidance();
+  else if (command === 'test:field-location') await testInspectionLocation();
+  else if (command === 'test:evidence-criterion') await testEvidenceCriterion();
   else throw new Error('Comando de base de datos no reconocido.');
   console.log(`db:${command} completado.`);
 } catch (error) {
