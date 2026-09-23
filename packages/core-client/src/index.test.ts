@@ -49,4 +49,13 @@ describe('CoreClient', () => {
     expect(url.searchParams.get('lifecycleStatus')).toBe('CLOSED');
     expect(result.meta.total).toBe(21);
   });
+  it('lets the browser set the multipart boundary for private evidence', async () => {
+    fetcher.mockResolvedValueOnce(envelope({ evidenceId: 'evidence-1', version: 2 }, 201));
+    const client = new CoreClient({ baseUrl: 'http://localhost:3000', fetch: fetcher });
+    const body = new FormData();
+    body.set('file', new Blob(['%PDF-1.0'], { type: 'application/pdf' }), 'evidence.pdf');
+    await client.request('/v1/inspections/inspection-1/evidence', { method: 'POST', body });
+    const sent = fetcher.mock.calls[0][0] as Request;
+    expect(sent.headers.get('content-type')).toMatch(/^multipart\/form-data; boundary=/);
+  });
 });

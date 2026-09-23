@@ -54,7 +54,11 @@
     "coordinator:test": "npm run test --workspace @ebr-bpm/web-coordinator",
     "analytics:dev": "npm run dev --workspace @ebr-bpm/web-analytics",
     "analytics:build": "npm run build --workspace @ebr-bpm/web-analytics",
-    "analytics:test": "npm run test --workspace @ebr-bpm/web-analytics"
+    "analytics:test": "npm run test --workspace @ebr-bpm/web-analytics",
+    "field:dev": "npm run dev --workspace @ebr-bpm/pwa-field",
+    "field:build": "npm run build --workspace @ebr-bpm/pwa-field",
+    "field:test": "npm run test --workspace @ebr-bpm/pwa-field",
+    "db:test:field-location": "npm run db:test:field-location --workspace @ebr-bpm/api"
   },
   "engines": {
     "node": ">=20"

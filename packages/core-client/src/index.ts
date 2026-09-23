@@ -12,6 +12,7 @@ export interface CoreUser { id: string; fullName: string; roleCode: CoreRole; st
 
 export interface CoreInspection {
   id: string; caseId: string; assignmentId: string; evaluatorUserId: string; status: InspectionStatus;
+  establishmentId: string | null; establishmentName: string | null; establishmentAddress: string | null; companyName: string | null;
   version: number; contentRevision: number; bpmTemplateVersionId: string; riskRuleVersionId: string;
   origin: string; priority: string; startedAt: string | null; finalizedAt: string | null;
   submittedAt: string | null; createdAt: string; updatedAt: string;
@@ -119,7 +120,7 @@ export class CoreClient {
     const headers = new Headers(init.headers);
     headers.set('Accept', 'application/json');
     if (this.accessToken) headers.set('Authorization', `Bearer ${this.accessToken}`);
-    if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
     const request = new Request(`${this.baseUrl}${path}`, { ...init, headers, credentials: 'include' });
     let response: Response;
     try { response = await this.fetcher(request); }
