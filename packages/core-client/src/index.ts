@@ -56,13 +56,16 @@ export interface CoreWorkPackage {
   currentCalculation: CoreCalculation | null; generatedAt: string;
 }
 
+export type AnalyticsCurrentCalculation = Pick<CoreCalculation,
+  'id' | 'calculationNumber' | 'bpmPercentage' | 'productRiskScore' | 'establishmentRiskScore' | 'totalRiskScore' | 'frequency' | 'calculatedAt'>;
+
 export interface AnalyticsEvaluation {
   id: string; caseId: string; origin: string; priority: string; inspectionStatus: InspectionStatus;
   lifecycleStatus: AnalyticsLifecycleStatus; riskLevel: RiskLevel | null;
   companyId: string | null; companyName: string | null; companyTradeName: string | null;
   establishmentId: string | null; establishmentName: string | null;
   evaluatorUserId: string; evaluatorName: string; createdAt: string; startedAt: string | null; submittedAt: string | null;
-  currentCalculation: CoreCalculation | null;
+  currentCalculation: AnalyticsCurrentCalculation | null;
   currentReview: Pick<CoreReview, 'id' | 'cycleNumber' | 'status' | 'returnCount' | 'returnReason' | 'resubmittedAt' | 'approvedAt' | 'createdAt'> | null;
   latestReport: Pick<CoreReport, 'id' | 'status' | 'fileName' | 'verificationId' | 'generatedAt' | 'officialAt'> | null;
   closure: Pick<CoreClosure, 'id' | 'reportId' | 'closedAt' | 'reason'> | null;
