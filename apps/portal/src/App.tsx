@@ -20,6 +20,10 @@ import { RequestListPage } from './pages/requests/RequestListPage'
 import { RequestFormPage } from './pages/requests/RequestFormPage'
 import { RequestDetailPage } from './pages/requests/RequestDetailPage'
 import { DocumentReviewPage } from './pages/requests/DocumentReviewPage'
+import { CaseListPage } from './pages/operation/CaseListPage'
+import { CaseDetailPage } from './pages/operation/CaseDetailPage'
+import { CaseSourceFormPage } from './pages/operation/CaseSourceFormPage'
+import { OperationHistoryPage } from './pages/operation/OperationHistoryPage'
 import { theme } from './theme'
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -83,6 +87,19 @@ function OnlineRoutes() {
     <Route path="/solicitudes/nueva" element={<PrivateRoute><CapabilityPage id="requests"><CompanyRequestEditor><RequestFormPage /></CompanyRequestEditor></CapabilityPage></PrivateRoute>} />
     <Route path="/solicitudes/:id/editar" element={<PrivateRoute><CapabilityPage id="requests"><CompanyRequestEditor><RequestFormPage /></CompanyRequestEditor></CapabilityPage></PrivateRoute>} />
     <Route path="/solicitudes/:id" element={<PrivateRoute><CapabilityPage id="requests"><RequestDetailPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/casos" element={<PrivateRoute><CapabilityPage id="cases"><CaseListPage key="ALL" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/casos/:id" element={<PrivateRoute><CapabilityPage id="cases"><CaseDetailPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/programas" element={<PrivateRoute><CapabilityPage id="programs"><CaseListPage key="INSTITUTIONAL_PROGRAM" origin="INSTITUTIONAL_PROGRAM" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/programas/nuevo" element={<PrivateRoute><CapabilityPage id="programs"><CaseSourceFormPage origin="INSTITUTIONAL_PROGRAM" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/programas/:id/editar" element={<PrivateRoute><CapabilityPage id="programs"><CaseSourceFormPage origin="INSTITUTIONAL_PROGRAM" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/alertas" element={<PrivateRoute><CapabilityPage id="alerts"><CaseListPage key="HEALTH_ALERT" origin="HEALTH_ALERT" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/alertas/nueva" element={<PrivateRoute><CapabilityPage id="alerts"><CaseSourceFormPage origin="HEALTH_ALERT" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/alertas/:id/editar" element={<PrivateRoute><CapabilityPage id="alerts"><CaseSourceFormPage origin="HEALTH_ALERT" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/denuncias" element={<PrivateRoute><CapabilityPage id="complaints"><CaseListPage key="COMPLAINT" origin="COMPLAINT" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/denuncias/nueva" element={<PrivateRoute><CapabilityPage id="complaints"><CaseSourceFormPage origin="COMPLAINT" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/denuncias/:id/editar" element={<PrivateRoute><CapabilityPage id="complaints"><CaseSourceFormPage origin="COMPLAINT" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/asignaciones" element={<PrivateRoute><CapabilityPage id="assignments"><OperationHistoryPage kind="assignments" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/operacion/agenda" element={<PrivateRoute><CapabilityPage id="scheduling"><OperationHistoryPage kind="schedules" /></CapabilityPage></PrivateRoute>} />
     <Route path="*" element={<PrivateRoute><ProtectedDestination /></PrivateRoute>} />
   </Routes>
 }

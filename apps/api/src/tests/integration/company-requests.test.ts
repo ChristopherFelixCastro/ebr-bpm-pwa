@@ -202,6 +202,16 @@ describe('company requests HTTP',()=>{
     for(const role of ['COORDINATOR','EVALUATOR']){mocks.clientQuery.mockResolvedValueOnce({rows:[requestRow]});r=await request(app()).post(`/v1/company-requests/${requestId}/submit`).set(await auth(role)).send({version:1});expect(r.status).toBe(403)}
   });
 
+  it('returns the stable case link only after authorized request detail access',async()=>{
+    const linkedCase='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    mocks.query.mockResolvedValueOnce({rows:[{...requestRow,status:'PENDING_ASSIGNMENT'}]}).mockResolvedValueOnce({rows:[]}).mockResolvedValueOnce({rows:[]}).mockResolvedValueOnce({rows:[{id:linkedCase}]});
+    const r=await request(app()).get(`/v1/company-requests/${requestId}`).set(await auth('COORDINATOR'));expect(r.status).toBe(200);expect(r.body.data.caseId).toBe(linkedCase);expect(String(mocks.query.mock.calls[3][0])).toContain("origin='COMPANY_REQUEST'");
+    mocks.query.mockReset().mockResolvedValueOnce({rows:[requestRow]}).mockResolvedValueOnce({rows:[]}).mockResolvedValueOnce({rows:[]});
+    const draft=await request(app()).get(`/v1/company-requests/${requestId}`).set(await auth('ADMIN'));expect(draft.status).toBe(200);expect(draft.body.data.caseId).toBeNull();expect(mocks.query).toHaveBeenCalledTimes(3);
+    mocks.query.mockReset().mockResolvedValueOnce({rows:[{...requestRow,status:'PENDING_ASSIGNMENT'}]}).mockResolvedValueOnce({rows:[{companyId:'99999999-9999-4999-8999-999999999999'}]});
+    expect((await request(app()).get(`/v1/company-requests/${requestId}`).set(await auth('DELEGATE'))).status).toBe(403);expect(mocks.query).toHaveBeenCalledTimes(2);
+  });
+
   it('returns request detail without internal fields and documents all thirteen operations',async()=>{
     mocks.query.mockResolvedValueOnce({rows:[requestRow]}).mockResolvedValueOnce({rows:[{id:requestContact,contactId:contact,version:3}]}).mockResolvedValueOnce({rows:[documentRow]});
     const r=await request(app()).get(`/v1/company-requests/${requestId}`).set(await auth('ADMIN'));expect(r.status).toBe(200);expect(JSON.stringify(r.body)).not.toMatch(/storage_path|email_normalized|identity_document_normalized/);expect(r.body.data.documentSummary.total).toBe(1);

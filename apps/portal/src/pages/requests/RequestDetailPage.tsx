@@ -16,6 +16,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useSession } from '../../session/SessionContext'
 import { useNotification } from '../../components/NoticeProvider'
 import { canArchiveDocument, canEditRequest, canReviewDocuments } from '../../access/resourceRules'
+import { canOperate } from '../../access/operationRules'
 
 const relationshipTypes = ['LEGAL_REPRESENTATIVE', 'QUALITY_CONTACT', 'PRIMARY_CONTACT', 'OWNER', 'REPRESENTATIVE'] as const
 const formatBytes = (value: number) => value < 1024 * 1024 ? `${(value / 1024).toFixed(1)} KiB` : `${(value / (1024 * 1024)).toFixed(2)} MiB`
@@ -51,7 +52,7 @@ export const RequestDetailPage = () => {
     setLoading(true)
     try {
       const [detail, docs] = await Promise.all([requestsApi.get(id), requestsApi.documents(id)])
-      setRequest(detail); setDocuments(docs); setStale(false)
+      setRequest(detail); setDocuments(docs); setCaseId(detail.caseId); setStale(false)
     } catch (error) { const route = routeForError(error); if (route) navigate(route, { replace: true }); else showError(supportMessage(error, 'No fue posible cargar la solicitud.')) }
     finally { setLoading(false) }
   }, [id, navigate, showError])
@@ -130,7 +131,7 @@ export const RequestDetailPage = () => {
 
   return <Stack spacing={3}>
     <Box><Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/solicitudes')}>Solicitudes</Button><Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}><Box><Typography variant="h5" sx={{ fontWeight: 800 }}>{request.requestType}</Typography><Typography color="text.secondary">UUID: {request.id} · Versión {request.version}</Typography></Box><Chip color={draft ? 'warning' : 'info'} label={request.status} /></Box></Box>
-    {caseId && <Alert severity="success">Caso creado: {caseId}</Alert>}
+    {caseId && canOperate(user) && <Alert severity="success" action={<Button onClick={() => navigate(`/operacion/casos/${caseId}`)}>Ver caso operativo</Button>}>Caso creado: {caseId}</Alert>}
     {!draft && <Alert severity="info">La solicitud fue enviada y se presenta en modo solo lectura.</Alert>}
     {stale && <Alert severity="warning" action={<Button onClick={() => void load()}>Recargar recurso</Button>}>El recurso cambió en el servidor; no se sobrescribió automáticamente.</Alert>}
     <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent><Typography variant="h6" sx={{ fontWeight: 700 }}>Datos de solicitud</Typography><Divider sx={{ my: 2 }} /><Typography><strong>Establecimiento:</strong> {request.establishmentName || request.establishmentId}</Typography><Typography><strong>Motivo:</strong> {request.reason}</Typography><Typography><strong>Observaciones:</strong> {request.observations || '—'}</Typography>{editable && <Button sx={{ mt: 2 }} variant="outlined" onClick={() => navigate(`/solicitudes/${id}/editar`)}>Editar borrador</Button>}</CardContent></Card>

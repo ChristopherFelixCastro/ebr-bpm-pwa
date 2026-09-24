@@ -1,6 +1,7 @@
 import{z}from'zod';
 export const uuid=z.string().uuid();const text=z.string().trim().min(1).max(500);const iso=z.string().datetime({offset:true});const page=z.coerce.number().int().min(1).default(1),limit=z.coerce.number().int().min(1).max(100).default(20);const bool=z.preprocess(v=>v==='true'?true:v==='false'?false:v,z.boolean());
 export const assignmentListSchema=z.object({page,limit,active:bool.optional(),evaluatorUserId:uuid.optional(),caseId:uuid.optional(),origin:z.enum(['COMPANY_REQUEST','INSTITUTIONAL_PROGRAM','HEALTH_ALERT','COMPLAINT']).optional(),assignedFrom:iso.optional(),assignedTo:iso.optional()}).strict();
+export const assignableEvaluatorListSchema=z.object({page,limit,search:z.string().trim().min(1).max(100).optional()}).strict();
 export const scheduleListSchema=z.object({page,limit,status:z.enum(['SCHEDULED','RESCHEDULED','CANCELLED']).optional(),evaluatorUserId:uuid.optional(),caseId:uuid.optional(),startFrom:iso.optional(),startTo:iso.optional()}).strict();
 export const assignSchema=z.object({evaluatorUserId:uuid,reason:text.optional()}).strict();
 export const reassignSchema=z.object({newEvaluatorUserId:uuid,currentAssignmentVersion:z.number().int().positive(),reason:text}).strict();
