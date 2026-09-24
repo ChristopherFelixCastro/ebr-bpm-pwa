@@ -34,14 +34,14 @@ describe('portal A', () => {
     expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeInTheDocument()
   })
 
-  it('restaura solo una cuenta aprobada y oculta secciones sin páginas listas', async () => {
+  it('restaura una cuenta aprobada y muestra solo secciones funcionales autorizadas', async () => {
     vi.mocked(core.restoreSession).mockResolvedValue(user('DELEGATE'))
     at('/inicio')
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument()
-    expect(screen.queryByText('Solicitudes')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Solicitudes').length).toBeGreaterThan(0)
     expect(screen.queryByText('Configuración')).not.toBeInTheDocument()
-    expect(visibleSections(user('DELEGATE')).map((item) => item.name)).toEqual(['Inicio'])
+    expect(visibleSections(user('DELEGATE')).map((item) => item.name)).toEqual(['Inicio', 'Directorio empresarial', 'Solicitudes'])
     expect(core.restoreSession).toHaveBeenCalledTimes(1)
   })
 

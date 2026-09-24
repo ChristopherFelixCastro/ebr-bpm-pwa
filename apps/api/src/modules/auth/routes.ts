@@ -163,7 +163,7 @@ router.get('/me', authenticate, async (req, res) => {
   const result = await query<CurrentUserRow>(`SELECT u.id,u.full_name AS "fullName",r.code AS "roleCode",u.status::text,m.company_id AS "companyId"
     FROM users u
     JOIN roles r ON r.id=u.role_id
-    LEFT JOIN user_company_memberships m ON m.user_id=u.id AND m.effective_to IS NULL
+    LEFT JOIN user_company_memberships m ON m.user_id=u.id AND m.effective_to IS NULL AND EXISTS (SELECT 1 FROM companies c WHERE c.id=m.company_id AND c.status='ACTIVE')
     WHERE u.id=$1 AND u.status='APPROVED'`, [req.auth!.userId]);
   const user = result.rows[0];
   if (!user || !validRole(user.roleCode) || user.roleCode !== req.auth!.role) return error(req, res, 401, 'UNAUTHENTICATED', 'Autenticación requerida.');

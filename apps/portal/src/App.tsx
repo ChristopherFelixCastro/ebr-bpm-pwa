@@ -10,6 +10,16 @@ import { HomePage } from './pages/HomePage'
 import { AccountPage } from './pages/AccountPage'
 import { OfflineAccessPage, OfflinePackagesPage } from './pages/OfflinePages'
 import { StatusPage } from './pages/StatusPage'
+import { NoticeProvider } from './components/NoticeProvider'
+import { CompanyListPage } from './pages/companies/CompanyListPage'
+import { CompanyDetailPage } from './pages/companies/CompanyDetailPage'
+import { EstablishmentListPage } from './pages/companies/EstablishmentListPage'
+import { EstablishmentDetailPage } from './pages/companies/EstablishmentDetailPage'
+import { ContactListPage } from './pages/companies/ContactListPage'
+import { RequestListPage } from './pages/requests/RequestListPage'
+import { RequestFormPage } from './pages/requests/RequestFormPage'
+import { RequestDetailPage } from './pages/requests/RequestDetailPage'
+import { DocumentReviewPage } from './pages/requests/DocumentReviewPage'
 import { theme } from './theme'
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -27,6 +37,19 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return <PortalLayout>{children}</PortalLayout>
 }
 
+function CapabilityPage({ id, children }: { id: string; children: React.ReactNode }) {
+  const { user } = useSession()
+  const capability = capabilities.find((item) => item.id === id)
+  if (!capability?.ready || !hasCapability(user, capability)) return <StatusPage title="Acceso denegado" description="Su cuenta no tiene permiso para abrir esta página." />
+  return children
+}
+
+function CompanyRequestEditor({ children }: { children: React.ReactNode }) {
+  const { user } = useSession()
+  if (user?.roleCode === 'COORDINATOR' || ((user?.roleCode === 'COMPANY_ADMIN' || user?.roleCode === 'DELEGATE') && !user.companyId)) return <StatusPage title="Acceso denegado" description="Su cuenta no tiene una empresa activa autorizada para crear borradores." />
+  return children
+}
+
 function ProtectedDestination() {
   const { user } = useSession()
   const { pathname } = useLocation()
@@ -34,6 +57,7 @@ function ProtectedDestination() {
     .find(({ path }) => pathname === path || pathname.startsWith(`${path}/`))
   if (!capability) return <StatusPage title="Página no encontrada" description="La dirección no corresponde a una página del portal." />
   if (!hasCapability(user, capability)) return <StatusPage title="Acceso denegado" description="Su cuenta no tiene permiso para abrir esta sección." />
+  if (capability.ready) return <StatusPage title="Página no encontrada" description="La dirección no corresponde a una página disponible." />
   return <StatusPage title="Función pendiente de migración" description="Esta pantalla aún no está disponible en el portal único." />
 }
 
@@ -47,10 +71,22 @@ function OnlineRoutes() {
     <Route path="/" element={<Navigate to="/inicio" replace />} />
     <Route path="/inicio" element={<PrivateRoute><HomePage /></PrivateRoute>} />
     <Route path="/cuenta" element={<PrivateRoute><AccountPage /></PrivateRoute>} />
+    <Route path="/denegado" element={<PrivateRoute><StatusPage title="Acceso denegado" /></PrivateRoute>} />
+    <Route path="/no-encontrado" element={<PrivateRoute><StatusPage title="Recurso no encontrado" /></PrivateRoute>} />
+    <Route path="/directorio/empresas" element={<PrivateRoute><CapabilityPage id="companies"><CompanyListPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/directorio/empresas/:id" element={<PrivateRoute><CapabilityPage id="companies"><CompanyDetailPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/directorio/establecimientos" element={<PrivateRoute><CapabilityPage id="establishments"><EstablishmentListPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/directorio/establecimientos/:id" element={<PrivateRoute><CapabilityPage id="establishments"><EstablishmentDetailPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/directorio/contactos" element={<PrivateRoute><CapabilityPage id="contacts"><ContactListPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/solicitudes/documentos-pendientes" element={<PrivateRoute><CapabilityPage id="document-review"><DocumentReviewPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/solicitudes" element={<PrivateRoute><CapabilityPage id="requests"><RequestListPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/solicitudes/nueva" element={<PrivateRoute><CapabilityPage id="requests"><CompanyRequestEditor><RequestFormPage /></CompanyRequestEditor></CapabilityPage></PrivateRoute>} />
+    <Route path="/solicitudes/:id/editar" element={<PrivateRoute><CapabilityPage id="requests"><CompanyRequestEditor><RequestFormPage /></CompanyRequestEditor></CapabilityPage></PrivateRoute>} />
+    <Route path="/solicitudes/:id" element={<PrivateRoute><CapabilityPage id="requests"><RequestDetailPage /></CapabilityPage></PrivateRoute>} />
     <Route path="*" element={<PrivateRoute><ProtectedDestination /></PrivateRoute>} />
   </Routes>
 }
 
 export default function App() {
-  return <ThemeProvider theme={theme}><CssBaseline /><BrowserRouter><SessionProvider><OnlineRoutes /></SessionProvider></BrowserRouter></ThemeProvider>
+  return <ThemeProvider theme={theme}><CssBaseline /><BrowserRouter><SessionProvider><NoticeProvider><OnlineRoutes /></NoticeProvider></SessionProvider></BrowserRouter></ThemeProvider>
 }

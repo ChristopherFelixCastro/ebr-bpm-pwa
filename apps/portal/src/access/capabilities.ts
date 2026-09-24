@@ -19,11 +19,11 @@ const companyRequests = ['ADMIN', 'UNIVERSAL', 'COMPANY_ADMIN', 'DELEGATE', 'COO
 // El rol nunca reemplaza la comprobación de empresa, asignación, estado y versión que hace Core.
 export const capabilities: readonly Capability[] = [
   { id: 'home', label: 'Inicio', path: '/inicio', section: 'Inicio', roles: all, ready: true },
-  { id: 'companies', label: 'Empresas', path: '/directorio/empresas', section: 'Directorio empresarial', roles: ['ADMIN', 'UNIVERSAL', 'COMPANY_ADMIN'], ready: false },
-  { id: 'establishments', label: 'Establecimientos', path: '/directorio/establecimientos', section: 'Directorio empresarial', roles: all, ready: false },
-  { id: 'contacts', label: 'Contactos', path: '/directorio/contactos', section: 'Directorio empresarial', roles: all, ready: false },
-  { id: 'requests', label: 'Solicitudes BPM', path: '/solicitudes', section: 'Solicitudes', roles: companyRequests, ready: false },
-  { id: 'document-review', label: 'Documentos pendientes', path: '/solicitudes/documentos-pendientes', section: 'Solicitudes', roles: coordination, ready: false },
+  { id: 'companies', label: 'Empresas', path: '/directorio/empresas', section: 'Directorio empresarial', roles: ['ADMIN', 'UNIVERSAL', 'COMPANY_ADMIN'], ready: true },
+  { id: 'establishments', label: 'Establecimientos', path: '/directorio/establecimientos', section: 'Directorio empresarial', roles: all, ready: true },
+  { id: 'contacts', label: 'Contactos', path: '/directorio/contactos', section: 'Directorio empresarial', roles: all, ready: true },
+  { id: 'requests', label: 'Solicitudes BPM', path: '/solicitudes', section: 'Solicitudes', roles: companyRequests, ready: true },
+  { id: 'document-review', label: 'Documentos pendientes', path: '/solicitudes/documentos-pendientes', section: 'Solicitudes', roles: coordination, ready: true },
   { id: 'cases', label: 'Casos', path: '/operacion/casos', section: 'Operación sanitaria', roles: coordination, ready: false },
   { id: 'alerts', label: 'Alertas sanitarias', path: '/operacion/alertas', section: 'Operación sanitaria', roles: coordination, ready: false },
   { id: 'complaints', label: 'Denuncias', path: '/operacion/denuncias', section: 'Operación sanitaria', roles: coordination, ready: false },

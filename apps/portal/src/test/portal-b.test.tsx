@@ -1,0 +1,110 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { CoreApiError, type CoreUser } from '@ebr-bpm/core-client'
+import App from '../App'
+import { core } from '../api/core'
+import { visibleSections } from '../access/capabilities'
+import { canArchiveDocument, canEditCompany, canEditRequest, canReviewDocuments, isOwnCompany } from '../access/resourceRules'
+
+const account = (roleCode: CoreUser['roleCode'], companyId: string | null = 'company-1'): CoreUser => ({ id: roleCode, fullName: roleCode, roleCode, status: 'APPROVED', companyId, authTime: Date.now() })
+beforeEach(() => { localStorage.clear(); core.disconnect(); vi.spyOn(core, 'request').mockResolvedValue({ data: { status: 'ready' }, meta: { correlationId: 'test' } }) })
+afterEach(() => { cleanup(); vi.restoreAllMocks() })
+
+describe('entrega B: alcance y rutas', () => {
+  it('muestra Solicitudes al delegado y omite empresas, validación y configuración', () => {
+    const pages = visibleSections(account('DELEGATE')).flatMap((section) => section.pages.map((item) => item.id))
+    expect(pages).toContain('requests')
+    expect(pages).toContain('establishments')
+    expect(pages).toContain('contacts')
+    expect(pages).not.toContain('companies')
+    expect(pages).not.toContain('document-review')
+    expect(pages).not.toContain('users')
+  })
+  it('limita las acciones por empresa, rol y estado', () => {
+    expect(isOwnCompany(account('DELEGATE'), 'company-1')).toBe(true)
+    expect(canEditRequest(account('DELEGATE'), 'company-1', 'DRAFT')).toBe(true)
+    expect(canEditRequest(account('DELEGATE'), 'company-2', 'DRAFT')).toBe(false)
+    expect(canEditRequest(account('DELEGATE'), 'company-1', 'PENDING_ASSIGNMENT')).toBe(false)
+    expect(canEditCompany(account('DELEGATE'), 'company-1')).toBe(false)
+    expect(canEditCompany(account('COMPANY_ADMIN'), 'company-2')).toBe(false)
+    expect(canEditCompany(account('COMPANY_ADMIN'), 'company-1')).toBe(true)
+    expect(canEditCompany(account('UNIVERSAL', null), 'company-2')).toBe(true)
+    expect(canEditRequest(account('UNIVERSAL', null), 'company-2', 'DRAFT')).toBe(true)
+    expect(canEditRequest(account('COORDINATOR', null), 'company-2', 'DRAFT')).toBe(false)
+    expect(canReviewDocuments(account('COORDINATOR', null), 'DRAFT')).toBe(true)
+    expect(canReviewDocuments(account('DELEGATE'), 'DRAFT')).toBe(false)
+    expect(canArchiveDocument(account('DELEGATE'), 'company-1', 'DRAFT')).toBe(true)
+    expect(canArchiveDocument(account('DELEGATE'), 'company-2', 'DRAFT')).toBe(false)
+  })
+  it('bloquea URL directa de nueva solicitud para coordinación', async () => {
+    vi.spyOn(core, 'restoreSession').mockResolvedValue(account('COORDINATOR', null))
+    window.history.replaceState({}, '', '/solicitudes/nueva')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Crear borrador' })).not.toBeInTheDocument()
+  })
+  it('oculta Nueva solicitud y bloquea su URL a una cuenta sin membresía activa', async () => {
+    vi.spyOn(core, 'restoreSession').mockResolvedValue(account('DELEGATE', null))
+    vi.mocked(core.request).mockImplementation(async (path) => ({ data: path === '/health/ready' ? { status: 'ready' } : [], meta: { correlationId: 'test', total: 0 } } as never))
+    window.history.replaceState({}, '', '/solicitudes')
+    const view = render(<App />)
+    expect(await screen.findByText('No hay solicitudes.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Nueva solicitud' })).not.toBeInTheDocument()
+    view.unmount()
+    window.history.replaceState({}, '', '/solicitudes/nueva')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Crear borrador' })).not.toBeInTheDocument()
+  })
+  it('consulta una página de documentos pendientes sin recorrer solicitudes', async () => {
+    vi.spyOn(core, 'restoreSession').mockResolvedValue(account('COORDINATOR', null))
+    const requestSpy=vi.mocked(core.request)
+    requestSpy.mockImplementation(async (path) => ({ data: path.startsWith('/v1/company-requests/documents/pending') ? [{ id: 'doc-1', requestId: 'req-1', documentType: 'SUPPORTING_DOCUMENT', fileName: 'pendiente.pdf', version: 2, establishmentName: 'Planta', requestType: 'REGISTRATION' }] : { status: 'ready' }, meta: { correlationId: 'test', total: 1 } } as never))
+    window.history.replaceState({}, '', '/solicitudes/documentos-pendientes')
+    render(<App />)
+    expect(await screen.findByText('pendiente.pdf')).toBeInTheDocument()
+    expect(requestSpy.mock.calls.filter(([path]) => String(path).startsWith('/v1/company-requests'))).toHaveLength(1)
+    expect(requestSpy).toHaveBeenCalledWith('/v1/company-requests/documents/pending?page=1&limit=10', expect.objectContaining({cache:'no-store'}))
+  })
+  it('bloquea URL directa de solicitudes para evaluador', async () => {
+    vi.spyOn(core, 'restoreSession').mockResolvedValue(account('EVALUATOR', null))
+    window.history.replaceState({}, '', '/solicitudes')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
+  })
+  it('permite al coordinador validar un documento pendiente con su versión y oculta la edición', async () => {
+    vi.spyOn(core, 'restoreSession').mockResolvedValue(account('COORDINATOR', null))
+    const requestSpy = vi.mocked(core.request)
+    requestSpy.mockImplementation(async (path) => ({ data: path.endsWith('/documents') ? [{ id: 'doc-1', requestId: 'req-1', documentType: 'AUTHORIZATION_LETTER', fileName: 'carta.pdf', mimeType: 'application/pdf', sizeBytes: 1024, status: 'PENDING', rejectionReason: null, version: 7 }] : path.endsWith('/validate') ? { id: 'doc-1', status: 'VALID' } : path.startsWith('/v1/company-requests/') ? { id: 'req-1', companyId: 'company-1', establishmentId: 'est-1', requestType: 'REGISTRATION', reason: 'Alta', status: 'DRAFT', version: 3, contacts: [], documentSummary: { total: 1, pending: 1, valid: 0, rejected: 0, archived: 0 } } : { status: 'ready' }, meta: { correlationId: 'test' } } as never))
+    window.history.replaceState({}, '', '/solicitudes/req-1')
+    render(<App />)
+    expect(await screen.findByText('carta.pdf')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Validar' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Editar borrador' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cargar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Enviar solicitud' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Validar' }))
+    await waitFor(() => expect(requestSpy).toHaveBeenCalledWith('/v1/company-requests/req-1/documents/doc-1/validate', expect.objectContaining({ method: 'POST', body: JSON.stringify({ version: 7 }) })))
+  })
+  it('permite editar al delegado de su empresa y oculta la validación documental', async () => {
+    vi.spyOn(core, 'restoreSession').mockResolvedValue(account('DELEGATE'))
+    vi.mocked(core.request).mockImplementation(async (path) => ({ data: path.endsWith('/documents') ? [{ id: 'doc-1', requestId: 'req-1', documentType: 'SUPPORTING_DOCUMENT', fileName: 'soporte.pdf', mimeType: 'application/pdf', sizeBytes: 1024, status: 'PENDING', rejectionReason: null, version: 2 }] : path.startsWith('/v1/company-requests/') ? { id: 'req-1', companyId: 'company-1', establishmentId: 'est-1', requestType: 'REGISTRATION', reason: 'Alta', status: 'DRAFT', version: 3, contacts: [], documentSummary: { total: 1, pending: 1, valid: 0, rejected: 0, archived: 0 } } : { status: 'ready' }, meta: { correlationId: 'test' } } as never))
+    window.history.replaceState({}, '', '/solicitudes/req-1')
+    render(<App />)
+    expect(await screen.findByText('soporte.pdf')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Editar borrador' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Validar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Rechazar' })).not.toBeInTheDocument()
+  })
+  it('bloquea un recurso de otra empresa aunque se introduzca la URL directamente', async () => {
+    vi.spyOn(core, 'restoreSession').mockResolvedValue(account('DELEGATE'))
+    vi.mocked(core.request).mockImplementation(async (path) => {
+      if (path.startsWith('/v1/company-requests/')) throw new CoreApiError(403, 'FORBIDDEN', 'Acceso denegado.')
+      return { data: { status: 'ready' }, meta: { correlationId: 'test' } } as never
+    })
+    window.history.replaceState({}, '', '/solicitudes/foreign-request')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/denegado')
+  })
+})

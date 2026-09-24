@@ -6,6 +6,7 @@ import { enrollOfflineIdentity, lockOfflineVault, type OfflineIdentity, unlockOf
 
 const LOGOUT_PENDING = 'ebr-bpm-portal-logout-pending'
 type PendingAction = { run: () => Promise<unknown>; resolve: (result: unknown) => void; reject: (reason: unknown) => void }
+export class ReauthenticationCancelledError extends Error { constructor() { super('Reautenticación cancelada.') } }
 type SessionValue = {
   user: CoreUser | null
   offlineUser: OfflineIdentity | null
@@ -37,7 +38,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const cancelPending = useCallback((message: string) => {
     const action = pendingRef.current
     pendingRef.current = null
-    action?.reject(new Error(message))
+    action?.reject(message === 'Reautenticación cancelada.' ? new ReauthenticationCancelledError() : new Error(message))
     setPending(null)
     setPassword('')
     setReauthError('')

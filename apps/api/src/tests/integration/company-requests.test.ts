@@ -5,7 +5,7 @@ import {beforeEach,describe,expect,it,vi} from 'vitest';
 const mocks=vi.hoisted(()=>({query:vi.fn(),clientQuery:vi.fn(),audit:vi.fn(),upload:vi.fn(),remove:vi.fn(),sign:vi.fn(),commit:vi.fn(),rollback:vi.fn()}));
 vi.mock('../../db/client.js',()=>({query:mocks.query,withTransaction:async(fn:any)=>{try{const value=await fn({query:mocks.clientQuery});mocks.commit();return value}catch(error){mocks.rollback();throw error}}}));
 vi.mock('../../core/audit/domain-audit.service.js',()=>({writeDomainAudit:mocks.audit}));
-vi.mock('../../core/storage/storage.service.js',()=>({uploadPrivateObject:mocks.upload,removePrivateObject:mocks.remove,createShortLivedDownloadUrl:mocks.sign}));
+vi.mock('../../core/storage/storage.service.js',()=>({uploadPrivateObject:mocks.upload,removePrivateObject:mocks.remove,createShortLivedDownloadUrl:mocks.sign,PrivateStorageError:class PrivateStorageError extends Error{constructor(public code:'OBJECT_NOT_FOUND'|'UNAVAILABLE'){super(code)}}}));
 
 import {env} from '../../config/env.js';
 import {signAccessToken} from '../../core/auth/jwt.js';
@@ -155,6 +155,32 @@ describe('company requests HTTP',()=>{
     let r=await request(app()).post(`/v1/company-requests/${requestId}/documents/${documentId}/archive`).set(await auth('COORDINATOR')).send({version:1});expect(r.status).toBe(200);
     mocks.query.mockResolvedValueOnce({rows:[requestRow]}).mockResolvedValueOnce({rows:[{...documentRow,storagePath:'request-document/private.pdf'}]});
     r=await request(app()).post(`/v1/company-requests/${requestId}/documents/${documentId}/download-url`).set(await auth('COORDINATOR'));expect(r.body.data).toEqual({signedUrl:'https://signed.test/file',expiresInSeconds:60});expect(mocks.sign).toHaveBeenCalledWith('request-document/private.pdf',60);expect(JSON.stringify(mocks.audit.mock.calls)).not.toContain('request-document/private.pdf');
+  });
+
+  it('paginates pending documents in draft requests without exposing private fields',async()=>{
+    const pending={id:documentId,requestId,documentType:'AUTHORIZATION_LETTER',fileName:'letter.pdf',version:1,establishmentName:'Planta',requestType:'REGISTRATION'};
+    for(const role of ['ADMIN','UNIVERSAL','COORDINATOR']){
+      mocks.query.mockResolvedValueOnce({rows:[{total:'3'}]}).mockResolvedValueOnce({rows:[pending]});
+      const r=await request(app()).get('/v1/company-requests/documents/pending?page=2&limit=1').set(await auth(role));
+      expect(r.status).toBe(200);expect(r.body.meta).toMatchObject({page:2,limit:1,total:3});expect(r.body.data).toEqual([pending]);
+      expect(JSON.stringify(r.body)).not.toMatch(/storagePath|signedUrl|mimeType|companyId/);
+      const [countSql]=mocks.query.mock.calls.at(-2)!;const [rowsSql,values]=mocks.query.mock.calls.at(-1)!;
+      for(const sql of [countSql,rowsSql]){expect(sql).toContain("cr.status='DRAFT'");expect(sql).toContain("d.status='PENDING'");expect(sql).toContain('d.deleted_at IS NULL');expect(sql).toContain('d.archived_at IS NULL')}
+      expect(values).toEqual([1,1]);
+    }
+    for(const role of ['COMPANY_ADMIN','DELEGATE','EVALUATOR'])expect((await request(app()).get('/v1/company-requests/documents/pending').set(await auth(role))).status).toBe(403);
+    expect((await request(app()).get('/v1/company-requests/documents/pending?page=0').set(await auth('ADMIN'))).status).toBe(400);
+  });
+
+  it('maps absent private objects to 404 and signing outages to 503',async()=>{
+    const {PrivateStorageError}=await import('../../core/storage/storage.service.js');
+    for(const [code,status] of [['OBJECT_NOT_FOUND',404],['UNAVAILABLE',503]] as const){
+      mocks.query.mockResolvedValueOnce({rows:[requestRow]}).mockResolvedValueOnce({rows:[{...documentRow,storagePath:'request-document/private.pdf'}]});
+      mocks.sign.mockRejectedValueOnce(new PrivateStorageError(code));
+      const r=await request(app()).post(`/v1/company-requests/${requestId}/documents/${documentId}/download-url`).set(await auth('COORDINATOR'));
+      expect(r.status).toBe(status);expect(JSON.stringify(r.body)).not.toContain('request-document/private.pdf');
+    }
+    expect(mocks.audit).not.toHaveBeenCalled();
   });
 
   it('submits atomically with exact prerequisites and creates a MEDIUM pending case',async()=>{

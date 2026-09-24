@@ -9,8 +9,8 @@ export function HomePage() {
     {offlineEnrollmentError && <Alert severity="warning" sx={{ mb: 3 }}>La sesión online funciona, pero no se pudo habilitar el acceso local. Sus paquetes anteriores permanecen guardados; compruebe el acceso antes de trabajar sin red.</Alert>}
     <Card><CardContent>
       <Typography variant="h6" sx={{ mb: 1 }}>Portal único EBR / BPM</Typography>
-      <Typography sx={{ mb: 2 }}>La sesión y la navegación central ya están disponibles. Las pantallas de negocio se incorporarán por entregas después de validar esta base.</Typography>
-      <Alert severity="info">Su acceso a datos y acciones dependerá del alcance, asignación, estado y versión comprobados por el Core al migrar cada flujo.</Alert>
+      <Typography sx={{ mb: 2 }}>El directorio empresarial y las solicitudes BPM están disponibles según su rol. La operación sanitaria y el trabajo de campo se incorporarán en entregas posteriores.</Typography>
+      <Alert severity="info">Core comprueba el alcance empresarial, estado y versión de cada operación.</Alert>
     </CardContent></Card>
   </Box>
 }
