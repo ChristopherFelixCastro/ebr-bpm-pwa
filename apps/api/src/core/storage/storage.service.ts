@@ -1,8 +1,8 @@
 import { env } from '../../config/env.js';
 import { getSupabaseStorageClient } from './supabase-storage.client.js';
-import { assertPrivateObject, type AllowedPrivateMimeType } from './storage-path.js';
+import { assertPrivateObject, isPrivateObjectPath, type AllowedPrivateMimeType } from './storage-path.js';
 
-const validPath = (value: string) => /^[a-z0-9-]+\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(pdf|jpg|png)$/i.test(value) && !value.includes('..');
+const validPath = isPrivateObjectPath;
 const bucket = () => {
   if (!env.SUPABASE_STORAGE_BUCKET_PRIVATE) throw new Error('SUPABASE_STORAGE_NOT_CONFIGURED');
   return getSupabaseStorageClient().storage.from(env.SUPABASE_STORAGE_BUCKET_PRIVATE);
