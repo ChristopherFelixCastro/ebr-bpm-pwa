@@ -9,7 +9,9 @@ import { canonical, sha256Hex, type PermitClaims } from '../offline/permit'
 import { enrollOfflineIdentity, lockOfflineVault } from '../offline/vault'
 import { FieldInspectionPage } from '../pages/field/FieldInspectionPage'
 
-vi.mock('../session/SessionContext', () => ({ useSession: () => ({ user: null, offlineUser: { id: 'expiry-ui-eval', fullName: 'Evaluadora', roleCode: 'EVALUATOR' } }) }))
+// Valor estable, como el estado real de SessionProvider: un objeto nuevo por render recrearía reload() en cada render.
+const session = vi.hoisted(() => ({ user: null, offlineUser: { id: 'expiry-ui-eval', fullName: 'Evaluadora', roleCode: 'EVALUATOR' } }))
+vi.mock('../session/SessionContext', () => ({ useSession: () => session }))
 afterEach(() => { cleanup(); lockOfflineVault(); vi.restoreAllMocks(); vi.unstubAllEnvs() })
 
 it('oculta respuestas, criterios y evidencias al vencer el permiso aunque existan pendientes', async () => {
