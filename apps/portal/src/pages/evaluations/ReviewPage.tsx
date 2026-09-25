@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { orderBpmItems } from '../../field/bpmOrder'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Alert, Box, Button, Card, Checkbox, FormControlLabel, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material'
 import { CoreApiError } from '@ebr-bpm/core-client'
@@ -32,7 +33,7 @@ export function ReviewPage() {
   }
   if (!detail) return error ? <Alert severity="error">{error}</Alert> : <Typography>Cargando revisión…</Typography>
   const responses = new Map(detail.workPackage.responses.map((entry) => [entry.bpmItemId, entry]))
-  const criteria = detail.workPackage.bpmTemplate.items.filter((item) => item.itemKind === 'CRITERION' && item.isEvaluable)
+  const criteria = orderBpmItems(detail.workPackage.bpmTemplate.items).map(({ item }) => item).filter((item) => item.itemKind === 'CRITERION' && item.isEvaluable)
   return <Stack spacing={2}>
     <Box><Button onClick={() => navigate(`/evaluaciones/${id}`)}>← Evaluación</Button><Typography variant="h5" sx={{ fontWeight: 800 }}>Revisión institucional</Typography></Box>
     {error && <Alert severity="error">{error}</Alert>}

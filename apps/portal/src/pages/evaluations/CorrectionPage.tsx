@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { orderBpmItems } from '../../field/bpmOrder'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Alert, Box, Button, Card, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { CoreApiError, type CoreInspection, type CoreReview, type CoreWorkPackage } from '@ebr-bpm/core-client'
@@ -43,7 +44,9 @@ export function CorrectionPage() {
   }
   if (!data) return error ? <Alert severity="error">{error}</Alert> : <Typography>Cargando correcciones…</Typography>
   const { inspection, review, workPackage } = data
-  const items = review.correctionItems?.filter((entry) => entry.returnNumber === review.returnCount) ?? []
+  const position = new Map(orderBpmItems(workPackage.bpmTemplate.items).map(({ item }, index) => [item.id, index]))
+  const items = (review.correctionItems?.filter((entry) => entry.returnNumber === review.returnCount) ?? [])
+    .sort((a, b) => (position.get(a.bpmItemId) ?? Infinity) - (position.get(b.bpmItemId) ?? Infinity))
   const canResubmit = items.length > 0 && items.every((entry) => entry.status === 'CORRECTED')
   return <Stack spacing={2}>
     <Box><Button onClick={() => navigate('/campo/correcciones')}>← Correcciones</Button><Typography variant="h5" sx={{ fontWeight: 800 }}>Corregir inspección {id.slice(0, 8)}</Typography><Typography color="text.secondary">Versión Core {inspection.version} · devolución {review.returnCount}. Reenvío únicamente online.</Typography></Box>

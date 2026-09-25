@@ -12,7 +12,7 @@ import {
   canWriteConfiguration, nextOrder, ResourceDetailPage, ResourceListPage, StaleAlert, textOrNull, TreeView, useVersionEditor,
   VersionPage, type AreaConfig, type FieldSpec, type FormValues, type VersionContext,
 } from './shared'
-import { buildTree, flattenTree } from './tree'
+import { buildTree, flattenTree } from '../../utils/tree'
 
 export const catalogArea: AreaConfig<Catalog, CatalogPreview> = {
   title: 'Catálogos',

@@ -8,7 +8,7 @@ import {
   nextOrder, ResourceDetailPage, ResourceListPage, textOrNull, TreeView, useVersionEditor, VersionPage,
   type AreaConfig, type FieldSpec, type VersionContext,
 } from './shared'
-import { buildTree, flattenTree } from './tree'
+import { buildTree, flattenTree } from '../../utils/tree'
 
 export const bpmTemplateArea: AreaConfig<BpmTemplate, BpmPreview> = {
   title: 'Plantillas BPM',

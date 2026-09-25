@@ -18,7 +18,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useNotification } from '../../components/NoticeProvider'
 import { ReauthenticationCancelledError, useSession } from '../../session/SessionContext'
 import { dateTime, dominicanDateTimeInput, dominicanInputToIso, statusColors, statusLabels } from './labels'
-import type { TreeNode } from './tree'
+import type { TreeNode } from '../../utils/tree'
 
 // La interfaz solo oculta controles; Core decide permisos, orden, validación y publicación.
 export const canWriteConfiguration = (user: CoreUser | null) => user?.status === 'APPROVED' && (user.roleCode === 'ADMIN' || user.roleCode === 'UNIVERSAL')

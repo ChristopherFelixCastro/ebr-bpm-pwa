@@ -6,7 +6,7 @@ import { canonical, sha256Hex, verifyPermit, type SignedPermit } from '../offlin
 export type BpmValue = 'C' | 'CP' | 'IT' | 'NA'
 export type WorkPackage = {
   inspection: CoreInspection
-  bpmTemplate: { versionId: string; items: Array<{ id: string; parentItemId: string | null; itemKind: string; displayCode: string | null; title: string; sortOrder: number; isEvaluable: boolean; guidanceItems?: Array<{ id: string; text: string }> }> }
+  bpmTemplate: { versionId: string; items: Array<{ id: string; parentItemId: string | null; itemKind: string; displayCode: string | null; title: string; sortOrder: number; isEvaluable: boolean; criticality?: 'CRITICA' | 'MAYOR' | 'MENOR' | null; guidanceItems?: Array<{ id: string; text: string; criticality?: 'CRITICA' | 'MAYOR' | 'MENOR' | null }> }> }
   responses: Array<{ bpmItemId: string; responseValue: BpmValue; observations: string | null }>
   riskRule: { versionId: string; factors: Array<{ id: string; code: string; name: string; options: Array<{ id: string; code: string; label: string }> }>; foodCatalog: Array<{ id: string; name: string; subcategories: Array<{ id: string; name: string; riskScore: number | null }> }> }
   factorSelections: Array<{ riskFactorId: string; optionId: string }>
