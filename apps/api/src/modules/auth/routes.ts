@@ -1,5 +1,7 @@
-import { timingSafeEqual } from 'node:crypto';
-import { Router, type Request, type Response } from 'express';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { Router, type NextFunction, type Request, type Response } from 'express';
+import multer from 'multer';
+import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { env } from '../../config/env.js';
 import { writeAuthAudit } from '../../core/audit/auth-audit.service.js';
@@ -12,6 +14,7 @@ import { newPasswordSchema } from '../../core/auth/password-policy.js';
 import { roleCodes, type RoleCode } from '../../core/auth/roles.js';
 import { issueOpaqueRefreshToken, parseOpaqueRefreshToken } from '../../core/auth/tokens.js';
 import { query, withTransaction } from '../../db/client.js';
+import { insertLetter, LetterError, storeLetter } from '../users/authorization-letters.js';
 
 const router = Router();
 const credentials = z.object({ email: z.string().email().transform((x) => x.trim().toLowerCase()), password: z.string().min(1).max(1024) }).strict();
@@ -60,34 +63,44 @@ router.post('/login', async (req, res) => {
   return success(res, { accessToken });
 });
 
-router.post('/register', async (req, res) => {
-  const parsed = registerSchema.safeParse(req.body);
+// Registro público: multipart con la carta de autorización de la cuenta (campo authorizationLetter).
+// El registro JSON anterior se conserva por compatibilidad, pero la cuenta queda pendiente y no puede aprobarse sin carta.
+// Ninguna variante crea sesión.
+const letterUpload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fields: 10, fileSize: 5 * 1024 * 1024 } });
+const acceptLetter = (req: Request, res: Response, next: NextFunction) => req.is('multipart/form-data')
+  ? letterUpload.single('authorizationLetter')(req, res, (failure: any) => failure
+    ? error(req, res, failure.code === 'LIMIT_FILE_SIZE' ? 413 : 400, failure.code === 'LIMIT_FILE_SIZE' ? 'PAYLOAD_TOO_LARGE' : 'VALIDATION_ERROR', 'Archivo inválido.')
+    : next())
+  : next();
+const letterFailures: Record<string, [number, string]> = {
+  VALIDATION_ERROR: [400, 'Archivo inválido.'], PAYLOAD_TOO_LARGE: [413, 'El archivo supera 5 MB.'],
+  UNSUPPORTED_MEDIA_TYPE: [415, 'Formato no permitido. Use PDF, JPEG o PNG.'], STORAGE_UNAVAILABLE: [503, 'El almacenamiento privado no está disponible.'],
+};
+
+router.post('/register', acceptLetter, async (req, res) => {
+  const multipartRequest = Boolean(req.is('multipart/form-data'));
+  const body = multipartRequest ? Object.fromEntries(Object.entries(req.body ?? {}).filter(([, value]) => value !== '')) : req.body;
+  const parsed = registerSchema.safeParse(body);
   if (!parsed.success) return error(req, res, 400, 'VALIDATION_ERROR', 'Datos de registro inválidos.');
+  if (multipartRequest && !req.file) return error(req, res, 400, 'AUTHORIZATION_LETTER_REQUIRED', 'Adjunte la carta de autorización de la cuenta.');
+  const userId = randomUUID();
+  const create = async (client: PoolClient, letter?: { storagePath: string; fileName: string; sha256: string }) => {
+    const role = await client.query<{ id: string }>('SELECT id FROM roles WHERE code=$1', [parsed.data.roleCode]);
+    const passwordHash = await hashPassword(parsed.data.password);
+    await client.query(`INSERT INTO users(id,role_id,full_name,email,phone,password_hash,status) VALUES($1,$2,$3,$4,$5,$6,'PENDING_VALIDATION')`,
+      [userId, role.rows[0].id, parsed.data.fullName, parsed.data.email.toLowerCase(), parsed.data.phone ?? null, passwordHash]);
+    if (parsed.data.companyId) await client.query('INSERT INTO user_company_memberships(user_id,company_id) VALUES($1,$2)', [userId, parsed.data.companyId]);
+    const inserted = letter ? await insertLetter(client, { userId, uploadedBy: userId, ...letter, mimeType: req.file!.mimetype, sizeBytes: req.file!.size }) : null;
+    await writeDomainAudit({ action: 'USER_REGISTERED_PUBLIC', actorUserId: userId, correlationId: req.context.correlationId, entityType: 'USER', entityId: userId,
+      metadata: { roleCode: parsed.data.roleCode, letterId: inserted?.id ?? null }, client });
+  };
   try {
-    const createdId = await withTransaction(async (client) => {
-      const role = await client.query<{ id: string }>('SELECT id FROM roles WHERE code=$1', [parsed.data.roleCode]);
-      const passwordHash = await hashPassword(parsed.data.password);
-      const user = await client.query<{ id: string }>(
-        `INSERT INTO users(role_id,full_name,email,phone,password_hash,status) VALUES($1,$2,$3,$4,$5,'PENDING_VALIDATION') RETURNING id`,
-        [role.rows[0].id, parsed.data.fullName, parsed.data.email.toLowerCase(), parsed.data.phone ?? null, passwordHash]
-      );
-      if (parsed.data.companyId) {
-        await client.query('INSERT INTO user_company_memberships(user_id,company_id) VALUES($1,$2)', [user.rows[0].id, parsed.data.companyId]);
-      }
-      await writeDomainAudit({
-        action: 'USER_REGISTERED_PUBLIC',
-        actorUserId: user.rows[0].id,
-        correlationId: req.context.correlationId,
-        entityType: 'USER',
-        entityId: user.rows[0].id,
-        metadata: { roleCode: parsed.data.roleCode },
-        client,
-      });
-      return user.rows[0].id;
-    });
-    const result = await query(`${userProjection} WHERE u.id=$1`, [createdId]);
-    return res.status(201).json({ data: result.rows[0], meta: { correlationId: req.context.correlationId } });
+    if (req.file) await storeLetter(userId, req.file, (stored) => withTransaction((client) => create(client, stored)));
+    else await withTransaction((client) => create(client));
+    const result = await query(`${userProjection} WHERE u.id=$1`, [userId]);
+    return res.status(201).json({ data: { ...result.rows[0], authorizationLetterStatus: req.file ? 'PENDING' : null }, meta: { correlationId: req.context.correlationId } });
   } catch (err: any) {
+    if (err instanceof LetterError && letterFailures[err.code]) return error(req, res, letterFailures[err.code][0], err.code, letterFailures[err.code][1]);
     if (err?.code === '23505') return error(req, res, 409, 'CONFLICT', 'El correo ya está registrado.');
     if (err?.code === '23503') return error(req, res, 400, 'VALIDATION_ERROR', 'La empresa indicada no existe.');
     throw err;

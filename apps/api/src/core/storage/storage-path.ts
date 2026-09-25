@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-export const privateObjectScopes = ['request-document', 'inspection-evidence', 'official-report'] as const;
+export const privateObjectScopes = ['request-document', 'inspection-evidence', 'official-report', 'account-authorization-letter'] as const;
 export type PrivateObjectScope = typeof privateObjectScopes[number];
 
 const extensionByMimeType = {

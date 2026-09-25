@@ -61,7 +61,8 @@
     "field:dev": "npm run dev --workspace @ebr-bpm/pwa-field",
     "field:build": "npm run build --workspace @ebr-bpm/pwa-field",
     "field:test": "npm run test --workspace @ebr-bpm/pwa-field",
-    "db:test:field-location": "npm run db:test:field-location --workspace @ebr-bpm/api"
+    "db:test:field-location": "npm run db:test:field-location --workspace @ebr-bpm/api",
+    "db:test:user-authorization-letters": "npm run db:test:user-authorization-letters --workspace @ebr-bpm/api"
   },
   "engines": {
     "node": ">=20"

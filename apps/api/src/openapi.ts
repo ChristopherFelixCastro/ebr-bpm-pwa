@@ -174,7 +174,7 @@ export const openApiDocument = {
       User: {
         type: 'object',
         additionalProperties: false,
-        required: ['id', 'fullName', 'email', 'phone', 'status', 'version', 'roleCode', 'companyId', 'companyName', 'createdAt', 'updatedAt'],
+        required: ['id', 'fullName', 'email', 'phone', 'status', 'version', 'roleCode', 'companyId', 'companyName', 'createdAt', 'updatedAt', 'authorizationLetterStatus'],
         properties: {
           id: { type: 'string', format: 'uuid' },
           fullName: { type: 'string' },
@@ -187,6 +187,29 @@ export const openApiDocument = {
           companyName: { type: ['string', 'null'] },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
+          authorizationLetterStatus: { type: ['string', 'null'], enum: ['PENDING', 'VALID', 'REJECTED', null], description: 'Estado de la carta activa de la cuenta; null si no existe.' },
+        },
+      },
+      UserAuthorizationLetter: {
+        type: 'object',
+        additionalProperties: false,
+        description: 'Metadatos de la carta de autorización de la cuenta. Nunca incluye ruta privada, contenido ni URL firmada.',
+        required: ['id', 'userId', 'status', 'fileName', 'mimeType', 'sizeBytes', 'sha256', 'uploadedByUserId', 'uploadedAt', 'reviewedByUserId', 'reviewedAt', 'rejectionReason', 'archivedAt', 'version'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['PENDING', 'VALID', 'REJECTED', 'ARCHIVED'] },
+          fileName: { type: 'string' },
+          mimeType: { type: 'string', enum: ['application/pdf', 'image/jpeg', 'image/png'] },
+          sizeBytes: { type: 'integer', minimum: 1, maximum: 5242880 },
+          sha256: { type: 'string', pattern: '^[0-9a-f]{64}$' },
+          uploadedByUserId: { type: 'string', format: 'uuid' },
+          uploadedAt: { type: 'string', format: 'date-time' },
+          reviewedByUserId: { type: ['string', 'null'], format: 'uuid' },
+          reviewedAt: { type: ['string', 'null'], format: 'date-time' },
+          rejectionReason: { type: ['string', 'null'] },
+          archivedAt: { type: ['string', 'null'], format: 'date-time' },
+          version: { type: 'integer', minimum: 1 },
         },
       },
       UserCreateRequest: {
@@ -430,54 +453,101 @@ export const openApiDocument = {
     '/v1/users': {
       get: {
         tags: ['Users'], summary: 'Listar usuarios', security: [{ bearerAuth: [] }],
+        description: 'ADMIN y UNIVERSAL. ADMIN no recibe cuentas UNIVERSAL en resultados ni en meta.total.',
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
           { name: 'search', in: 'query', schema: { type: 'string', maxLength: 100 } },
+          { name: 'status', in: 'query', schema: { type: 'string', enum: ['PENDING_VALIDATION', 'APPROVED', 'REJECTED', 'INACTIVE'] } },
+          { name: 'roleCode', in: 'query', schema: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] } },
         ],
         responses: { '200': successResponse({ type: 'array', items: { $ref: '#/components/schemas/User' } }), '400': errorResponse('Consulta inválida.'), '403': errorResponse('Rol no autorizado.') },
       },
       post: {
         tags: ['Users'], summary: 'Crear usuario pendiente', security: [{ bearerAuth: [] }],
+        description: 'Crear UNIVERSAL solo por UNIVERSAL con reautenticación reciente.',
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UserCreateRequest' } } } },
-        responses: { '201': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Datos inválidos.'), '409': errorResponse('Correo duplicado.') },
+        responses: { '201': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Datos inválidos.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado.'), '409': errorResponse('Correo duplicado.') },
       },
     },
     '/v1/users/{id}': {
       get: {
         tags: ['Users'], summary: 'Consultar usuario', security: [{ bearerAuth: [] }],
+        description: 'Una cuenta UNIVERSAL responde 404 a ADMIN.',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Identificador inválido.'), '404': errorResponse('No encontrado.') },
       },
       patch: {
         tags: ['Users'], summary: 'Modificar usuario con versión optimista', security: [{ bearerAuth: [] }],
+        description: 'Cambiar hacia o desde UNIVERSAL exige UNIVERSAL con reautenticación reciente. Un cambio de rol revoca las sesiones de la cuenta.',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UserPatchRequest' } } } },
-        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Modificación inválida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Modificación inválida.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
       },
     },
     '/v1/users/{id}/approve': {
       post: {
         tags: ['Users'], summary: 'Aprobar usuario', security: [{ bearerAuth: [] }],
+        description: 'Exige reautenticación reciente y una carta de autorización activa VALID, comprobada dentro de la operación y por la base de datos. Desde PENDING_VALIDATION o INACTIVE.',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
-        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado o autogestión.'), '409': errorResponse('Versión desactualizada, estado inválido, carta requerida (AUTHORIZATION_LETTER_REQUIRED) o último UNIVERSAL.') },
       },
     },
     '/v1/users/{id}/reject': {
       post: {
         tags: ['Users'], summary: 'Rechazar usuario', security: [{ bearerAuth: [] }],
+        description: 'Exige reautenticación reciente. Solo desde PENDING_VALIDATION. Revoca sesiones.',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
-        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado o autogestión.'), '409': errorResponse('Versión desactualizada, estado inválido, carta requerida (AUTHORIZATION_LETTER_REQUIRED) o último UNIVERSAL.') },
       },
     },
     '/v1/users/{id}/deactivate': {
       post: {
         tags: ['Users'], summary: 'Desactivar usuario y revocar sesiones', security: [{ bearerAuth: [] }],
+        description: 'Exige reautenticación reciente. No permite autodesactivación ni dejar el sistema sin UNIVERSAL aprobado.',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
-        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado o autogestión.'), '409': errorResponse('Versión desactualizada, estado inválido, carta requerida (AUTHORIZATION_LETTER_REQUIRED) o último UNIVERSAL.') },
+      },
+    },
+    '/v1/users/{id}/authorization-letters': {
+      get: {
+        tags: ['Users'], summary: 'Historial de cartas de autorización de la cuenta', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': successResponse({ type: 'array', items: { $ref: '#/components/schemas/UserAuthorizationLetter' } }), '404': errorResponse('No encontrado.') },
+      },
+      post: {
+        tags: ['Users'], summary: 'Adjuntar o reemplazar la carta de una cuenta pendiente o inactiva', security: [{ bearerAuth: [] }],
+        description: 'PDF, JPEG o PNG de hasta 5 MB; se validan MIME, extensión y firma y se calcula SHA-256. Reemplazar archiva la carta activa anterior.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'multipart/form-data': { schema: { type: 'object', required: ['file'], properties: { file: { type: 'string', format: 'binary' } } } } } },
+        responses: { '201': successResponse({ $ref: '#/components/schemas/UserAuthorizationLetter' }), '400': errorResponse('Archivo inválido.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Estado inválido.'), '413': errorResponse('Archivo mayor de 5 MB.'), '415': errorResponse('Formato no permitido.'), '503': errorResponse('Storage no disponible.') },
+      },
+    },
+    '/v1/users/{id}/authorization-letters/{letterId}/validate': {
+      post: {
+        tags: ['Users'], summary: 'Marcar la carta pendiente como VALID', security: [{ bearerAuth: [] }],
+        description: 'Exige reautenticación reciente y versión. La cuenta no puede revisar su propia carta.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }, { name: 'letterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/UserAuthorizationLetter' }), '401': errorResponse('Reautenticación reciente requerida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada o estado inválido.') },
+      },
+    },
+    '/v1/users/{id}/authorization-letters/{letterId}/reject': {
+      post: {
+        tags: ['Users'], summary: 'Rechazar la carta pendiente con motivo', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }, { name: 'letterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', additionalProperties: false, required: ['version', 'reason'], properties: { version: { type: 'integer', minimum: 1 }, reason: { type: 'string', minLength: 1, maxLength: 1000 } } } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/UserAuthorizationLetter' }), '401': errorResponse('Reautenticación reciente requerida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada o estado inválido.') },
+      },
+    },
+    '/v1/users/{id}/authorization-letters/{letterId}/download-url': {
+      post: {
+        tags: ['Users'], summary: 'Emitir URL temporal de descarga (60 s)', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }, { name: 'letterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': successResponse({ type: 'object', required: ['signedUrl', 'expiresInSeconds'], properties: { signedUrl: { type: 'string', format: 'uri' }, expiresInSeconds: { type: 'integer' } } }), '404': errorResponse('No encontrado.'), '503': errorResponse('Storage no disponible.') },
       },
     },
     '/health/live': { get: { summary: 'Comprobar que el proceso está activo', responses: { '200': successResponse({ type: 'object', properties: { status: { const: 'ok' } } }) } } },
@@ -492,9 +562,12 @@ export const openApiDocument = {
     '/v1/auth/register': {
       post: {
         tags: ['Auth'], summary: 'Registro público de usuario empresarial',
-        description: 'Crea un usuario en estado PENDING_VALIDATION con rol COMPANY_ADMIN o DELEGATE.',
-        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/RegisterRequest' } } } },
-        responses: { '201': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Datos inválidos.'), '409': errorResponse('Correo duplicado.') },
+        description: 'Crea un usuario en estado PENDING_VALIDATION con rol COMPANY_ADMIN o DELEGATE, sin sesión. En multipart/form-data la carta de autorización de la cuenta (authorizationLetter) es obligatoria. El JSON anterior se conserva por compatibilidad: la cuenta queda pendiente y no puede aprobarse sin carta.',
+        requestBody: { required: true, content: {
+          'multipart/form-data': { schema: { type: 'object', required: ['fullName', 'email', 'password', 'roleCode', 'authorizationLetter'], properties: { fullName: { type: 'string' }, email: { type: 'string', format: 'email' }, phone: { type: 'string' }, password: { type: 'string' }, roleCode: { type: 'string', enum: ['COMPANY_ADMIN', 'DELEGATE'] }, companyId: { type: 'string', format: 'uuid' }, authorizationLetter: { type: 'string', format: 'binary' } } } },
+          'application/json': { schema: { $ref: '#/components/schemas/RegisterRequest' } },
+        } },
+        responses: { '201': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Datos inválidos o carta requerida.'), '409': errorResponse('Correo duplicado.'), '413': errorResponse('Archivo mayor de 5 MB.'), '415': errorResponse('Formato no permitido.'), '503': errorResponse('Storage no disponible.') },
       },
     },
     '/v1/auth/forgot-password': {

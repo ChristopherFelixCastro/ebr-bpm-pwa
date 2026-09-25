@@ -20,7 +20,8 @@ const makeApp = () => {
   app.use('/v1/users', userRoutes);
   return app;
 };
-const token = () => signAccessToken(id, 'UNIVERSAL', Math.floor(Date.now() / 1000));
+const actorId = '33333333-3333-4333-8333-333333333333';
+const token = () => signAccessToken(actorId, 'UNIVERSAL', Math.floor(Date.now() / 1000));
 
 describe('user administration', () => {
   beforeEach(() => { vi.clearAllMocks(); env.JWT_ACCESS_SECRET = 'test-secret-with-at-least-thirty-two-bytes'; });
@@ -45,14 +46,14 @@ describe('user administration', () => {
   });
 
   it('rejects a stale update', async () => {
-    mocks.clientQuery.mockResolvedValueOnce({ rows: [{ role_code: 'ADMIN', company_id: null }] }).mockResolvedValueOnce({ rows: [{ id: 'role-id' }] }).mockResolvedValueOnce({ rowCount: 0, rows: [] });
+    mocks.clientQuery.mockResolvedValueOnce({ rows: [{ roleCode: 'ADMIN', status: 'APPROVED', companyId: null }] }).mockResolvedValueOnce({ rows: [{ id: 'role-id' }] }).mockResolvedValueOnce({ rowCount: 0, rows: [] });
     const response = await request(makeApp()).patch(`/v1/users/${id}`).set('Authorization', `Bearer ${await token()}`).send({ version: 1, fullName: 'Changed' });
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('STALE_VERSION');
   });
 
   it('deactivates a user and revokes refresh sessions', async () => {
-    mocks.clientQuery.mockResolvedValueOnce({ rows: [{ roleCode: 'ADMIN' }] }).mockResolvedValueOnce({ rowCount: 1, rows: [{ id }] }).mockResolvedValueOnce({ rows: [] });
+    mocks.clientQuery.mockResolvedValueOnce({ rows: [{ roleCode: 'ADMIN', status: 'APPROVED', companyId: null }] }).mockResolvedValueOnce({ rowCount: 1, rows: [{ id }] }).mockResolvedValueOnce({ rows: [] });
     mocks.query.mockResolvedValueOnce({ rows: [{ id, status: 'INACTIVE', version: 2 }] });
     const response = await request(makeApp()).post(`/v1/users/${id}/deactivate`).set('Authorization', `Bearer ${await token()}`).send({ version: 1 });
     expect(response.status).toBe(200);
