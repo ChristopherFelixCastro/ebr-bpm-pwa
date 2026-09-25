@@ -26,6 +26,11 @@ import { CaseSourceFormPage } from './pages/operation/CaseSourceFormPage'
 import { OperationHistoryPage } from './pages/operation/OperationHistoryPage'
 import { FieldAssignmentsPage } from './pages/field/FieldAssignmentsPage'
 import { FieldInspectionPage } from './pages/field/FieldInspectionPage'
+import { EvaluationListPage } from './pages/evaluations/EvaluationListPage'
+import { EvaluationDetailPage } from './pages/evaluations/EvaluationDetailPage'
+import { ReviewPage } from './pages/evaluations/ReviewPage'
+import { CorrectionsInboxPage } from './pages/evaluations/CorrectionsInboxPage'
+import { CorrectionPage } from './pages/evaluations/CorrectionPage'
 import { theme } from './theme'
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -85,6 +90,8 @@ function OnlineRoutes() {
     <Route path="/campo/paquetes" element={<OfflinePackagesPage />} />
     <Route path="/campo/asignadas" element={<PrivateRoute><CapabilityPage id="field"><FieldAssignmentsPage /></CapabilityPage></PrivateRoute>} />
     <Route path="/campo/inspecciones/:id" element={<FieldRoute><FieldInspectionPage /></FieldRoute>} />
+    <Route path="/campo/correcciones" element={<PrivateRoute><CapabilityPage id="corrections"><CorrectionsInboxPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/campo/correcciones/:id" element={<PrivateRoute><CapabilityPage id="corrections"><CorrectionPage /></CapabilityPage></PrivateRoute>} />
     <Route path="/" element={<Navigate to="/inicio" replace />} />
     <Route path="/inicio" element={<PrivateRoute><HomePage /></PrivateRoute>} />
     <Route path="/cuenta" element={<PrivateRoute><AccountPage /></PrivateRoute>} />
@@ -113,6 +120,11 @@ function OnlineRoutes() {
     <Route path="/operacion/denuncias/:id/editar" element={<PrivateRoute><CapabilityPage id="complaints"><CaseSourceFormPage origin="COMPLAINT" /></CapabilityPage></PrivateRoute>} />
     <Route path="/operacion/asignaciones" element={<PrivateRoute><CapabilityPage id="assignments"><OperationHistoryPage kind="assignments" /></CapabilityPage></PrivateRoute>} />
     <Route path="/operacion/agenda" element={<PrivateRoute><CapabilityPage id="scheduling"><OperationHistoryPage kind="schedules" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/evaluaciones" element={<PrivateRoute><CapabilityPage id="analytics"><EvaluationListPage key="evaluations" mode="evaluations" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/evaluaciones/:id" element={<PrivateRoute><CapabilityPage id="analytics"><EvaluationDetailPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/evaluaciones/:id/revision" element={<PrivateRoute><CapabilityPage id="analytics"><ReviewPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/informes" element={<PrivateRoute><CapabilityPage id="reports"><EvaluationListPage key="reports" mode="reports" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/historico" element={<PrivateRoute><CapabilityPage id="history"><EvaluationListPage key="history" mode="history" /></CapabilityPage></PrivateRoute>} />
     <Route path="*" element={<PrivateRoute><ProtectedDestination /></PrivateRoute>} />
   </Routes>
 }

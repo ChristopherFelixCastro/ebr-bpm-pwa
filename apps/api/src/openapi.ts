@@ -14,6 +14,7 @@ const jsonBody=(schema:object)=>({required:true,content:{'application/json':{sch
 const secured={security:[{bearerAuth:[]}],tags:['Inspection Reviews & Reports']} as const;
 Object.assign((openApiDocument as any).tags,[...(openApiDocument as any).tags,{name:'Inspection Reviews & Reports',description:'Revisión institucional, correcciones limitadas, PDF privado, oficialización y cierre.'}]);
 Object.assign((openApiDocument as any).paths,{
+  '/v1/review-corrections':{get:{...secured,summary:'Bandeja paginada de correcciones del evaluador asignado',description:'Solo EVALUATOR. El servidor filtra por actor y ciclo actual RETURNED_FOR_CORRECTION; devuelve metadatos mínimos y total de inspecciones, sin respuestas BPM ni datos de otras cuentas.',parameters:[{name:'page',in:'query',schema:{type:'integer',minimum:1,default:1}},{name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:50,default:20}}],responses:{'200':successResponse({type:'array',items:{type:'object'}}),'403':errorResponse('Solo EVALUATOR.')}}},
   '/v1/inspections/{inspectionId}/reviews':{
     post:{...secured,summary:'Abrir revisión',description:'COORDINATOR y UNIVERSAL pueden abrir; ADMIN solo consulta. Exige inspección SUBMITTED, cálculo vigente coincidente, caso abierto y ausencia de ciclo activo o informe oficial.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false}),responses:{'201':successResponse({type:'object'}),...institutionalErrors}},
     get:{...secured,summary:'Listar ciclos de revisión',description:'Lectura global institucional; EVALUATOR solo sobre su inspección. Nunca expone observaciones BPM ni texto de auditoría.',parameters:[inspectionIdParameter],responses:{'200':successResponse({type:'array',items:{type:'object'}}),...institutionalErrors}},
@@ -35,6 +36,11 @@ Object.assign((openApiDocument as any).paths,{
   '/v1/inspections/{inspectionId}/close':{post:{...secured,summary:'Cerrar inspección y caso',description:'Acción posterior e idempotente para la misma identidad. COORDINATOR normal; UNIVERSAL con reautenticación reciente; ADMIN solo consulta. Cancela agenda, cierra asignación y caso, conserva historiales y crea inspection_closures atómicamente.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['reportId'],properties:{reportId:{type:'string',format:'uuid'},reason:{type:'string',maxLength:500}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
   '/v1/inspections/{inspectionId}/closure':{get:{...secured,summary:'Consultar cierre',description:'Metadatos históricos saneados del cierre. COMPANY_ADMIN y DELEGATE no tienen acceso.',parameters:[inspectionIdParameter],responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
 });
+for(const route of ['/v1/inspections/{inspectionId}/reports/generate','/v1/inspections/{inspectionId}/reports/{reportId}/officialize','/v1/inspections/{inspectionId}/reports/{reportId}/download-url']){
+  const response=(openApiDocument as any).paths[route].post.responses;
+  response['503']=errorResponse('REPORT_STORAGE_UNAVAILABLE: almacenamiento privado temporalmente no disponible.');
+  response['404']=errorResponse('REPORT_OBJECT_NOT_FOUND: archivo privado ausente o recurso no encontrado.');
+}
 };
 
 const augmentAnalyticsOpenApi=()=>{

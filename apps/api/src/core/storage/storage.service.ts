@@ -64,7 +64,7 @@ export async function createShortLivedDownloadUrl(storagePath: string, expiresIn
   try { result = await bucket().createSignedUrl(storagePath, expiresInSeconds); }
   catch (error) { throw expectedSigningFailure(error) ?? error; }
   const { data, error } = result;
-  if (error?.statusCode === '404') throw new PrivateStorageError('OBJECT_NOT_FOUND');
+  if (Number(error?.statusCode) === 404) throw new PrivateStorageError('OBJECT_NOT_FOUND');
   if (error || !data?.signedUrl) throw new PrivateStorageError('UNAVAILABLE');
   return { signedUrl: data.signedUrl, expiresInSeconds };
 }
@@ -77,7 +77,13 @@ export async function removePrivateObject(storagePath: string) {
 
 export async function readPrivateObject(storagePath: string) {
   if (!validPath(storagePath)) throw new Error('INVALID_STORAGE_PATH');
-  const { data, error } = await bucket().download(storagePath);
-  if (error || !data) throw new Error('PRIVATE_STORAGE_OBJECT_NOT_FOUND');
-  return Buffer.from(await data.arrayBuffer());
+  let result;
+  try { result = await bucket().download(storagePath); }
+  catch (error) { const expected = expectedSigningFailure(error); throw expected?.code === 'OBJECT_NOT_FOUND' ? expected : uploadFailure(error) ?? expected ?? error; }
+  const { data, error } = result;
+  if (Number(error?.statusCode) === 404) throw new PrivateStorageError('OBJECT_NOT_FOUND');
+  if (error) throw uploadFailure(error, true)!;
+  if (!data) throw new PrivateStorageError('UNAVAILABLE', 'REMOTE_FAILURE');
+  try { return Buffer.from(await data.arrayBuffer()); }
+  catch (error) { throw uploadFailure(error) ?? error; }
 }

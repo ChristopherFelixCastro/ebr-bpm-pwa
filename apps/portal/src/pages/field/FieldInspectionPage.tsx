@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { Alert, Box, Button, Card, CardContent, Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { useSession } from '../../session/SessionContext'
 import { core } from '../../api/core'
-import { CoreApiError, type CoreInspection } from '@ebr-bpm/core-client'
+import { CoreApiError, type CoreInspection, type CoreReport } from '@ebr-bpm/core-client'
+import { supportMessage } from '../../api/presentation'
 import { acknowledgeRenewalConflict, addEvidence, addFood, compareRenewalConflict, confirmFieldRenewal, downloadFieldPackage, finalizeLocal, inspectStoredFieldState, previewFieldRenewal, rebaseConflict, removePendingEvidence, reviewFieldConflict, saveLocation, saveResponse, selectFactor, syncFieldState, type BpmValue, type FieldRenewalPreview, type FieldState, type StoredFieldState } from '../../field/model'
 
 export function FieldInspectionPage() {
@@ -23,9 +24,10 @@ export function FieldInspectionPage() {
   const [foodId, setFoodId] = useState('')
   const [evidenceItemId, setEvidenceItemId] = useState('')
   const [conflictReview, setConflictReview] = useState<{ operationId: string; version: number; status: string; current: unknown; local: unknown } | null>(null)
+  const [officialReport, setOfficialReport] = useState<CoreReport | null>(null)
   const reload = useCallback(async () => {
     if (!actor || !id) return
-    setState(null); setSealed(null); setRenewalPreview(null); setConflictReview(null)
+    setState(null); setSealed(null); setRenewalPreview(null); setConflictReview(null); setOfficialReport(null)
     try {
       const stored = await inspectStoredFieldState(actor.id, id)
       setServerDenied(false); setReadOnly(false); setCoreChanged(false); setError('')
@@ -60,6 +62,13 @@ export function FieldInspectionPage() {
   }, [actor, id, user])
   useEffect(() => { void reload() }, [reload])
   useEffect(() => {
+    if (!user || user.roleCode !== 'EVALUATOR' || !navigator.onLine || state?.inspection.status !== 'SUBMITTED') return
+    let active = true
+    void core.reports(id).then(({ data }) => { if (active) setOfficialReport(data.find((report) => report.status === 'OFFICIAL') ?? null) })
+      .catch(() => { if (active) setOfficialReport(null) })
+    return () => { active = false }
+  }, [id, state?.inspection.status, user])
+  useEffect(() => {
     if (!state?.permit) return
     const expiresAt = Date.parse(state.permit.claims.expiresAt)
     const earliest = Date.parse(state.permit.claims.issuedAt) - 5 * 60_000
@@ -80,6 +89,17 @@ export function FieldInspectionPage() {
     setBusy(true); setError(''); setRenewalPreview(null)
     try { setRenewalPreview(await previewFieldRenewal(user.id, id)) }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'No se pudo comparar con Core.') }
+    finally { setBusy(false) }
+  }
+  const openOfficialReport = async () => {
+    if (!user || !officialReport) return
+    setBusy(true); setError('')
+    try {
+      const response = await core.reportDownloadUrl(id, officialReport.id)
+      const link = document.createElement('a')
+      link.href = response.data.signedUrl; link.rel = 'noopener noreferrer'; link.target = '_blank'
+      document.body.append(link); link.click(); link.remove()
+    } catch (cause) { setError(supportMessage(cause, 'No se pudo abrir el informe oficial.')) }
     finally { setBusy(false) }
   }
   if (!actor) return <Alert severity="error">Inicie sesión o desbloquee su cuenta local.</Alert>
@@ -116,6 +136,8 @@ export function FieldInspectionPage() {
       <Alert severity="info">Paquete de {state.inspection.establishmentName ?? state.inspection.caseId}. Estado Core: {state.inspection.status}; versión {state.inspection.version}. {state.permit && <>Permiso local hasta {new Date(state.permit.claims.expiresAt).toLocaleString('es-DO')}. La vigencia usa el reloj local como indicio; la revocación se comprueba al reconectar.</>}</Alert>
       {state.localFinalized && state.inspection.status !== 'SUBMITTED' && <Alert severity="warning">Finalización local pendiente. Aún no figura como SUBMITTED en Core.</Alert>}
       {state.inspection.status === 'SUBMITTED' && <Alert severity="success">Envío confirmado por Core.</Alert>}
+      {user?.roleCode === 'EVALUATOR' && state.inspection.status === 'SUBMITTED' && officialReport && navigator.onLine &&
+        <Button disabled={busy} onClick={() => void openOfficialReport()}>Abrir informe oficial</Button>}
       <Card><CardContent><Typography variant="h6">Respuestas BPM</Typography>
         {state.signedPackage.bpmTemplate.items.map((item) => <Box key={item.id} sx={{ borderBottom: '1px solid #ddd', py: 2 }}>
           <Typography sx={{ fontWeight: item.itemKind === 'CRITERION' ? 600 : 800 }}>{item.displayCode} {item.title}</Typography>

@@ -39,7 +39,7 @@ async function setup(){
   return{inspectionId,evaluatorId,coordinatorId,adminId,itemId};
 }
 
-async function createApprovedInspection(){
+async function createSubmittedInspection(){
   const inspectionId=await withTransaction(async client=>{
     const source=(await client.query<any>('SELECT evaluator_user_id,bpm_template_version_id,risk_rule_version_id FROM inspections WHERE id=$1',[fixture.inspectionId])).rows[0];
     const caseId=(await client.query<{id:string}>("INSERT INTO cases(origin,status) VALUES('INSTITUTIONAL_PROGRAM','PENDING_ASSIGNMENT') RETURNING id")).rows[0].id;
@@ -55,6 +55,11 @@ async function createApprovedInspection(){
     await client.query("UPDATE inspections SET status='SUBMITTED',submitted_at=clock_timestamp() WHERE id=$1",[created]);
     return created;
   });
+  return inspectionId;
+}
+
+async function createApprovedInspection(){
+  const inspectionId=await createSubmittedInspection();
   const coordinator=actor(fixture.coordinatorId,'COORDINATOR');
   const review=await service.openReview(inspectionId,coordinator,correlationId);
   await service.approveReview(inspectionId,review.id,'Approved regression fixture',coordinator,correlationId);
@@ -64,6 +69,20 @@ async function createApprovedInspection(){
 describe('review, official report and closure service with PostgreSQL',()=>{
   beforeAll(async()=>{fixture=await setup()});
   beforeEach(()=>{vi.clearAllMocks();const pdf=Buffer.from('%PDF-1.7\ncontrolled\n%%EOF');dependencies.render.mockResolvedValue(pdf);dependencies.read.mockResolvedValue(pdf);dependencies.upload.mockResolvedValue({storagePath:'private'});dependencies.remove.mockResolvedValue(undefined);dependencies.sign.mockResolvedValue({signedUrl:'https://signed.test/report',expiresInSeconds:60})});
+
+  it('pagina solo las devoluciones del evaluador asignado',async()=>{
+    const coordinator=actor(fixture.coordinatorId,'COORDINATOR');
+    const inspectionId=await createSubmittedInspection();
+    const review=await service.openReview(inspectionId,coordinator,correlationId);
+    await service.returnReview(inspectionId,review.id,{reason:'Corregir criterio de prueba',bpmItemIds:[fixture.itemId]},coordinator,correlationId);
+    const own=await service.correctionInbox({page:1,limit:1},actor(fixture.evaluatorId,'EVALUATOR'));
+    expect(own.total).toBe(1);
+    expect(own.rows[0]).toMatchObject({inspectionId,reviewId:review.id,returnCount:1});
+    expect(own.rows[0]).not.toHaveProperty('storagePath');
+    expect((await service.correctionInbox({page:2,limit:1},actor(fixture.evaluatorId,'EVALUATOR'))).rows).toEqual([]);
+    expect((await service.correctionInbox({page:1,limit:20},actor(randomUUID(),'EVALUATOR'))).total).toBe(0);
+    await expect(service.correctionInbox({page:1,limit:20},coordinator)).rejects.toMatchObject({code:'FORBIDDEN'});
+  });
 
   it('retains the prior active draft and object when regeneration rolls back after archival',async()=>{
     const inspectionId=await createApprovedInspection();

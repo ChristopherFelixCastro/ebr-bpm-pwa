@@ -17,3 +17,7 @@ export const deleteCorrection = z.object({ baseVersion: z.number().int().positiv
 export const approve = z.object({ note: z.string().trim().max(1000).optional() }).strict();
 export const generate = z.object({ operationId: uuid }).strict();
 export const close = z.object({ reason: z.string().trim().max(500).optional() }).strict();
+export const correctionInbox = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+}).strict();
