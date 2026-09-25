@@ -71,7 +71,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         >
           {getIcon()}
         </Box>
-        <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+        <Typography variant="h6" component="span" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
           {title}
         </Typography>
       </DialogTitle>

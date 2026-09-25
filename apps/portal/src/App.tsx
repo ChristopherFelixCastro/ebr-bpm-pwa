@@ -31,6 +31,8 @@ import { EvaluationDetailPage } from './pages/evaluations/EvaluationDetailPage'
 import { ReviewPage } from './pages/evaluations/ReviewPage'
 import { CorrectionsInboxPage } from './pages/evaluations/CorrectionsInboxPage'
 import { CorrectionPage } from './pages/evaluations/CorrectionPage'
+import { UserListPage } from './pages/users/UserListPage'
+import { UserDetailPage } from './pages/users/UserDetailPage'
 import { theme } from './theme'
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -125,6 +127,8 @@ function OnlineRoutes() {
     <Route path="/evaluaciones/:id/revision" element={<PrivateRoute><CapabilityPage id="analytics"><ReviewPage /></CapabilityPage></PrivateRoute>} />
     <Route path="/informes" element={<PrivateRoute><CapabilityPage id="reports"><EvaluationListPage key="reports" mode="reports" /></CapabilityPage></PrivateRoute>} />
     <Route path="/historico" element={<PrivateRoute><CapabilityPage id="history"><EvaluationListPage key="history" mode="history" /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/usuarios" element={<PrivateRoute><CapabilityPage id="users"><UserListPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/usuarios/:id" element={<PrivateRoute><CapabilityPage id="users"><UserDetailPage /></CapabilityPage></PrivateRoute>} />
     <Route path="*" element={<PrivateRoute><ProtectedDestination /></PrivateRoute>} />
   </Routes>
 }
