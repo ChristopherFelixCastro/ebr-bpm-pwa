@@ -24,6 +24,8 @@ import { CaseListPage } from './pages/operation/CaseListPage'
 import { CaseDetailPage } from './pages/operation/CaseDetailPage'
 import { CaseSourceFormPage } from './pages/operation/CaseSourceFormPage'
 import { OperationHistoryPage } from './pages/operation/OperationHistoryPage'
+import { FieldAssignmentsPage } from './pages/field/FieldAssignmentsPage'
+import { FieldInspectionPage } from './pages/field/FieldInspectionPage'
 import { theme } from './theme'
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -39,6 +41,15 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (loading) return <StatusPage title="Restaurando sesión…" />
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
   return <PortalLayout>{children}</PortalLayout>
+}
+
+function FieldRoute({ children }: { children: React.ReactNode }) {
+  const { user, offlineUser, loading } = useSession()
+  if (loading) return <StatusPage title="Restaurando sesión…" />
+  const actor = user ?? offlineUser
+  if (!actor) return <Navigate to={navigator.onLine ? '/login' : '/acceso-sin-conexion'} replace />
+  if (actor.roleCode !== 'EVALUATOR' && actor.roleCode !== 'UNIVERSAL') return <StatusPage title="Acceso denegado" />
+  return user ? <PortalLayout>{children}</PortalLayout> : children
 }
 
 function CapabilityPage({ id, children }: { id: string; children: React.ReactNode }) {
@@ -72,6 +83,8 @@ function OnlineRoutes() {
     <Route path="/recuperar-clave" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
     <Route path="/acceso-sin-conexion" element={<OfflineAccessPage />} />
     <Route path="/campo/paquetes" element={<OfflinePackagesPage />} />
+    <Route path="/campo/asignadas" element={<PrivateRoute><CapabilityPage id="field"><FieldAssignmentsPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/campo/inspecciones/:id" element={<FieldRoute><FieldInspectionPage /></FieldRoute>} />
     <Route path="/" element={<Navigate to="/inicio" replace />} />
     <Route path="/inicio" element={<PrivateRoute><HomePage /></PrivateRoute>} />
     <Route path="/cuenta" element={<PrivateRoute><AccountPage /></PrivateRoute>} />

@@ -3,15 +3,15 @@ import type { PoolClient } from 'pg';
 import { env } from '../../config/env.js';
 import { writeDomainAudit } from '../../core/audit/domain-audit.service.js';
 import type { RoleCode } from '../../core/auth/roles.js';
-import { createShortLivedDownloadUrl, removePrivateObject, uploadPrivateObject } from '../../core/storage/storage.service.js';
+import { createShortLivedDownloadUrl, PrivateStorageError, removePrivateObject, uploadPrivateObject } from '../../core/storage/storage.service.js';
 import { createUploadPath, MAX_PRIVATE_OBJECT_BYTES, type AllowedPrivateMimeType } from '../../core/storage/storage-path.js';
 import { query, withTransaction } from '../../db/client.js';
 import * as repo from './repository.js';
 import type { InspectionListInput, OfflineOperationInput } from './schemas.js';
 
 export type Actor={userId:string;role:RoleCode;authTime:number};
-export type InspectionErrorCode='FORBIDDEN'|'NOT_FOUND'|'CONFLICT'|'DEFAULT_DEFINITIONS_UNAVAILABLE'|'STALE_VERSION'|'ALREADY_SUBMITTED'|'INSPECTION_IN_PROGRESS'|'VALIDATION_ERROR'|'PAYLOAD_TOO_LARGE'|'REAUTHENTICATION_REQUIRED'|'CALCULATION_INPUT_INCOMPLETE'|'IDEMPOTENCY_KEY_REUSED'|'PAYLOAD_HASH_MISMATCH'|'ONLINE_REQUIRED'|'BINARY_UPLOAD_REQUIRED';
-export class InspectionError extends Error{constructor(public code:InspectionErrorCode,public details?:unknown){super(code)}}
+export type InspectionErrorCode='FORBIDDEN'|'NOT_FOUND'|'CONFLICT'|'DEFAULT_DEFINITIONS_UNAVAILABLE'|'STALE_VERSION'|'ALREADY_SUBMITTED'|'INSPECTION_IN_PROGRESS'|'VALIDATION_ERROR'|'PAYLOAD_TOO_LARGE'|'REAUTHENTICATION_REQUIRED'|'CALCULATION_INPUT_INCOMPLETE'|'IDEMPOTENCY_KEY_REUSED'|'PAYLOAD_HASH_MISMATCH'|'ONLINE_REQUIRED'|'BINARY_UPLOAD_REQUIRED'|'OFFLINE_PERMIT_UNAVAILABLE'|'STORAGE_UNAVAILABLE'|'EVIDENCE_PERSISTENCE_FAILED';
+export class InspectionError extends Error{constructor(public code:InspectionErrorCode,public details?:unknown,public technical?:{stage:'STORAGE_UPLOAD'|'DATABASE_TRANSACTION';reason:string;cleanup?:'SUCCEEDED'|'FAILED'}){super(code)}}
 const globals=new Set<RoleCode>(['ADMIN','UNIVERSAL','COORDINATOR']);
 const readers=new Set<RoleCode>([...globals,'EVALUATOR']);
 const editable=new Set(['DRAFT','IN_PROGRESS']);
@@ -95,7 +95,11 @@ export async function uploadEvidence(id:string,file:Express.Multer.File,a:Actor,
   if(!editable.has(before.status))throw new InspectionError('CONFLICT');
   if(options.baseVersion&&before.version!==options.baseVersion)throw new InspectionError('STALE_VERSION');
   const path=createUploadPath('inspection-evidence',id,file.mimetype as AllowedPrivateMimeType);
-  await uploadPrivateObject({storagePath:path,mimeType:file.mimetype as AllowedPrivateMimeType,content:file.buffer});
+  try { await uploadPrivateObject({storagePath:path,mimeType:file.mimetype as AllowedPrivateMimeType,content:file.buffer}); }
+  catch(error){
+    if(error instanceof PrivateStorageError)throw new InspectionError('STORAGE_UNAVAILABLE',undefined,{stage:'STORAGE_UPLOAD',reason:error.reason});
+    throw error;
+  }
   try{
     return await withTransaction(async c=>{
       if(options.operationId)await lockOperation(c,options.operationId);
@@ -112,7 +116,14 @@ export async function uploadEvidence(id:string,file:Express.Multer.File,a:Actor,
       await audit(c,'EVIDENCE_UPLOADED',a,corr,'INSPECTION_EVIDENCE',evidenceId,{inspectionId:id,caseId:i.caseId,evidenceId,mimeType:file.mimetype,sizeBytes:file.size,resultingVersion:updated.version});
       return result;
     });
-  }catch(e){try{await removePrivateObject(path)}catch{}throw e}
+  }catch(e){
+    let cleanup:'SUCCEEDED'|'FAILED'='SUCCEEDED';
+    try{await removePrivateObject(path)}catch{cleanup='FAILED'}
+    if(e instanceof InspectionError||['23505','23514','55000'].includes((e as{code?:string})?.code??''))throw e;
+    const code=(e as{code?:unknown})?.code;
+    const reason=typeof code==='string'&&/^[0-9A-Z]{5}$/.test(code)?`SQLSTATE_${code}`:'UNEXPECTED_TRANSACTION_FAILURE';
+    throw new InspectionError('EVIDENCE_PERSISTENCE_FAILED',undefined,{stage:'DATABASE_TRANSACTION',reason,cleanup});
+  }
 }
 export async function deleteEvidence(id:string,evidenceId:string,input:{version:number;baseVersion:number},a:Actor,corr:string){return withTransaction(async c=>{const i=await get(id,a,c,true,true);if(!editable.has(i.status))throw new InspectionError('CONFLICT');if(i.version!==input.baseVersion)throw new InspectionError('STALE_VERSION');const e=await repo.evidence(c,id,evidenceId,true);if(!e)throw new InspectionError('NOT_FOUND');const q=await c.query("UPDATE inspection_evidence SET status='ARCHIVED',deleted_at=clock_timestamp(),deleted_by_user_id=$1,archived_at=clock_timestamp() WHERE id=$2 AND inspection_id=$3 AND version=$4 AND status<>'ARCHIVED'",[a.userId,evidenceId,id,input.version]);if(!q.rowCount)throw new InspectionError('STALE_VERSION');const updated=await repo.inspection(c,id);await audit(c,'EVIDENCE_DELETED',a,corr,'INSPECTION_EVIDENCE',evidenceId,{inspectionId:id,caseId:i.caseId,evidenceId,status:'ARCHIVED',resultingVersion:updated.version});return{evidenceId,status:'ARCHIVED',version:input.version+1,inspectionVersion:updated.version}})}
 export async function decideEvidence(id:string,evidenceId:string,version:number,state:'VALID'|'REJECTED',reason:string|undefined,a:Actor,corr:string){globalAuth(a);if(state==='REJECTED'&&!reason)throw new InspectionError('VALIDATION_ERROR');return withTransaction(async c=>{const i=await repo.inspection(c,id,true);if(!i)throw new InspectionError('NOT_FOUND');if(!editable.has(i.status))throw new InspectionError('CONFLICT');const e=await repo.evidence(c,id,evidenceId,true);if(!e)throw new InspectionError('NOT_FOUND');if(e.status!=='UPLOADED')throw new InspectionError('CONFLICT');const q=await c.query('UPDATE inspection_evidence SET status=$1,validated_at=clock_timestamp(),validated_by_user_id=$2,rejection_reason=$3 WHERE id=$4 AND inspection_id=$5 AND version=$6',[state,a.userId,state==='REJECTED'?reason:null,evidenceId,id,version]);if(!q.rowCount)throw new InspectionError('STALE_VERSION');const updated=await repo.inspection(c,id);await audit(c,state==='VALID'?'EVIDENCE_VALIDATED':'EVIDENCE_REJECTED',a,corr,'INSPECTION_EVIDENCE',evidenceId,{inspectionId:id,caseId:i.caseId,evidenceId,status:state,resultingVersion:updated.version});return{evidenceId,status:state,version:version+1,inspectionVersion:updated.version}})}

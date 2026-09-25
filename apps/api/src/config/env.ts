@@ -30,6 +30,7 @@ const schema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: optionalEnvironmentValue(z.string().min(20)),
   SUPABASE_STORAGE_BUCKET_PRIVATE: optionalEnvironmentValue(z.string().min(1)),
   PDF_CHROMIUM_EXECUTABLE_PATH: optionalEnvironmentValue(z.string().min(1)),
+  OFFLINE_PERMIT_PRIVATE_KEY_BASE64: optionalEnvironmentValue(z.string().min(1)),
 }).superRefine((value, context) => {
   if (value.NODE_ENV === 'production' && !value.JWT_ACCESS_SECRET) {
     context.addIssue({

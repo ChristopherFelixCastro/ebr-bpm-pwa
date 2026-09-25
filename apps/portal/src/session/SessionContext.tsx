@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material'
 import { CoreApiError, type CoreUser } from '@ebr-bpm/core-client'
 import { core, coreAvailable, SESSION_EXPIRED_EVENT } from '../api/core'
-import { enrollOfflineIdentity, lockOfflineVault, type OfflineIdentity, unlockOfflineIdentity } from '../offline/vault'
+import { enrollOfflineIdentity, lockOfflineVault, rekeyOfflineIdentity, type OfflineIdentity, unlockOfflineIdentity } from '../offline/vault'
 
 const LOGOUT_PENDING = 'ebr-bpm-portal-logout-pending'
 type PendingAction = { run: () => Promise<unknown>; resolve: (result: unknown) => void; reject: (reason: unknown) => void }
@@ -16,6 +16,8 @@ type SessionValue = {
   logout: () => Promise<void>
   lockOffline: () => void
   unlockOffline: (userId: string, password: string) => Promise<void>
+  unlockVaultOnline: (password: string) => Promise<void>
+  recoverOfflineVault: (oldPassword: string, currentPassword: string) => Promise<void>
   reauthenticate: (password: string) => Promise<void>
   runWithReauthentication: <T,>(action: () => Promise<T>) => Promise<T>
 }
@@ -93,9 +95,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setOfflineUser(null)
       setOfflineEnrollmentError(false)
       setUser(authenticated)
-      if (authenticated.roleCode === 'EVALUATOR') {
+      if (authenticated.roleCode === 'EVALUATOR' || authenticated.roleCode === 'UNIVERSAL') {
         // El enrolamiento local protege futuros paquetes; un fallo no altera el login Core.
-        try { await enrollOfflineIdentity(authenticated, nextPassword) } catch { setOfflineEnrollmentError(true) }
+        const enrollmentEpoch = sessionEpoch.current
+        try { await enrollOfflineIdentity(authenticated, nextPassword) }
+        catch { if (enrollmentEpoch === sessionEpoch.current) setOfflineEnrollmentError(true) }
+        if (enrollmentEpoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante el acceso al vault.') }
       }
       return authenticated
     },
@@ -109,9 +114,36 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     lockOffline: () => { lockOfflineVault(); setOfflineUser(null) },
     unlockOffline: async (userId, nextPassword) => {
+      const epoch = sessionEpoch.current
       if (await coreAvailable()) throw new Error('Use el inicio de sesión normal cuando Core esté disponible.')
       const identity = await unlockOfflineIdentity(userId, nextPassword)
+      if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión cambió durante el acceso local.') }
       setOfflineUser(identity)
+    },
+    unlockVaultOnline: async (nextPassword) => {
+      if (!user || (user.roleCode !== 'EVALUATOR' && user.roleCode !== 'UNIVERSAL')) throw new Error('Acceso no autorizado.')
+      const epoch = sessionEpoch.current
+      const authenticated = await core.reauthenticate(nextPassword)
+      if (epoch !== sessionEpoch.current || authenticated.id !== user.id) throw new Error('La sesión cambió durante la validación.')
+      try { await enrollOfflineIdentity(authenticated, nextPassword) }
+      catch {
+        if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante el acceso al vault.') }
+        setOfflineEnrollmentError(true)
+        throw new Error('El vault usa una contraseña anterior. Recupérelo en Mi cuenta sin borrar sus pendientes.')
+      }
+      if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante el acceso al vault.') }
+      setOfflineEnrollmentError(false)
+      setUser(authenticated)
+    },
+    recoverOfflineVault: async (oldPassword, currentPassword) => {
+      if (!user || (user.roleCode !== 'EVALUATOR' && user.roleCode !== 'UNIVERSAL')) throw new Error('Acceso no autorizado.')
+      const epoch = sessionEpoch.current
+      const authenticated = await core.reauthenticate(currentPassword)
+      if (epoch !== sessionEpoch.current || authenticated.id !== user.id) throw new Error('La sesión cambió durante la recuperación.')
+      await rekeyOfflineIdentity(authenticated, oldPassword, currentPassword)
+      if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante la recuperación del vault.') }
+      setOfflineEnrollmentError(false)
+      setUser(authenticated)
     },
     reauthenticate: async (nextPassword) => {
       const epoch = sessionEpoch.current

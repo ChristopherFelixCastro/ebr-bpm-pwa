@@ -30,7 +30,7 @@ export const capabilities: readonly Capability[] = [
   { id: 'complaints', label: 'Denuncias', path: '/operacion/denuncias', section: 'Operación sanitaria', roles: coordination, ready: true },
   { id: 'assignments', label: 'Asignaciones', path: '/operacion/asignaciones', section: 'Operación sanitaria', roles: coordination, ready: true },
   { id: 'scheduling', label: 'Agenda', path: '/operacion/agenda', section: 'Operación sanitaria', roles: coordination, ready: true },
-  { id: 'field', label: 'Mis inspecciones', path: '/campo/asignadas', section: 'Inspecciones de campo', roles: ['EVALUATOR', 'UNIVERSAL'], ready: false },
+  { id: 'field', label: 'Mis inspecciones', path: '/campo/asignadas', section: 'Inspecciones de campo', roles: ['EVALUATOR', 'UNIVERSAL'], ready: true },
   { id: 'corrections', label: 'Correcciones', path: '/campo/correcciones', section: 'Inspecciones de campo', roles: ['EVALUATOR'], ready: false },
   { id: 'analytics', label: 'Evaluaciones', path: '/evaluaciones', section: 'Evaluación y cierre', roles: coordination, ready: false },
   { id: 'reports', label: 'Informes', path: '/informes', section: 'Evaluación y cierre', roles: coordination, ready: false },

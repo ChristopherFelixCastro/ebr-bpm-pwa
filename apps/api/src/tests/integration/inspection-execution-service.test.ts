@@ -8,12 +8,16 @@ const storage = vi.hoisted(() => ({
 }));
 
 vi.mock('../../core/storage/storage.service.js', () => ({
+  PrivateStorageError: class PrivateStorageError extends Error {
+    constructor(public code: 'UNAVAILABLE', public reason: string) { super(code); }
+  },
   uploadPrivateObject: storage.upload,
   removePrivateObject: storage.remove,
   createShortLivedDownloadUrl: storage.sign,
 }));
 
 import { env } from '../../config/env.js';
+import { PrivateStorageError } from '../../core/storage/storage.service.js';
 import { query, withTransaction } from '../../db/client.js';
 import * as service from '../../modules/inspection-execution/service.js';
 
@@ -122,6 +126,36 @@ describe('inspection execution service idempotency', () => {
     storage.upload.mockResolvedValue({ storagePath: 'private' });
     storage.remove.mockResolvedValue(undefined);
     storage.sign.mockResolvedValue({ signedUrl: 'https://signed.test/private', expiresInSeconds: 60 });
+  });
+
+  it('distingue fallo de subida y fallo transaccional sin registrar la evidencia de prueba', async () => {
+    const buffer = Buffer.alloc(55 * 1024);
+    buffer.write('%PDF-');
+    const file = { ...pdfFile(), buffer, size: buffer.length };
+    const evaluator = actor(fixture.evaluatorId);
+    const storageOperationId = randomUUID();
+    storage.upload.mockRejectedValueOnce(new PrivateStorageError('UNAVAILABLE', 'NETWORK_ACCESS_DENIED'));
+    await expect(service.uploadEvidence(fixture.inspectionId, file, evaluator, correlationId, {
+      operationId: storageOperationId, baseVersion: 1, payloadHash: service.hashEvidenceUpload(file, 1),
+    })).rejects.toMatchObject({ code: 'STORAGE_UNAVAILABLE', technical: { stage: 'STORAGE_UPLOAD', reason: 'NETWORK_ACCESS_DENIED' } });
+    expect(storage.remove).not.toHaveBeenCalled();
+    expect((await query<{ count: string }>('SELECT count(*)::text count FROM inspection_operations WHERE operation_id=$1', [storageOperationId])).rows[0].count).toBe('0');
+
+    const transactionOperationId = randomUUID();
+    await expect(service.uploadEvidence(fixture.inspectionId, file, evaluator, 'invalid-test-correlation', {
+      operationId: transactionOperationId, baseVersion: 1, payloadHash: service.hashEvidenceUpload(file, 1),
+    })).rejects.toMatchObject({ code: 'EVIDENCE_PERSISTENCE_FAILED', technical: { stage: 'DATABASE_TRANSACTION', reason: 'SQLSTATE_22P02', cleanup: 'SUCCEEDED' } });
+    expect(storage.remove).toHaveBeenCalledTimes(1);
+    expect((await query<{ count: string }>('SELECT count(*)::text count FROM inspection_operations WHERE operation_id=$1', [transactionOperationId])).rows[0].count).toBe('0');
+    expect((await query<{ count: string }>('SELECT count(*)::text count FROM inspection_evidence WHERE inspection_id=$1', [fixture.inspectionId])).rows[0].count).toBe('0');
+
+    const successfulOperationId = randomUUID();
+    const result = await service.uploadEvidence(fixture.inspectionId, file, evaluator, correlationId, {
+      operationId: successfulOperationId, baseVersion: 1, payloadHash: service.hashEvidenceUpload(file, 1),
+    });
+    expect(result).toMatchObject({ status: 'UPLOADED', sizeBytes: 55 * 1024, version: 2 });
+    expect((await query<{ count: string }>('SELECT count(*)::text count FROM inspection_operations WHERE operation_id=$1', [successfulOperationId])).rows[0].count).toBe('1');
+    expect((await query<{ count: string }>('SELECT count(*)::text count FROM inspection_evidence WHERE inspection_id=$1', [fixture.inspectionId])).rows[0].count).toBe('1');
   });
 
   it('serializes concurrent retries, returns an identical contract and applies the domain effect once', async () => {

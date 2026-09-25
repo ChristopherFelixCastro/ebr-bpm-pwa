@@ -9,10 +9,36 @@ const bucket = () => {
 };
 
 export class PrivateStorageError extends Error {
-  constructor(public readonly code: 'OBJECT_NOT_FOUND' | 'UNAVAILABLE') { super(code); }
+  constructor(public readonly code: 'OBJECT_NOT_FOUND' | 'UNAVAILABLE',
+    public readonly reason: 'NOT_CONFIGURED' | 'NETWORK_ACCESS_DENIED' | 'NETWORK_UNAVAILABLE' | 'REMOTE_REJECTED' | 'REMOTE_FAILURE' | 'UNSPECIFIED' = 'UNSPECIFIED') { super(code); }
 }
 
 const transportCodes = new Set(['EACCES', 'ECONNREFUSED', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'ENETUNREACH', 'EHOSTUNREACH', 'UND_ERR_CONNECT_TIMEOUT']);
+function nestedCodes(error: unknown, depth = 0, seen = new Set<object>()): string[] {
+  if (!error || typeof error !== 'object' || depth > 5 || seen.has(error)) return [];
+  seen.add(error);
+  const entry = error as { code?: unknown; cause?: unknown; originalError?: unknown; errors?: unknown };
+  return [
+    ...(typeof entry.code === 'string' ? [entry.code] : []),
+    ...nestedCodes(entry.cause, depth + 1, seen),
+    ...nestedCodes(entry.originalError, depth + 1, seen),
+    ...(Array.isArray(entry.errors) ? entry.errors.flatMap((part) => nestedCodes(part, depth + 1, seen)) : []),
+  ];
+}
+function uploadFailure(error: unknown, sdkResult = false): PrivateStorageError | null {
+  if (!error || typeof error !== 'object') return null;
+  const failure = error as { code?: unknown; message?: unknown; statusCode?: unknown; name?: unknown };
+  if (failure.code === 'SUPABASE_STORAGE_NOT_CONFIGURED' || failure.message === 'SUPABASE_STORAGE_NOT_CONFIGURED')
+    return new PrivateStorageError('UNAVAILABLE', 'NOT_CONFIGURED');
+  const codes = nestedCodes(error);
+  if (codes.includes('EACCES')) return new PrivateStorageError('UNAVAILABLE', 'NETWORK_ACCESS_DENIED');
+  if (codes.some((code) => transportCodes.has(code))) return new PrivateStorageError('UNAVAILABLE', 'NETWORK_UNAVAILABLE');
+  if (sdkResult || failure.name === 'StorageApiError' || failure.name === 'StorageUnknownError') {
+    const status = Number(failure.statusCode);
+    return new PrivateStorageError('UNAVAILABLE', status >= 400 && status < 500 ? 'REMOTE_REJECTED' : 'REMOTE_FAILURE');
+  }
+  return null;
+}
 function expectedSigningFailure(error: unknown): PrivateStorageError | null {
   if (!error || typeof error !== 'object') return null;
   const failure = error as { code?: unknown; message?: unknown; statusCode?: unknown; cause?: { code?: unknown }; originalError?: { code?: unknown; cause?: { code?: unknown } } };
@@ -24,8 +50,10 @@ function expectedSigningFailure(error: unknown): PrivateStorageError | null {
 
 export async function uploadPrivateObject(input: { storagePath: string; mimeType: AllowedPrivateMimeType; content: Uint8Array }) {
   assertPrivateObject(input.storagePath, input.mimeType, input.content.byteLength);
-  const { error } = await bucket().upload(input.storagePath, input.content, { contentType: input.mimeType, upsert: false });
-  if (error) throw new Error('PRIVATE_STORAGE_UPLOAD_FAILED');
+  let result;
+  try { result = await bucket().upload(input.storagePath, input.content, { contentType: input.mimeType, upsert: false }); }
+  catch (error) { throw uploadFailure(error) ?? error; }
+  if (result.error) throw uploadFailure(result.error, true)!;
   return { storagePath: input.storagePath };
 }
 
