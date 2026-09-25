@@ -33,6 +33,9 @@ import { CorrectionsInboxPage } from './pages/evaluations/CorrectionsInboxPage'
 import { CorrectionPage } from './pages/evaluations/CorrectionPage'
 import { UserListPage } from './pages/users/UserListPage'
 import { UserDetailPage } from './pages/users/UserDetailPage'
+import { CatalogDetailPage, CatalogListPage, CatalogVersionPage } from './pages/configuration/CatalogPages'
+import { BpmTemplateDetailPage, BpmTemplateListPage, BpmTemplateVersionPage } from './pages/configuration/BpmTemplatePages'
+import { RiskRuleDetailPage, RiskRuleListPage, RiskRuleVersionPage } from './pages/configuration/RiskRulePages'
 import { theme } from './theme'
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -129,6 +132,16 @@ function OnlineRoutes() {
     <Route path="/historico" element={<PrivateRoute><CapabilityPage id="history"><EvaluationListPage key="history" mode="history" /></CapabilityPage></PrivateRoute>} />
     <Route path="/configuracion/usuarios" element={<PrivateRoute><CapabilityPage id="users"><UserListPage /></CapabilityPage></PrivateRoute>} />
     <Route path="/configuracion/usuarios/:id" element={<PrivateRoute><CapabilityPage id="users"><UserDetailPage /></CapabilityPage></PrivateRoute>} />
+    {/* Configuración versionada (F4) */}
+    <Route path="/configuracion/catalogos" element={<PrivateRoute><CapabilityPage id="catalogs"><CatalogListPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/catalogos/:id" element={<PrivateRoute><CapabilityPage id="catalogs"><CatalogDetailPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/catalogos/:id/versiones/:versionId" element={<PrivateRoute><CapabilityPage id="catalogs"><CatalogVersionPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/plantillas-bpm" element={<PrivateRoute><CapabilityPage id="templates"><BpmTemplateListPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/plantillas-bpm/:id" element={<PrivateRoute><CapabilityPage id="templates"><BpmTemplateDetailPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/plantillas-bpm/:id/versiones/:versionId" element={<PrivateRoute><CapabilityPage id="templates"><BpmTemplateVersionPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/reglas-riesgo" element={<PrivateRoute><CapabilityPage id="rules"><RiskRuleListPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/reglas-riesgo/:id" element={<PrivateRoute><CapabilityPage id="rules"><RiskRuleDetailPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/configuracion/reglas-riesgo/:id/versiones/:versionId" element={<PrivateRoute><CapabilityPage id="rules"><RiskRuleVersionPage /></CapabilityPage></PrivateRoute>} />
     <Route path="*" element={<PrivateRoute><ProtectedDestination /></PrivateRoute>} />
   </Routes>
 }
