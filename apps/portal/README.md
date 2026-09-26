@@ -1,6 +1,15 @@
-# Portal único EBR / BPM — entrega A
+# Portal único EBR / BPM
 
-El host React/Vite de `apps/portal` usa un solo `BrowserRouter`, `SessionProvider`, `CoreClient` y layout. El login conserva el estilo de `web-admin`. Durante esta entrega solo están operativos Inicio, Mi cuenta, reautenticación, cierre de sesión, el registro de una petición de recuperación y el visor local cifrado de solo lectura. Las rutas de negocio permanecen protegidas y fuera del sidebar hasta migrar su pantalla y verificar su contrato con Core.
+El host React/Vite de `apps/portal` usa un solo `BrowserRouter`, `SessionProvider`, `CoreClient` y layout. Reúne las entregas:
+
+- **A** acceso: inicio de sesión, Mi cuenta, reautenticación, cierre de sesión y visor local cifrado.
+- **B** directorio empresarial (empresas, establecimientos, perfiles, contactos), solicitudes BPM y validación documental.
+- **C** casos de los cuatro orígenes, asignaciones y agenda.
+- **D** inspección de campo: formulario BPM, riesgo, evidencias y trabajo offline cifrado (ver `FIELD_OFFLINE.md`).
+- **E** evaluación, revisión, corrección, informes e histórico (ver `EVALUATION.md`).
+- **F** configuración: Usuarios con carta de autorización de la cuenta, Catálogos, Plantillas BPM y Reglas de riesgo; registro público con carta.
+
+Cada entrada del sidebar se activa solo cuando su pantalla y su guard de URL directa funcionan (`src/access/capabilities.ts`). Los permisos de Core prevalecen: ocultar un botón no es un control de seguridad.
 
 ## Ejecución y despliegue
 
@@ -13,14 +22,24 @@ El host React/Vite de `apps/portal` usa un solo `BrowserRouter`, `SessionProvide
 
 El token de acceso solo existe en memoria de `CoreClient`. Al recargar, `refresh` rota la cookie y `me` restablece una cuenta `APPROVED`. Un cierre de sesión sin conexión deja un marcador local de revocación pendiente; bloquea la sesión y reintenta `logout` antes de restaurar. Ese marcador no otorga acceso.
 
-Después de un login online de un `EVALUATOR` aprobado, el portal puede enrolar su identidad local con una clave derivada de su contraseña. Los paquetes locales se cifran con AES-GCM y se asocian al ID de la cuenta. La clave se borra de memoria al salir o recargar. Para abrir un paquete tras recargar sin red: entrar en «Trabajo de campo sin conexión», elegir la cuenta evaluadora, escribir su contraseña, abrir «Paquetes locales» y seleccionar el paquete. La prueba `offline-vault.test.ts` simula esta recarga y comprueba contraseña, propiedad y aislamiento entre cuentas. En A no hay descarga, edición ni sincronización desde el portal nuevo; el visor admite paquetes ya guardados en **este mismo origen** por la futura migración de campo.
+Después de un login online de un `EVALUATOR` aprobado, el portal puede enrolar su identidad local con una clave derivada de su contraseña. Los paquetes locales se cifran con AES-GCM y se asocian al ID de la cuenta. La clave se borra de memoria al salir o recargar. Para abrir un paquete tras recargar sin red: entrar en «Trabajo de campo sin conexión», elegir la cuenta evaluadora, escribir su contraseña, abrir «Paquetes locales» y seleccionar el paquete. La prueba `offline-vault.test.ts` simula esta recarga y comprueba contraseña, propiedad y aislamiento entre cuentas. La descarga, edición, sincronización y renovación de paquetes se describen en `FIELD_OFFLINE.md`; el visor abre paquetes guardados en **este mismo origen**.
 
-**Requisito previo a paquetes sanitarios reales:** `offlineUntil` indica hoy un plazo nominal de 72 horas, pero está en texto claro y puede modificarse en IndexedDB. No puede ser la única autoridad del vencimiento. Antes de guardar datos sanitarios reales, incluir el vencimiento dentro del dato autenticado por AES-GCM (o aplicar un mecanismo equivalente verificable), comprobar la manipulación en una prueba y definir cómo se renueva sin perder pendientes. El visor de A no constituye autorización offline lista para producción.
+**Vencimiento offline:** el plazo del paquete (hasta 72 horas) está dentro del permiso Ed25519 emitido por Core y verificado junto con el hash del paquete (`src/offline/permit.ts`); `field-permit.test.ts` y `field-expiry-ui.test.tsx` comprueban la manipulación y el sellado al vencer. El reloj local sigue siendo un indicio: la revocación se comprueba al reconectar.
 
 Los datos IndexedDB del portal anterior en `http://localhost:5178` no son legibles desde `5179`. Mantener `5178` disponible y pedir a cada evaluador sincronizar allí sus pendientes y confirmar en Core antes de cambiar de origen. No borrar el almacenamiento ni desinstalar el PWA antiguo antes de esa confirmación. Una exportación/importación local sería un plan de contingencia posterior sujeto a un diseño de seguridad y no se implementa en A.
 
-## Contratos pendientes antes del cierre funcional
+## Usuarios y carta de autorización de la cuenta (F)
 
-Core debe aceptar y conservar la carta de autorización **de la cuenta** como requisito de aprobación (distinta de la carta de solicitud BPM), completar envío y restablecimiento de contraseña, y ofrecer consulta de resultados finales e informes oficiales limitada a la empresa. Hasta entonces, el registro no se envía y la recuperación se presenta solo como petición registrada; no hay enlaces empresariales a resultados inexistentes.
+- Usuarios (`ADMIN`, `UNIVERSAL`): lista paginada en Core con total, búsqueda y filtros; detalle con edición versionada, aprobación/reactivación, rechazo y desactivación con reautenticación. `ADMIN` no ve cuentas `UNIVERSAL` (Core las excluye de resultados y totales y responde 404 por ID).
+- La carta de autorización de la **cuenta** es distinta de la carta de una **solicitud BPM**. PDF, JPG o PNG de hasta 5 MB. La aprobación permanece indisponible hasta que Core confirme una carta `VALID`; Core lo comprueba dentro de la operación y un trigger de base de datos impide la transición a `APPROVED` sin ella (migración `0034`).
+- El registro público envía la carta en `multipart/form-data`, deja la cuenta en `PENDING_VALIDATION` y no abre sesión. La administración vincula la empresa durante la validación.
+- Configuración versionada (`ADMIN`, `UNIVERSAL` escriben; `COORDINATOR` consulta, previsualiza y valida): catálogos, plantillas BPM en jerarquía Sección → Subsección → Grupo → Criterio con instrucciones, y reglas de riesgo con seis factores, productos y rangos. Publicar, retirar y cambiar la predeterminada exigen reautenticación y versión; una nueva predeterminada solo afecta inspecciones nuevas.
 
-Siguen pendientes la bandeja de validación documental de coordinación, solicitudes para delegado, directorio acotado de evaluadores, corrección y reenvío del evaluador asignado, e interfaces para catálogos, plantillas y reglas. La membresía de empresa activa de Core determina hoy el alcance del delegado; el SDP describe establecimientos asignados y requiere una decisión/contrato posterior. `UNIVERSAL` no recibe autoría de correcciones devueltas. Ninguna pantalla futura debe usar `/v1/users` para coordinación ni datos simulados.
+## Pendientes fuera de F
+
+- Envío y restablecimiento **real** de contraseña: «¿Olvidó su contraseña?» solo registra la petición.
+- Consulta de resultados finales e informes oficiales acotada a la empresa: no existe contrato en Core.
+- Identificación de la empresa en el registro público: no hay consulta pública de empresas; la vincula la administración.
+- Inventario y retiro de la PWA anterior en `5178` por dispositivo/perfil/cuenta (ver arriba).
+- Solicitudes para delegado acotadas a establecimientos asignados: el SDP describe establecimientos asignados; hoy la membresía de empresa activa determina el alcance.
+- Ninguna pantalla debe usar `/v1/users` para coordinación ni datos simulados.

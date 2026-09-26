@@ -9,8 +9,10 @@ const account = (roleCode: CoreUser['roleCode']): CoreUser => ({ id: roleCode, f
 afterEach(() => { cleanup(); vi.restoreAllMocks(); core.disconnect(); localStorage.clear() })
 
 it('muestra campo solo a EVALUATOR y UNIVERSAL, y protege ambas URL directas', async () => {
-  for (const role of ['EVALUATOR', 'UNIVERSAL'] as const)
-    expect(visibleSections(account(role)).find((section) => section.name === 'Inspecciones de campo')?.pages.map((page) => page.id)).toEqual(['field'])
+  // Correcciones es exclusiva del EVALUATOR asignado; UNIVERSAL no es autor de correcciones.
+  const fieldPages = (role: 'EVALUATOR' | 'UNIVERSAL') => visibleSections(account(role)).find((section) => section.name === 'Inspecciones de campo')?.pages.map((page) => page.id)
+  expect(fieldPages('EVALUATOR')).toEqual(['field', 'corrections'])
+  expect(fieldPages('UNIVERSAL')).toEqual(['field'])
   for (const role of ['ADMIN', 'COORDINATOR', 'COMPANY_ADMIN', 'DELEGATE'] as const)
     expect(visibleSections(account(role)).some((section) => section.name === 'Inspecciones de campo')).toBe(false)
   vi.spyOn(core, 'request').mockResolvedValue({ data: { status: 'ready' }, meta: { correlationId: 'test' } } as never)

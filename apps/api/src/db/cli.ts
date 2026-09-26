@@ -18,6 +18,7 @@ import {
   testBpmGuidance,
   testInspectionLocation,
   testEvidenceCriterion,
+  testUserAuthorizationLetters,
   testRequestsConstraints, testReviewsConstraints, testRiskConstraints, verify,
 } from './runner.js';
 
@@ -54,6 +55,7 @@ try {
   else if (command === 'test:bpm-guidance') await testBpmGuidance();
   else if (command === 'test:field-location') await testInspectionLocation();
   else if (command === 'test:evidence-criterion') await testEvidenceCriterion();
+  else if (command === 'test:user-authorization-letters') await testUserAuthorizationLetters();
   else throw new Error('Comando de base de datos no reconocido.');
   console.log(`db:${command} completado.`);
 } catch (error) {

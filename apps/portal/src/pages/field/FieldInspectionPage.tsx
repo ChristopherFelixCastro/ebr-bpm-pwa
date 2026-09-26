@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Box, Button, Card, CardContent, Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material'
+import { Alert, Box, Button, Card, CardContent, Checkbox, Chip, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { useSession } from '../../session/SessionContext'
 import { core } from '../../api/core'
 import { CoreApiError, type CoreInspection, type CoreReport } from '@ebr-bpm/core-client'
 import { supportMessage } from '../../api/presentation'
+import { orderBpmItems } from '../../field/bpmOrder'
+import { criticalityLabels } from '../configuration/labels'
 import { acknowledgeRenewalConflict, addEvidence, addFood, compareRenewalConflict, confirmFieldRenewal, downloadFieldPackage, finalizeLocal, inspectStoredFieldState, previewFieldRenewal, rebaseConflict, removePendingEvidence, reviewFieldConflict, saveLocation, saveResponse, selectFactor, syncFieldState, type BpmValue, type FieldRenewalPreview, type FieldState, type StoredFieldState } from '../../field/model'
 
 export function FieldInspectionPage() {
@@ -25,6 +27,7 @@ export function FieldInspectionPage() {
   const [evidenceItemId, setEvidenceItemId] = useState('')
   const [conflictReview, setConflictReview] = useState<{ operationId: string; version: number; status: string; current: unknown; local: unknown } | null>(null)
   const [officialReport, setOfficialReport] = useState<CoreReport | null>(null)
+  const orderedItems = useMemo(() => state ? orderBpmItems(state.signedPackage.bpmTemplate.items) : [], [state])
   const reload = useCallback(async () => {
     if (!actor || !id) return
     setState(null); setSealed(null); setRenewalPreview(null); setConflictReview(null); setOfficialReport(null)
@@ -139,9 +142,15 @@ export function FieldInspectionPage() {
       {user?.roleCode === 'EVALUATOR' && state.inspection.status === 'SUBMITTED' && officialReport && navigator.onLine &&
         <Button disabled={busy} onClick={() => void openOfficialReport()}>Abrir informe oficial</Button>}
       <Card><CardContent><Typography variant="h6">Respuestas BPM</Typography>
-        {state.signedPackage.bpmTemplate.items.map((item) => <Box key={item.id} sx={{ borderBottom: '1px solid #ddd', py: 2 }}>
-          <Typography sx={{ fontWeight: item.itemKind === 'CRITERION' ? 600 : 800 }}>{item.displayCode} {item.title}</Typography>
-          {item.guidanceItems?.map((guidance) => <Typography key={guidance.id} variant="body2">Instrucción: {guidance.text}</Typography>)}
+        {orderedItems.map(({ item, depth }) => <Box key={item.id} sx={{ borderBottom: '1px solid #ddd', py: 2, pl: (depth - 1) * 2 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            <Typography sx={{ fontWeight: item.itemKind === 'CRITERION' ? 600 : 800 }}>{item.displayCode} {item.title}</Typography>
+            {item.itemKind === 'CRITERION' && item.criticality && <Chip size="small" variant="outlined" label={`Criticidad ${criticalityLabels[item.criticality].toLowerCase()}`} />}
+          </Stack>
+          {item.guidanceItems?.map((guidance) => <Stack key={guidance.id} direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap', mt: 0.5 }}>
+            <Typography variant="body2">Instrucción: {guidance.text}</Typography>
+            {guidance.criticality && <Chip size="small" variant="outlined" color="warning" label={`Criticidad ${criticalityLabels[guidance.criticality].toLowerCase()}`} />}
+          </Stack>)}
           {item.itemKind === 'CRITERION' && item.isEvaluable && <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mt: 1 }}>
             <TextField select size="small" label="Respuesta" value={state.responses.find((response) => response.bpmItemId === item.id)?.responseValue ?? ''} disabled={!editing || busy}
               onChange={(event) => { const value = event.target.value as BpmValue; void action(() => saveResponse(actor.id, id, item.id, value, state.responses.find((response) => response.bpmItemId === item.id)?.observations ?? '')) }} sx={{ minWidth: 120 }}>
@@ -168,7 +177,7 @@ export function FieldInspectionPage() {
       </CardContent></Card>
       <Card><CardContent><Typography variant="h6">Evidencias privadas</Typography><Typography variant="body2">Hasta diez activas, máximo 5 MB por archivo.</Typography>
         {editing && <><TextField select size="small" label="Criterio relacionado (opcional)" value={evidenceItemId} onChange={(event) => setEvidenceItemId(event.target.value)} sx={{ my: 1, minWidth: 260 }}>
-          <MenuItem value="">General</MenuItem>{state.signedPackage.bpmTemplate.items.filter((item) => item.itemKind === 'CRITERION').map((item) => <MenuItem key={item.id} value={item.id}>{item.displayCode} {item.title}</MenuItem>)}
+          <MenuItem value="">General</MenuItem>{orderedItems.map(({ item }) => item).filter((item) => item.itemKind === 'CRITERION').map((item) => <MenuItem key={item.id} value={item.id}>{item.displayCode} {item.title}</MenuItem>)}
         </TextField>
         <input aria-label="Agregar evidencia" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,video/mp4,video/webm" disabled={!editing || busy}
           onChange={(event) => { const file = event.target.files?.[0]; if (file) void action(() => addEvidence(actor.id, id, file, evidenceItemId || null)); event.target.value = '' }} />

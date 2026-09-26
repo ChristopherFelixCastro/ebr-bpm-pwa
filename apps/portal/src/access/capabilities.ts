@@ -35,10 +35,10 @@ export const capabilities: readonly Capability[] = [
   { id: 'analytics', label: 'Evaluaciones', path: '/evaluaciones', section: 'Evaluación y cierre', roles: coordination, ready: true },
   { id: 'reports', label: 'Informes', path: '/informes', section: 'Evaluación y cierre', roles: coordination, ready: true },
   { id: 'history', label: 'Histórico', path: '/historico', section: 'Evaluación y cierre', roles: coordination, ready: true },
-  { id: 'users', label: 'Usuarios', path: '/configuracion/usuarios', section: 'Configuración', roles: central, ready: false },
-  { id: 'catalogs', label: 'Catálogos', path: '/configuracion/catalogos', section: 'Configuración', roles: central, ready: false },
-  { id: 'templates', label: 'Plantillas BPM', path: '/configuracion/plantillas-bpm', section: 'Configuración', roles: central, ready: false },
-  { id: 'rules', label: 'Reglas de riesgo', path: '/configuracion/reglas-riesgo', section: 'Configuración', roles: central, ready: false },
+  { id: 'users', label: 'Usuarios', path: '/configuracion/usuarios', section: 'Configuración', roles: central, ready: true },
+  { id: 'catalogs', label: 'Catálogos', path: '/configuracion/catalogos', section: 'Configuración', roles: coordination, ready: true },
+  { id: 'templates', label: 'Plantillas BPM', path: '/configuracion/plantillas-bpm', section: 'Configuración', roles: coordination, ready: true },
+  { id: 'rules', label: 'Reglas de riesgo', path: '/configuracion/reglas-riesgo', section: 'Configuración', roles: coordination, ready: true },
 ]
 
 export const sections: readonly Section[] = ['Inicio', 'Directorio empresarial', 'Solicitudes', 'Operación sanitaria', 'Inspecciones de campo', 'Evaluación y cierre', 'Configuración']

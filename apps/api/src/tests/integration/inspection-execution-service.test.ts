@@ -159,6 +159,8 @@ describe('inspection execution service idempotency', () => {
   });
 
   it('serializes concurrent retries, returns an identical contract and applies the domain effect once', async () => {
+    // Own fixture: earlier tests advance the shared inspection version.
+    const fixture = await createFixture();
     const payload = { bpmItemId: fixture.bpmItemId, responseValue: 'C' };
     const operation = {
       operationId: randomUUID(), operationType: 'UPSERT_BPM_RESPONSE' as const, baseVersion: 1,
