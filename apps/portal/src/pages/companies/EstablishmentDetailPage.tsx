@@ -1,3 +1,4 @@
+import { displayLabel } from '../../api/displayLabels'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Stack, TextField, Typography } from '@mui/material'
@@ -60,7 +61,7 @@ export const EstablishmentDetailPage = () => {
   const editable = canEdit && establishment.status === 'ACTIVE'
 
   return <Stack spacing={3}>
-    <Box><Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/directorio/establecimientos')}>Establecimientos</Button><Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}><Box><Typography variant="h5" sx={{ fontWeight: 800 }}>{establishment.name}</Typography><Typography color="text.secondary">{establishment.companyLegalName} · Versión {establishment.version}</Typography></Box><Chip color={establishment.status === 'ACTIVE' ? 'success' : 'default'} label={establishment.status} /></Box></Box>
+    <Box><Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/directorio/establecimientos')}>Establecimientos</Button><Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}><Box><Typography variant="h5" sx={{ fontWeight: 800 }}>{establishment.name}</Typography><Typography color="text.secondary">{establishment.companyLegalName} · Versión {establishment.version}</Typography></Box><Chip color={establishment.status === 'ACTIVE' ? 'success' : 'default'} label={displayLabel(establishment.status)} /></Box></Box>
     {stale && <Alert severity="warning" action={<Button onClick={() => void load()}>Recargar recurso</Button>}>El recurso cambió en el servidor. Los valores editados se conservaron.</Alert>}
     <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent><Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Datos del establecimiento</Typography><Stack spacing={2}>
       <TextField label="Nombre" disabled={!editable} value={establishment.name} onChange={(event) => setEstablishment({ ...establishment, name: event.target.value })} />

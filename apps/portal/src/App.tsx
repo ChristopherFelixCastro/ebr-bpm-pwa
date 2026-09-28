@@ -37,6 +37,9 @@ import { CatalogDetailPage, CatalogListPage, CatalogVersionPage } from './pages/
 import { BpmTemplateDetailPage, BpmTemplateListPage, BpmTemplateVersionPage } from './pages/configuration/BpmTemplatePages'
 import { RiskRuleDetailPage, RiskRuleListPage, RiskRuleVersionPage } from './pages/configuration/RiskRulePages'
 import { theme } from './theme'
+import { BackgroundFieldSync } from './field/BackgroundFieldSync'
+import { PublicLandingPage } from './pages/PublicLandingPage'
+import { PublicComplaintPage } from './pages/PublicComplaintPage'
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useSession()
@@ -88,6 +91,8 @@ function ProtectedDestination() {
 
 function OnlineRoutes() {
   return <Routes>
+    <Route path="/" element={<PublicLandingPage />} />
+    <Route path="/denunciar" element={<PublicComplaintPage />} />
     <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
     <Route path="/registro" element={<PublicRoute><RegisterPage /></PublicRoute>} />
     <Route path="/recuperar-clave" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
@@ -97,7 +102,6 @@ function OnlineRoutes() {
     <Route path="/campo/inspecciones/:id" element={<FieldRoute><FieldInspectionPage /></FieldRoute>} />
     <Route path="/campo/correcciones" element={<PrivateRoute><CapabilityPage id="corrections"><CorrectionsInboxPage /></CapabilityPage></PrivateRoute>} />
     <Route path="/campo/correcciones/:id" element={<PrivateRoute><CapabilityPage id="corrections"><CorrectionPage /></CapabilityPage></PrivateRoute>} />
-    <Route path="/" element={<Navigate to="/inicio" replace />} />
     <Route path="/inicio" element={<PrivateRoute><HomePage /></PrivateRoute>} />
     <Route path="/cuenta" element={<PrivateRoute><AccountPage /></PrivateRoute>} />
     <Route path="/denegado" element={<PrivateRoute><StatusPage title="Acceso denegado" /></PrivateRoute>} />
@@ -147,5 +151,5 @@ function OnlineRoutes() {
 }
 
 export default function App() {
-  return <ThemeProvider theme={theme}><CssBaseline /><BrowserRouter><SessionProvider><NoticeProvider><OnlineRoutes /></NoticeProvider></SessionProvider></BrowserRouter></ThemeProvider>
+  return <ThemeProvider theme={theme}><CssBaseline /><BrowserRouter><SessionProvider><BackgroundFieldSync /><NoticeProvider><OnlineRoutes /></NoticeProvider></SessionProvider></BrowserRouter></ThemeProvider>
 }

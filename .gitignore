@@ -29,6 +29,7 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 .cache/
+.local-browsers/
 uploads/
 postgres-data/
 

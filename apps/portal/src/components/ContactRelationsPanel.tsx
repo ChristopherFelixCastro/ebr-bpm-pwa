@@ -12,6 +12,7 @@ import { useNotification } from './NoticeProvider'
 import { ReauthenticationCancelledError, useSession } from '../session/SessionContext'
 import { todayInDominicanRepublic } from '../utils/date'
 import { useNavigate } from 'react-router-dom'
+import { displayLabel } from '../api/displayLabels'
 
 type Entity = 'company' | 'establishment'
 const relationshipTypes = ['LEGAL_REPRESENTATIVE', 'QUALITY_CONTACT', 'PRIMARY_CONTACT', 'OWNER', 'REPRESENTATIVE'] as const
@@ -116,7 +117,7 @@ export const ContactRelationsPanel = ({ entity, entityId, canEdit }: { entity: E
                     <Typography variant="caption" color="text.secondary">Documento: {fullDocument?.id === relation.contact.id ? (fullDocument.value || 'No registrado') : relation.contact.identityDocumentMasked || 'No registrado'}</Typography>
                   </Box>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Chip size="small" label={relation.relationshipType} />
+                    <Chip size="small" label={displayLabel(relation.relationshipType)} />
                     {relation.isPrimary && <Chip size="small" color="primary" label="Primario" />}
                     <Chip size="small" color={relation.effectiveTo ? 'default' : 'success'} label={relation.effectiveTo ? `Finalizada ${relation.effectiveTo}` : 'Vigente'} />
                   </Stack>
@@ -155,7 +156,7 @@ export const ContactRelationsPanel = ({ entity, entityId, canEdit }: { entity: E
               <TextField label="Teléfono" value={phone} onChange={(event) => setPhone(event.target.value)} />
               <TextField label="Correo" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
             </>}
-            <TextField select label="Tipo de relación" value={relationshipType} onChange={(event) => setRelationshipType(event.target.value as typeof relationshipType)}>{relationshipTypes.map((value) => <MenuItem key={value} value={value}>{value}</MenuItem>)}</TextField>
+            <TextField select label="Tipo de relación" value={relationshipType} onChange={(event) => setRelationshipType(event.target.value as typeof relationshipType)}>{relationshipTypes.map((value) => <MenuItem key={value} value={value}>{displayLabel(value)}</MenuItem>)}</TextField>
             <TextField type="date" label="Vigente desde" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             <FormControlLabel control={<Checkbox checked={isPrimary} onChange={(event) => setIsPrimary(event.target.checked)} />} label="Contacto primario" />
           </Stack>

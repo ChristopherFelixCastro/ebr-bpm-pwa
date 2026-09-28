@@ -9,6 +9,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 import { companiesApi, establishmentsApi, type Company, type Establishment, type EstablishmentCreate } from '../../api/resources'
 import { isStaleVersion, routeForError, supportMessage } from '../../api/presentation'
+import { displayLabel } from '../../api/displayLabels'
 import { ContactRelationsPanel } from '../../components/ContactRelationsPanel'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useNotification } from '../../components/NoticeProvider'
@@ -94,7 +95,7 @@ export const CompanyDetailPage = () => {
   if (!company) return null
 
   return <Stack spacing={3}>
-    <Box><Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/directorio/empresas')}>Empresas</Button><Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}><Box><Typography variant="h5" sx={{ fontWeight: 800 }}>{company.legalName}</Typography><Typography color="text.secondary">RNC: {company.rnc || '—'} · Versión {company.version}</Typography></Box><Chip color={company.status === 'ACTIVE' ? 'success' : 'default'} label={company.status} /></Box></Box>
+    <Box><Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/directorio/empresas')}>Empresas</Button><Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}><Box><Typography variant="h5" sx={{ fontWeight: 800 }}>{company.tradeName || company.legalName}</Typography><Typography color="text.secondary">{company.tradeName && `Razón social: ${company.legalName} · `}RNC: {company.rnc || '—'} · Versión {company.version}</Typography></Box><Chip color={company.status === 'ACTIVE' ? 'success' : 'default'} label={displayLabel(company.status)} /></Box></Box>
     {stale && <Alert severity="warning" action={<Button onClick={() => void load()}>Recargar recurso</Button>}>La empresa cambió en el servidor. Sus valores permanecen visibles; recargue antes de volver a guardar.</Alert>}
     <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent><Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Datos empresariales</Typography><Stack spacing={2}>
       <TextField label="Razón social" disabled={!canEdit || company.status !== 'ACTIVE'} value={company.legalName} onChange={(event) => setCompany({ ...company, legalName: event.target.value })} />
@@ -108,7 +109,7 @@ export const CompanyDetailPage = () => {
     </Stack></CardContent></Card>
 
     <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent><Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}><Typography variant="h6" sx={{ fontWeight: 700 }}>Establecimientos</Typography>{canEdit && company.status === 'ACTIVE' && <Button startIcon={<AddLocationAltIcon />} onClick={() => setEstablishmentOpen(true)}>Crear establecimiento</Button>}</Box><Button size="small" onClick={() => navigate(`/directorio/establecimientos?companyId=${company.id}`)}>Ver todos con paginación</Button><Divider sx={{ mb: 2 }} />
-      {establishments.length === 0 ? <Alert severity="info">No existen establecimientos registrados.</Alert> : <Stack spacing={1}>{establishments.map((item) => <Button key={item.id} onClick={() => navigate(`/directorio/establecimientos/${item.id}`)} sx={{ justifyContent: 'space-between', border: '1px solid #E2E8F0', p: 1.5 }}><span>{item.name}</span><Chip size="small" label={item.status} color={item.status === 'ACTIVE' ? 'success' : 'default'} /></Button>)}</Stack>}
+      {establishments.length === 0 ? <Alert severity="info">No existen establecimientos registrados.</Alert> : <Stack spacing={1}>{establishments.map((item) => <Button key={item.id} onClick={() => navigate(`/directorio/establecimientos/${item.id}`)} sx={{ justifyContent: 'space-between', border: '1px solid #E2E8F0', p: 1.5 }}><span>{item.name}</span><Chip size="small" label={displayLabel(item.status)} color={item.status === 'ACTIVE' ? 'success' : 'default'} /></Button>)}</Stack>}
     </CardContent></Card>
 
     <ContactRelationsPanel entity="company" entityId={company.id} canEdit={canEdit && company.status === 'ACTIVE'} />

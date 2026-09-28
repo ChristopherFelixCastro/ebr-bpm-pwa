@@ -16,6 +16,7 @@ import caseRoutes from './modules/cases/routes.js';
 import institutionalProgramRoutes from './modules/institutional-programs/routes.js';
 import healthAlertRoutes from './modules/health-alerts/routes.js';
 import complaintRoutes from './modules/complaints/routes.js';
+import publicComplaintRoutes from './modules/complaints/public-routes.js';
 import assignmentSchedulingRoutes from './modules/assignment-scheduling/routes.js';
 import inspectionExecutionRoutes from './modules/inspection-execution/routes.js';
 import inspectionReviewRoutes from './modules/inspection-reviews/routes.js';
@@ -26,6 +27,7 @@ import bpmTemplateAdministrationRoutes from './modules/bpm-template-administrati
 import riskRuleAdministrationRoutes from './modules/risk-rule-administration/routes.js';
 import { openApiDocument } from './openapi.js';
 import { rateLimit } from './core/http/rate-limit.js';
+import { localPrivateStorageEnabled, resolveLocalDownload } from './core/storage/local-private-storage.js';
 
 declare global {
   namespace Express {
@@ -68,7 +70,9 @@ app.use((req, res, next) => {
   res.locals.correlationId = id;
   next();
 });
-app.use(pinoHttp({ logger, genReqId: (req) => req.context.correlationId }));
+app.use(pinoHttp({ logger, genReqId: (req) => req.context.correlationId,
+  autoLogging: { ignore: (req) => req.url?.startsWith('/v1/dev-storage/') ?? false },
+}));
 app.use(helmet({ contentSecurityPolicy: env.OPENAPI_DOCS_ENABLED ? false : undefined, crossOriginResourcePolicy: { policy: 'same-site' } }));
 app.use(cors({ origin: (origin, callback) => callback(null, !origin || origins.includes(origin)), credentials: true, methods:['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'], allowedHeaders:['authorization','content-type','x-correlation-id','x-csrf-token'] }));
 app.use(express.json({ limit: env.JSON_BODY_LIMIT, strict: true }));
@@ -84,6 +88,20 @@ app.get('/health/ready', async (_req, res, next) => {
     next(error);
   }
 });
+if (localPrivateStorageEnabled()) {
+  app.get('/v1/dev-storage/:token', async (req, res, next) => {
+    try {
+      const object = await resolveLocalDownload(String(req.params.token));
+      if (!object) return res.sendStatus(404);
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Disposition', `attachment; filename="private-object.${object.extension}"`);
+      res.type(object.mimeType).send(object.content);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return res.sendStatus(404);
+      next(error);
+    }
+  });
+}
 app.get('/openapi.json', (_req, res) => res.json(openApiDocument));
 
 if (env.OPENAPI_DOCS_ENABLED) {
@@ -94,6 +112,7 @@ if (env.OPENAPI_DOCS_ENABLED) {
 }
 
 app.use('/v1/auth', rateLimit({windowMs:env.AUTH_RATE_LIMIT_WINDOW_MS,max:env.AUTH_RATE_LIMIT_MAX,scope:'auth'}), authRoutes);
+app.use('/v1/public/complaints', rateLimit({ windowMs: 60 * 60 * 1000, max: 5, scope: 'public-complaints' }), publicComplaintRoutes);
 app.use('/v1/companies', companyRoutes);
 app.use('/v1/establishments', establishmentRoutes);
 app.use('/v1', contactRoutes);

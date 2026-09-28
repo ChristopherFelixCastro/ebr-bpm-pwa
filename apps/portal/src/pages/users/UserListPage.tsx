@@ -53,6 +53,7 @@ export function UserListPage() {
   const create = async () => {
     const needsCompany = companyRoles.includes(form.roleCode)
     if (!form.fullName.trim() || !form.email.trim() || !form.password) return showError('Nombre, correo y contraseña temporal son obligatorios.')
+    if (form.password.length < 12) return showError('La contraseña temporal debe tener al menos 12 caracteres.')
     if (needsCompany && !form.company) return showError('Seleccione la empresa de la cuenta empresarial.')
     setSaving(true)
     try {
@@ -113,7 +114,7 @@ export function UserListPage() {
         <TextField label="Nombre completo" required value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} />
         <TextField label="Correo electrónico" type="email" required value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
         <TextField label="Teléfono" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
-        <TextField label="Contraseña temporal" type="password" required value={form.password} helperText="Mínimo según la política de contraseñas del Core." onChange={(event) => setForm({ ...form, password: event.target.value })} />
+        <TextField label="Contraseña temporal" type="password" required value={form.password} helperText="Mínimo 12 caracteres." onChange={(event) => setForm({ ...form, password: event.target.value })} />
         <TextField select label="Rol" value={form.roleCode} onChange={(event) => setForm({ ...form, roleCode: event.target.value as CoreRole, company: null })}
           helperText={form.roleCode === 'UNIVERSAL' ? 'Crear una cuenta UNIVERSAL solicitará confirmar su identidad.' : undefined}>
           {assignableRoles.map((code) => <MenuItem key={code} value={code}>{roleLabels[code]}</MenuItem>)}

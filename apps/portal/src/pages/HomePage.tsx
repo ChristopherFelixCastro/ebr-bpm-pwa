@@ -1,16 +1,53 @@
-import { Alert, Box, Card, CardContent, Typography } from '@mui/material'
+import { Alert, Box, Button, Card, CardActionArea, CardContent, Chip, Stack, Typography } from '@mui/material'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import { Link as RouterLink } from 'react-router-dom'
+import type { CoreRole } from '@ebr-bpm/core-client'
+import { capabilities, hasCapability } from '../access/capabilities'
 import { useSession } from '../session/SessionContext'
+
+const startByRole: Record<CoreRole, { intro: string; ids: string[]; next: string }> = {
+  UNIVERSAL: { intro: 'Supervise la operación completa, los usuarios y las definiciones que utiliza el sistema.', ids: ['cases', 'analytics', 'users', 'requests'], next: 'Revise los casos que requieren una decisión y las evaluaciones pendientes.' },
+  ADMIN: { intro: 'Organice la operación sanitaria y haga seguimiento de los casos e informes.', ids: ['cases', 'assignments', 'analytics', 'users'], next: 'Compruebe los casos, asigne evaluadores y revise los resultados.' },
+  COORDINATOR: { intro: 'Coordine los casos, los documentos y la agenda de inspecciones.', ids: ['cases', 'document-review', 'assignments', 'scheduling'], next: 'Empiece por los documentos y casos que esperan atención.' },
+  EVALUATOR: { intro: 'Consulte su trabajo de campo y las correcciones que requieren respuesta.', ids: ['field', 'corrections', 'establishments', 'contacts'], next: 'Abra Mis inspecciones para iniciar una asignación o continuar una inspección.' },
+  COMPANY_ADMIN: { intro: 'Administre los datos de su empresa y presente solicitudes BPM.', ids: ['requests', 'establishments', 'contacts', 'companies'], next: 'Revise sus establecimientos y solicitudes antes de enviar una nueva.' },
+  DELEGATE: { intro: 'Consulte los establecimientos y gestione solicitudes dentro de su empresa.', ids: ['requests', 'establishments', 'contacts'], next: 'Revise las solicitudes de la empresa o prepare una nueva.' },
+}
+
+const descriptions: Record<string, string> = {
+  cases: 'Revise el estado y avance de los casos sanitarios.', analytics: 'Consulte inspecciones, revisiones y cálculos de riesgo.',
+  users: 'Gestione cuentas, roles y autorizaciones.', requests: 'Prepare y consulte solicitudes BPM.',
+  assignments: 'Consulte las asignaciones de evaluadores.', 'document-review': 'Valide los documentos enviados.',
+  scheduling: 'Consulte y organice las visitas de campo.', field: 'Inicie asignaciones y continúe inspecciones.',
+  corrections: 'Responda las observaciones de una revisión.', establishments: 'Consulte los establecimientos registrados.',
+  contacts: 'Consulte los contactos asociados.', companies: 'Consulte los datos de la empresa.',
+}
 
 export function HomePage() {
   const { user, offlineEnrollmentError } = useSession()
-  return <Box>
-    <Typography variant="h4" sx={{ mb: 1 }}>Inicio</Typography>
-    <Typography variant="body1" sx={{ mb: 3 }}>Bienvenido, {user?.fullName}.</Typography>
-    {offlineEnrollmentError && <Alert severity="warning" sx={{ mb: 3 }}>La sesión online funciona, pero no se pudo habilitar el acceso local. Sus paquetes anteriores permanecen guardados; compruebe el acceso antes de trabajar sin red.</Alert>}
-    <Card><CardContent>
-      <Typography variant="h6" sx={{ mb: 1 }}>Portal único EBR / BPM</Typography>
-      <Typography sx={{ mb: 2 }}>El directorio empresarial, las solicitudes BPM, la operación sanitaria y las inspecciones de campo están disponibles según su rol.</Typography>
-      <Alert severity="info">Core comprueba el alcance empresarial, estado y versión de cada operación.</Alert>
+  const guide = user ? startByRole[user.roleCode] : null
+  const quickLinks = guide?.ids.map((id) => capabilities.find((item) => item.id === id)).filter((item) => item && hasCapability(user, item)) ?? []
+  return <Stack spacing={3}>
+    <Typography component="h1" variant="h4" sx={{ fontWeight: 850 }}>Inicio</Typography>
+    <Box sx={{ bgcolor: '#173b79', color: '#fff', borderRadius: 3, p: { xs: 3, md: 4 }, background: 'linear-gradient(120deg, #172f66, #24529d)' }}>
+      <Chip label="Portal EBR / BPM" size="small" sx={{ mb: 2, bgcolor: '#dceafe', color: '#173b79', fontWeight: 800 }} />
+      <Typography component="h2" variant="h5" sx={{ fontWeight: 850, mb: 1 }}>Bienvenido, {user?.fullName}</Typography>
+      <Typography sx={{ color: '#e5edff', maxWidth: 660, lineHeight: 1.6 }}>{guide?.intro}</Typography>
+    </Box>
+    {offlineEnrollmentError && <Alert severity="warning">La sesión online funciona, pero no se pudo habilitar el acceso local. Sus paquetes anteriores permanecen guardados; compruebe el acceso antes de trabajar sin red.</Alert>}
+    <Box><Typography component="h2" variant="h5" sx={{ fontWeight: 800, mb: 0.5 }}>Empiece por aquí</Typography><Typography color="text.secondary">Accesos disponibles para su rol. Core comprueba los permisos y el alcance de cada operación.</Typography></Box>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>
+      {quickLinks.map((item) => item && <Card key={item.id} variant="outlined" sx={{ borderRadius: 2.5, '&:hover': { borderColor: '#7da6e9', boxShadow: '0 8px 20px rgba(30,58,138,.08)' } }}>
+        <CardActionArea component={RouterLink} to={item.path} sx={{ height: '100%' }}><CardContent sx={{ minHeight: 135, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <Box><Typography sx={{ fontWeight: 800, fontSize: 18, mb: 0.5 }}>{item.label}</Typography><Typography variant="body2" color="text.secondary">{descriptions[item.id]}</Typography></Box>
+          <ArrowForwardIcon sx={{ color: '#1E3A8A', mt: 1, fontSize: 20 }} aria-hidden="true" />
+        </CardContent></CardActionArea>
+      </Card>)}
+    </Box>
+    <Card variant="outlined" sx={{ borderRadius: 2.5, bgcolor: '#f0f5fd' }}><CardContent sx={{ p: 3 }}>
+      <Typography component="h2" variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>Siguiente paso recomendado</Typography>
+      <Typography color="text.secondary" sx={{ mb: 1.5 }}>{guide?.next}</Typography>
+      {quickLinks[0] && <Button component={RouterLink} to={quickLinks[0].path} endIcon={<ArrowForwardIcon />} sx={{ textTransform: 'none' }}>Ir a {quickLinks[0].label}</Button>}
     </CardContent></Card>
-  </Box>
+  </Stack>
 }

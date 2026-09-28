@@ -23,7 +23,7 @@ export function OfflineAccessPage() {
   return <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 2 }}>
     <Card sx={{ width: '100%', maxWidth: 520 }}><CardContent sx={{ p: 4 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>Trabajo de campo sin conexión</Typography>
-      <Typography sx={{ mb: 2 }}>Los paquetes guardados en este origen se abren con la contraseña de la cuenta que los descargó. La clave solo permanece en memoria durante esta sesión; cada paquete exige además un permiso firmado vigente.</Typography>
+      <Typography sx={{ mb: 2 }}>Las inspecciones que abrió previamente con conexión están guardadas y cifradas en este navegador. Desbloquéelas con la contraseña de su cuenta. El acceso sin conexión requiere un permiso vigente.</Typography>
       {navigator.onLine && <Alert severity="info" sx={{ mb: 2 }}>Si Core está disponible, inicie sesión normalmente para validar su cuenta.</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {identities.length ? <Box component="form" onSubmit={submit}>
@@ -31,7 +31,7 @@ export function OfflineAccessPage() {
           {identities.map((identity) => <MenuItem key={identity.id} value={identity.id}>{identity.fullName}</MenuItem>)}
         </TextField>
         <TextField fullWidth label="Contraseña" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} sx={{ mb: 2 }} />
-        <Button fullWidth type="submit" variant="contained" disabled={!userId || !password || busy}>Desbloquear paquetes</Button>
+        <Button fullWidth type="submit" variant="contained" disabled={!userId || !password || busy}>Desbloquear inspecciones</Button>
       </Box> : <Alert severity="warning">No hay cuentas de campo habilitadas localmente en este origen. Primero inicie sesión con conexión.</Alert>}
       <Button component={Link} to="/login" sx={{ mt: 2 }}>Volver al inicio de sesión</Button>
     </CardContent></Card>
@@ -45,16 +45,16 @@ export function OfflinePackagesPage() {
   const [error, setError] = useState('')
   useEffect(() => {
     if (!offlineUser) return
-    void listOfflinePackages(offlineUser.id).then(setPackageIds).catch(() => setError('No se pudieron leer los paquetes.'))
+    void listOfflinePackages(offlineUser.id).then(setPackageIds).catch(() => setError('No se pudieron leer las inspecciones guardadas.'))
   }, [offlineUser])
   if (!offlineUser) return <Navigate to="/acceso-sin-conexion" replace />
   return <Box sx={{ p: 4, maxWidth: 800 }}>
-    <Typography variant="h4" sx={{ mb: 1 }}>Paquetes locales</Typography>
+    <Typography variant="h4" sx={{ mb: 1 }}>Inspecciones guardadas</Typography>
     <Typography sx={{ mb: 2 }}>Cuenta: {offlineUser.fullName}</Typography>
-    <Alert severity="info" sx={{ mb: 3 }}>Los paquetes con permiso firmado vigente pueden abrirse sin Core. Los pendientes y conflictos permanecen cifrados al vencer el permiso.</Alert>
+    <Alert severity="info" sx={{ mb: 3 }}>Puede abrir sin conexión las inspecciones con permiso vigente. Los cambios pendientes permanecen cifrados si el permiso vence; reconéctese para renovarlo.</Alert>
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
     {packageIds.length ? <List>{packageIds.map((id) => <ListItemButton key={id} onClick={() => navigate(`/campo/inspecciones/${id}`)}><ListItemText primary={id} secondary="Abrir inspección cifrada" /></ListItemButton>)}</List>
-      : <Typography>No hay paquetes descargados para esta cuenta en este origen.</Typography>}
+      : <Typography>No hay inspecciones preparadas para trabajar sin conexión en este navegador. Abra una con conexión primero.</Typography>}
     <Button onClick={() => { lockOffline(); navigate('/acceso-sin-conexion', { replace: true }) }} sx={{ mt: 3 }}>Bloquear y salir</Button>
   </Box>
 }

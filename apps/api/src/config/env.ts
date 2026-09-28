@@ -29,6 +29,7 @@ const schema = z.object({
   SUPABASE_URL: optionalEnvironmentValue(z.string().url()),
   SUPABASE_SERVICE_ROLE_KEY: optionalEnvironmentValue(z.string().min(20)),
   SUPABASE_STORAGE_BUCKET_PRIVATE: optionalEnvironmentValue(z.string().min(1)),
+  LOCAL_PRIVATE_STORAGE_ENABLED: booleanFromEnvironment.optional(),
   PDF_CHROMIUM_EXECUTABLE_PATH: optionalEnvironmentValue(z.string().min(1)),
   OFFLINE_PERMIT_PRIVATE_KEY_BASE64: optionalEnvironmentValue(z.string().min(1)),
 }).superRefine((value, context) => {
@@ -49,6 +50,12 @@ const schema = z.object({
   }
   if (value.SUPABASE_STORAGE_BUCKET_PRIVATE && value.SUPABASE_STORAGE_BUCKET_PRIVATE !== 'ebr-bpm-private') {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['SUPABASE_STORAGE_BUCKET_PRIVATE'], message: 'El bucket privado debe ser ebr-bpm-private.' });
+  }
+  if (value.LOCAL_PRIVATE_STORAGE_ENABLED && value.NODE_ENV !== 'development') {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['LOCAL_PRIVATE_STORAGE_ENABLED'], message: 'El almacenamiento local solo se permite en desarrollo.' });
+  }
+  if (value.LOCAL_PRIVATE_STORAGE_ENABLED && storageValues.some(Boolean)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['LOCAL_PRIVATE_STORAGE_ENABLED'], message: 'El almacenamiento local no se combina con Supabase Storage.' });
   }
 });
 

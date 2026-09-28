@@ -1,5 +1,6 @@
 import { env } from '../../config/env.js';
 import { getSupabaseStorageClient } from './supabase-storage.client.js';
+import { localPrivateStorageEnabled, localRead, localRemove, localSignedUrl, localUpload } from './local-private-storage.js';
 import { assertPrivateObject, isPrivateObjectPath, type AllowedPrivateMimeType } from './storage-path.js';
 
 const validPath = isPrivateObjectPath;
@@ -50,6 +51,11 @@ function expectedSigningFailure(error: unknown): PrivateStorageError | null {
 
 export async function uploadPrivateObject(input: { storagePath: string; mimeType: AllowedPrivateMimeType; content: Uint8Array }) {
   assertPrivateObject(input.storagePath, input.mimeType, input.content.byteLength);
+  if (localPrivateStorageEnabled()) {
+    try { await localUpload(input.storagePath, input.content); }
+    catch { throw new PrivateStorageError('UNAVAILABLE'); }
+    return { storagePath: input.storagePath };
+  }
   let result;
   try { result = await bucket().upload(input.storagePath, input.content, { contentType: input.mimeType, upsert: false }); }
   catch (error) { throw uploadFailure(error) ?? error; }
@@ -60,6 +66,10 @@ export async function uploadPrivateObject(input: { storagePath: string; mimeType
 export async function createShortLivedDownloadUrl(storagePath: string, expiresInSeconds = 60) {
   if (!Number.isInteger(expiresInSeconds) || expiresInSeconds < 10 || expiresInSeconds > 300) throw new Error('INVALID_SIGNED_URL_TTL');
   if (!validPath(storagePath)) throw new PrivateStorageError('OBJECT_NOT_FOUND');
+  if (localPrivateStorageEnabled()) {
+    try { return await localSignedUrl(storagePath, expiresInSeconds); }
+    catch (error) { throw new PrivateStorageError((error as NodeJS.ErrnoException).code === 'ENOENT' ? 'OBJECT_NOT_FOUND' : 'UNAVAILABLE'); }
+  }
   let result;
   try { result = await bucket().createSignedUrl(storagePath, expiresInSeconds); }
   catch (error) { throw expectedSigningFailure(error) ?? error; }
@@ -71,12 +81,17 @@ export async function createShortLivedDownloadUrl(storagePath: string, expiresIn
 
 export async function removePrivateObject(storagePath: string) {
   if (!validPath(storagePath)) throw new Error('INVALID_STORAGE_PATH');
+  if (localPrivateStorageEnabled()) { await localRemove(storagePath); return; }
   const { error } = await bucket().remove([storagePath]);
   if (error) throw new Error('PRIVATE_STORAGE_DELETE_FAILED');
 }
 
 export async function readPrivateObject(storagePath: string) {
   if (!validPath(storagePath)) throw new Error('INVALID_STORAGE_PATH');
+  if (localPrivateStorageEnabled()) {
+    try { return await localRead(storagePath); }
+    catch (error) { throw new PrivateStorageError((error as NodeJS.ErrnoException).code === 'ENOENT' ? 'OBJECT_NOT_FOUND' : 'UNAVAILABLE'); }
+  }
   let result;
   try { result = await bucket().download(storagePath); }
   catch (error) { const expected = expectedSigningFailure(error); throw expected?.code === 'OBJECT_NOT_FOUND' ? expected : uploadFailure(error) ?? expected ?? error; }

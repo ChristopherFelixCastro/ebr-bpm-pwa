@@ -56,6 +56,23 @@ it('lee el resumen real de Core en Evaluaciones para los tres roles instituciona
   }
 })
 
+it('muestra estados en español y conserva el código esperado por Core al filtrar', async () => {
+  vi.spyOn(core, 'restoreSession').mockResolvedValue(account('ADMIN'))
+  vi.mocked(core.request).mockImplementation(async (path) => {
+    if (path === '/health/ready') return envelope({ status: 'ready' })
+    if (path === '/v1/analytics/summary') return envelope({ total: 1, readyForReview: 1, pendingReview: 0, returnedForCorrection: 0, approved: 0, officialReports: 0, closed: 0, byRisk: { LOW: 0, MEDIUM: 0, HIGH: 0 } })
+    if (String(path).startsWith('/v1/analytics/evaluations?')) return envelope([evaluation], 1)
+    return envelope([])
+  })
+  window.history.replaceState({}, '', '/evaluaciones')
+  render(<App />)
+  expect(await screen.findByText('Resumen institucional')).toBeInTheDocument()
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Estado' }))
+  fireEvent.click(await screen.findByRole('option', { name: 'Listo para revisión' }))
+  await waitFor(() => expect(vi.mocked(core.request).mock.calls.some(([path]) => String(path).includes('lifecycleStatus=READY_FOR_REVIEW'))).toBe(true))
+  expect(screen.queryByText('READY_FOR_REVIEW')).not.toBeInTheDocument()
+})
+
 it('permite recálculo motivado a ADMIN sin mostrar decisiones de revisión o cierre', async () => {
   vi.spyOn(core, 'restoreSession').mockResolvedValue(account('ADMIN'))
   window.history.replaceState({}, '', '/evaluaciones/inspection-1')

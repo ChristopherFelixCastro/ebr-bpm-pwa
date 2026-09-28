@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { displayLabel } from '../../api/displayLabels'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Alert, Box, Button, Card, CardContent, Checkbox, Chip, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { useSession } from '../../session/SessionContext'
 import { core } from '../../api/core'
 import { CoreApiError, type CoreInspection, type CoreReport } from '@ebr-bpm/core-client'
 import { supportMessage } from '../../api/presentation'
+import { OfflinePackageMissingError } from '../../offline/vault'
 import { orderBpmItems } from '../../field/bpmOrder'
 import { criticalityLabels } from '../configuration/labels'
 import { acknowledgeRenewalConflict, addEvidence, addFood, compareRenewalConflict, confirmFieldRenewal, downloadFieldPackage, finalizeLocal, inspectStoredFieldState, previewFieldRenewal, rebaseConflict, removePendingEvidence, reviewFieldConflict, saveLocation, saveResponse, selectFactor, syncFieldState, type BpmValue, type FieldRenewalPreview, type FieldState, type StoredFieldState } from '../../field/model'
@@ -21,6 +23,11 @@ export function FieldInspectionPage() {
   const [coreChanged, setCoreChanged] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [online, setOnline] = useState(navigator.onLine)
+  const [retryEpoch, setRetryEpoch] = useState(0)
+  const [syncing, setSyncing] = useState(false)
+  const syncingRef = useRef(false)
+  const lastAutoSyncKey = useRef('')
   const [password, setPassword] = useState('')
   const [consent, setConsent] = useState(false)
   const [foodId, setFoodId] = useState('')
@@ -35,22 +42,31 @@ export function FieldInspectionPage() {
       const stored = await inspectStoredFieldState(actor.id, id)
       setServerDenied(false); setReadOnly(false); setCoreChanged(false); setError('')
       if (stored.status === 'EXPIRED') { setSealed(stored); return }
-      setState(stored.state)
       if (user && navigator.onLine) {
         try {
           const fresh = (await core.request<CoreInspection>(`/v1/inspections/${encodeURIComponent(id)}`, { cache: 'no-store' })).data
-          if (fresh.assignmentId !== stored.state.inspection.assignmentId || fresh.version !== stored.state.inspection.version || !['DRAFT', 'IN_PROGRESS'].includes(fresh.status)) {
+          if (fresh.assignmentId !== stored.state.inspection.assignmentId || fresh.version !== stored.state.inspection.version ||
+            (fresh.status !== stored.state.inspection.status && !['DRAFT', 'IN_PROGRESS'].includes(fresh.status))) {
             setCoreChanged(true)
-            setError('Core cambió el estado, la asignación o la versión. Los datos locales permanecen cifrados; revise antes de renovar o sincronizar.')
+            setError('Core cambió el estado, la asignación o la versión. Los datos locales permanecen cifrados; compare los cambios antes de continuar.')
           }
         } catch (failure) {
-          if (failure instanceof CoreApiError && (failure.status === 403 || failure.status === 404)) { setServerDenied(true); setState(null); setError('Core denegó el acceso a esta inspección.') }
+          if (failure instanceof CoreApiError && (failure.status === 403 || failure.status === 404)) { setServerDenied(true); setState(null); setError('Core denegó el acceso a esta inspección.'); return }
         }
       }
+      setState(stored.state)
     }
     catch (caught) {
       if (user && navigator.onLine) {
         try {
+          if (caught instanceof OfflinePackageMissingError) {
+            const fresh = (await core.request<CoreInspection>(`/v1/inspections/${encodeURIComponent(id)}`, { cache: 'no-store' })).data
+            if (['DRAFT', 'IN_PROGRESS'].includes(fresh.status)) {
+              const prepared = await downloadFieldPackage(user.id, id)
+              setState(prepared); setReadOnly(false); setCoreChanged(false); setServerDenied(false); setError('')
+              return
+            }
+          }
           const pkg = (await core.request<FieldState['signedPackage']>(`/v1/inspections/${encodeURIComponent(id)}/work-package`, { cache: 'no-store' })).data
           if (!['PENDING_SUBMISSION', 'SUBMITTED'].includes(pkg.inspection.status)) throw caught
           setState({ signedPackage: pkg, permit: null, inspection: pkg.inspection, responses: pkg.responses, factorSelections: pkg.factorSelections, foodSnapshots: pkg.foodSnapshots, evidence: [], queue: [], localFinalized: false, downloadedAt: '' })
@@ -58,12 +74,31 @@ export function FieldInspectionPage() {
           return
         } catch (failure) {
           if (failure instanceof CoreApiError && (failure.status === 403 || failure.status === 404)) { setServerDenied(true); setState(null); setError('Core denegó el acceso a esta inspección.'); return }
+          if (caught instanceof OfflinePackageMissingError) { setError(supportMessage(failure, 'No fue posible preparar la inspección.')); return }
         }
       }
-      setState(null); setError(caught instanceof Error ? caught.message : 'No se pudo abrir el paquete.')
+      setState(null); setError(caught instanceof Error ? caught.message : 'No se pudo abrir la inspección.')
     }
   }, [actor, id, user])
   useEffect(() => { void reload() }, [reload])
+  useEffect(() => {
+    const connected = () => { setOnline(true); setRetryEpoch((value) => value + 1); void reload() }
+    const disconnected = () => setOnline(false)
+    window.addEventListener('online', connected)
+    window.addEventListener('offline', disconnected)
+    return () => { window.removeEventListener('online', connected); window.removeEventListener('offline', disconnected) }
+  }, [reload])
+  const pendingOperations = state?.queue.filter((item) => item.status === 'PENDING' || item.status === 'SENDING') ?? []
+  const autoSyncKey = `${id}:${retryEpoch}:${pendingOperations.map((item) => item.operationId).join(',')}`
+  useEffect(() => {
+    if (!user || !online || !core.authenticated || busy || syncingRef.current || readOnly || coreChanged || state?.renewalConflict || !pendingOperations.length ||
+      state?.queue.some((item) => item.status === 'CONFLICT' || item.status === 'REJECTED') || lastAutoSyncKey.current === autoSyncKey) return
+    lastAutoSyncKey.current = autoSyncKey
+    syncingRef.current = true; setSyncing(true)
+    void syncFieldState(user.id, id).then((updated) => setState(updated))
+      .catch((caught) => setError(supportMessage(caught, 'Los cambios permanecen guardados; el envío se reintentará al reconectar.')))
+      .finally(() => { syncingRef.current = false; setSyncing(false) })
+  }, [autoSyncKey, busy, coreChanged, id, online, pendingOperations.length, readOnly, state, user])
   useEffect(() => {
     if (!user || user.roleCode !== 'EVALUATOR' || !navigator.onLine || state?.inspection.status !== 'SUBMITTED') return
     let active = true
@@ -107,7 +142,7 @@ export function FieldInspectionPage() {
   }
   if (!actor) return <Alert severity="error">Inicie sesión o desbloquee su cuenta local.</Alert>
   const permitCurrent = !state?.permit || (Date.now() >= Date.parse(state.permit.claims.issuedAt) - 5 * 60_000 && Date.now() < Date.parse(state.permit.claims.expiresAt))
-  const editing = state && permitCurrent && !readOnly && !coreChanged && !state.renewalConflict && ['DRAFT', 'IN_PROGRESS'].includes(state.inspection.status) && !state.localFinalized
+  const editing = state && permitCurrent && !busy && !syncing && !readOnly && !coreChanged && !state.renewalConflict && ['DRAFT', 'IN_PROGRESS'].includes(state.inspection.status) && !state.localFinalized
   const queue = state?.queue ?? []
   return <Stack spacing={2} sx={{ maxWidth: 1100, m: 'auto', p: offlineUser ? 3 : 0 }}>
     <Button component={Link} to={offlineUser ? '/campo/paquetes' : '/campo/asignadas'} sx={{ alignSelf: 'start' }}>Volver a mis inspecciones</Button>
@@ -116,28 +151,27 @@ export function FieldInspectionPage() {
     {sealed && <Alert severity="warning">El permiso local venció o requiere validar el reloj con Core. La firma y la integridad fueron verificadas; el contenido permanece cifrado y oculto. {sealed.hasPending ? `Hay ${sealed.pendingCount} operaciones pendientes.` : 'No hay operaciones pendientes.'} Reconéctese para comparar y renovar.</Alert>}
     {user && (sealed || coreChanged) && <Button disabled={busy} onClick={() => void compareAndRenew()}>Comparar con Core</Button>}
     {renewalPreview && <Card><CardContent><Typography variant="h6">Comparación previa a la renovación</Typography>
-      <Typography>Versión local {renewalPreview.localVersion}; versión Core {renewalPreview.coreVersion}; {renewalPreview.pendingCount} operaciones pendientes. Estado Core: {renewalPreview.coreStatus}.</Typography>
+      <Typography>Versión local {renewalPreview.localVersion}; versión Core {renewalPreview.coreVersion}; {renewalPreview.pendingCount} operaciones pendientes. Estado Core: {displayLabel(renewalPreview.coreStatus)}.</Typography>
       {(renewalPreview.assignmentChanged || renewalPreview.definitionsChanged || !['DRAFT', 'IN_PROGRESS'].includes(renewalPreview.coreStatus))
         ? <Alert severity="warning">La asignación, las definiciones o el estado cambiaron. Los pendientes se conservan; se requiere revisión antes de renovar.</Alert>
         : <><Typography>La renovación conserva la cola y los binarios. Si cambió la versión, abrirá una comparación detallada y bloqueará el envío hasta su confirmación.</Typography>
           <Button disabled={busy} onClick={() => void action(() => confirmFieldRenewal(user!.id, id, renewalPreview), () => { setRenewalPreview(null); setCoreChanged(false) })}>Renovar y abrir revisión</Button></>}
     </CardContent></Card>}
-    {!state && !sealed && user && !serverDenied && <Card><CardContent><Typography>Para abrir o descargar, desbloquee el vault con la contraseña actual de Core.</Typography>
+    {!state && !sealed && user && !serverDenied && <Card><CardContent><Typography>Para abrir el trabajo guardado en este dispositivo, desbloquéelo con su contraseña actual. Si es la primera vez que abre esta inspección, el portal la preparará automáticamente cuando Core esté disponible.</Typography>
       <TextField label="Contraseña" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
       <Button disabled={!password} onClick={() => void unlockVaultOnline(password).then(() => { setPassword(''); void reload() }).catch((caught: Error) => setError(caught.message))}>Desbloquear</Button>
-      <Button disabled={busy} onClick={() => void action(() => downloadFieldPackage(user.id, id), () => setCoreChanged(false))}>Descargar paquete</Button>
     </CardContent></Card>}
     {state && permitCurrent && <>
       {readOnly && <Alert severity="info">Vista de solo lectura obtenida de Core. Esta inspección ya no admite captura de campo.</Alert>}
       {state.renewalConflict && <Card><CardContent><Typography variant="h6">Conflicto de versión tras renovar</Typography>
         <Typography>Versión anterior {state.renewalConflict.localVersion}; versión Core {state.renewalConflict.coreVersion}. Ningún cambio local se aplicó en Core. Revise cada diferencia antes de habilitar el reintento.</Typography>
-        {compareRenewalConflict(state).map((entry) => <Box key={entry.operationId} sx={{ my: 2 }}><Typography>{entry.type} · {entry.status}</Typography>
+        {compareRenewalConflict(state).map((entry) => <Box key={entry.operationId} sx={{ my: 2 }}><Typography>{displayLabel(entry.type)} · {displayLabel(entry.status)}</Typography>
           <Typography variant="body2">Cambio local: {JSON.stringify(entry.local)}</Typography>
           <Typography variant="body2">Valor Core al renovar: {JSON.stringify(entry.current)}</Typography></Box>)}
         <Button disabled={busy} onClick={() => void action(() => acknowledgeRenewalConflict(actor.id, id))}>Aceptar valores Core sin pendientes y habilitar reintento</Button>
       </CardContent></Card>}
-      <Alert severity="info">Paquete de {state.inspection.establishmentName ?? state.inspection.caseId}. Estado Core: {state.inspection.status}; versión {state.inspection.version}. {state.permit && <>Permiso local hasta {new Date(state.permit.claims.expiresAt).toLocaleString('es-DO')}. La vigencia usa el reloj local como indicio; la revocación se comprueba al reconectar.</>}</Alert>
-      {state.localFinalized && state.inspection.status !== 'SUBMITTED' && <Alert severity="warning">Finalización local pendiente. Aún no figura como SUBMITTED en Core.</Alert>}
+      <Alert severity="info">Inspección de {state.inspection.establishmentName ?? state.inspection.caseId}. Estado Core: {displayLabel(state.inspection.status)}; versión {state.inspection.version}. {state.permit && <>Disponible sin conexión hasta {new Date(state.permit.claims.expiresAt).toLocaleString('es-DO')}. La revocación de acceso se comprueba al reconectar.</>}</Alert>
+      {state.localFinalized && state.inspection.status !== 'SUBMITTED' && <Alert severity="warning">Inspección finalizada y guardada en este dispositivo. {online ? 'El envío a Core está pendiente o en curso.' : 'Se enviará automáticamente cuando vuelva la conexión.'}</Alert>}
       {state.inspection.status === 'SUBMITTED' && <Alert severity="success">Envío confirmado por Core.</Alert>}
       {user?.roleCode === 'EVALUATOR' && state.inspection.status === 'SUBMITTED' && officialReport && navigator.onLine &&
         <Button disabled={busy} onClick={() => void openOfficialReport()}>Abrir informe oficial</Button>}
@@ -182,8 +216,8 @@ export function FieldInspectionPage() {
         <input aria-label="Agregar evidencia" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,video/mp4,video/webm" disabled={!editing || busy}
           onChange={(event) => { const file = event.target.files?.[0]; if (file) void action(() => addEvidence(actor.id, id, file, evidenceItemId || null)); event.target.value = '' }} />
         </>}
-        {state.signedPackage.evidence.filter((entry) => !entry.deletedAt && entry.status !== 'ARCHIVED').map((entry) => <Typography key={entry.id}>{entry.fileName} · {entry.status} (Core)</Typography>)}
-        {state.evidence.map((entry) => <Box key={entry.id}><Typography component="span">{entry.fileName} · {entry.status} {entry.lastError ?? ''}</Typography>
+        {state.signedPackage.evidence.filter((entry) => !entry.deletedAt && entry.status !== 'ARCHIVED').map((entry) => <Typography key={entry.id}>{entry.fileName} · {displayLabel(entry.status)} (Core)</Typography>)}
+        {state.evidence.map((entry) => <Box key={entry.id}><Typography component="span">{entry.fileName} · {displayLabel(entry.status)} {entry.lastError ?? ''}</Typography>
           {editing && entry.status === 'PENDING' && state.queue.find((op) => op.operationId === entry.operationId)?.attempts === 0 &&
             <Button size="small" disabled={busy} onClick={() => void action(() => removePendingEvidence(actor.id, id, entry.id))}>Quitar</Button>}
         </Box>)}
@@ -197,13 +231,16 @@ export function FieldInspectionPage() {
       </CardContent></Card>
       <Card><CardContent><Typography variant="h6">Envío</Typography>
         <Typography>Operaciones: {queue.filter((item) => item.status !== 'APPLIED' && item.status !== 'RESOLVED').length} pendientes; {queue.filter((item) => item.status === 'CONFLICT').length} conflictos; {queue.filter((item) => item.status === 'REJECTED').length} rechazos; {queue.filter((item) => item.status === 'APPLIED').length} confirmadas.</Typography>
-        {queue.filter((item) => item.status !== 'APPLIED' && item.status !== 'RESOLVED').map((item) => <Box key={item.operationId} sx={{ my: 1 }}><Typography variant="body2">{item.type}: {item.status} {item.lastError ?? ''}</Typography>
+        {syncing && <Alert severity="info" sx={{ mt: 1 }}>Enviando cambios a Core automáticamente…</Alert>}
+        {!online && queue.some((item) => item.status === 'PENDING') && <Alert severity="info" sx={{ mt: 1 }}>Los cambios están cifrados en este dispositivo. Se enviarán cuando vuelva la conexión y exista una sesión válida en Core.</Alert>}
+        {online && !user && queue.some((item) => item.status === 'PENDING') && <Alert severity="info" sx={{ mt: 1 }}>La conexión volvió. Inicie sesión con Core para autorizar el envío de los cambios guardados.</Alert>}
+        {queue.filter((item) => item.status !== 'APPLIED' && item.status !== 'RESOLVED').map((item) => <Box key={item.operationId} sx={{ my: 1 }}><Typography variant="body2">{displayLabel(item.type)}: {displayLabel(item.status)} {item.lastError ?? ''}</Typography>
           {item.status === 'CONFLICT' && user && <><Button disabled={busy} onClick={() => void reviewFieldConflict(user.id, id, item.operationId).then((review) => setConflictReview({ operationId: item.operationId, ...review })).catch((caught: Error) => setError(caught.message))}>Comparar con Core</Button>
-            {conflictReview?.operationId === item.operationId && <Box sx={{ p: 1, bgcolor: '#F1F5F9' }}><Typography variant="body2">Core: {conflictReview.status}, versión {conflictReview.version}. Valor actual: {JSON.stringify(conflictReview.current)}</Typography><Typography variant="body2">Cambio local: {JSON.stringify(conflictReview.local)}</Typography><Button disabled={busy} onClick={() => void action(() => rebaseConflict(user.id, id, item.operationId), () => setConflictReview(null))}>Reintentar mi cambio</Button></Box>}</>}
+            {conflictReview?.operationId === item.operationId && <Box sx={{ p: 1, bgcolor: '#F1F5F9' }}><Typography variant="body2">Core: {displayLabel(conflictReview.status)}, versión {conflictReview.version}. Valor actual: {JSON.stringify(conflictReview.current)}</Typography><Typography variant="body2">Cambio local: {JSON.stringify(conflictReview.local)}</Typography><Button disabled={busy} onClick={() => void action(() => rebaseConflict(user.id, id, item.operationId), () => setConflictReview(null))}>Reintentar mi cambio</Button></Box>}</>}
         </Box>)}
         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-          {editing && <Button disabled={busy} onClick={() => void action(() => finalizeLocal(actor.id, id))}>Finalizar localmente</Button>}
-          {user && !readOnly && !coreChanged && !state.renewalConflict && queue.some((item) => item.status === 'PENDING' || item.status === 'SENDING') && <Button variant="contained" disabled={busy} onClick={() => void action(() => syncFieldState(user.id, id))}>Sincronizar con Core</Button>}
+          {editing && <Button disabled={busy || syncing} variant="contained" onClick={() => void action(() => finalizeLocal(actor.id, id))}>Finalizar inspección</Button>}
+          {user && online && !readOnly && !coreChanged && !state.renewalConflict && !syncing && lastAutoSyncKey.current === autoSyncKey && queue.some((item) => item.status === 'PENDING' || item.status === 'SENDING') && <Button disabled={busy} onClick={() => { setRetryEpoch((value) => value + 1) }}>Reintentar envío pendiente</Button>}
         </Stack>
       </CardContent></Card>
     </>}

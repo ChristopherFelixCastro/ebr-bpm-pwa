@@ -45,6 +45,24 @@ describe('portal A', () => {
     expect(core.restoreSession).toHaveBeenCalledTimes(1)
   })
 
+  it('mantiene una sola sección del menú desplegada y deja Inicio como enlace', async () => {
+    vi.mocked(core.restoreSession).mockResolvedValue(user('DELEGATE'))
+    at('/inicio')
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Inicio' })
+    const directory = screen.getByRole('button', { name: 'Directorio empresarial' })
+    const requests = screen.getByRole('button', { name: 'Solicitudes' })
+    expect(directory).toHaveAttribute('aria-expanded', 'false')
+    expect(requests).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('link', { name: 'Inicio' })).toBeInTheDocument()
+    fireEvent.click(directory)
+    expect(directory).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('link', { name: 'Establecimientos' })).toBeInTheDocument()
+    fireEvent.click(requests)
+    expect(requests).toHaveAttribute('aria-expanded', 'true')
+    expect(directory).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('bloquea la URL directa de configuración para un delegado', async () => {
     vi.mocked(core.restoreSession).mockResolvedValue(user('DELEGATE'))
     at('/configuracion/usuarios')

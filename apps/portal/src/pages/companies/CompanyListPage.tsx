@@ -9,6 +9,7 @@ import AddIcon from '@mui/icons-material/Add'
 import BusinessIcon from '@mui/icons-material/Business'
 import { companiesApi, type Company, type CompanyCreate } from '../../api/resources'
 import { routeForError, supportMessage } from '../../api/presentation'
+import { displayLabel } from '../../api/displayLabels'
 import { useSession } from '../../session/SessionContext'
 import { useNotification } from '../../components/NoticeProvider'
 
@@ -71,7 +72,7 @@ export const CompanyListPage = () => {
         <Button variant="outlined" onClick={() => { setPage(0); setSearch(searchInput.trim()) }}>Buscar</Button>
       </Stack>
       <TableContainer><Table><TableHead><TableRow><TableCell>Empresa</TableCell><TableCell>RNC</TableCell><TableCell>Contacto</TableCell><TableCell>Establecimientos</TableCell><TableCell>Estado</TableCell></TableRow></TableHead>
-        <TableBody>{loading ? <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}><CircularProgress /></TableCell></TableRow> : companies.length === 0 ? <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}>No hay empresas para los filtros seleccionados.</TableCell></TableRow> : companies.map((company) => <TableRow hover key={company.id} onClick={() => navigate(`/directorio/empresas/${company.id}`)} sx={{ cursor: 'pointer' }}><TableCell><Typography sx={{ fontWeight: 700 }}>{company.legalName}</Typography><Typography variant="caption" color="text.secondary">{company.tradeName || 'Sin nombre comercial'}</Typography></TableCell><TableCell>{company.rnc || '—'}</TableCell><TableCell>{company.email || company.phone || '—'}</TableCell><TableCell>{company.activeEstablishmentCount}/{company.establishmentCount} activos</TableCell><TableCell><Chip size="small" color={company.status === 'ACTIVE' ? 'success' : 'default'} label={company.status} /></TableCell></TableRow>)}</TableBody>
+        <TableBody>{loading ? <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}><CircularProgress /></TableCell></TableRow> : companies.length === 0 ? <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6 }}>No hay empresas para los filtros seleccionados.</TableCell></TableRow> : companies.map((company) => <TableRow hover key={company.id} onClick={() => navigate(`/directorio/empresas/${company.id}`)} sx={{ cursor: 'pointer' }}><TableCell><Typography sx={{ fontWeight: 700 }}>{company.tradeName || company.legalName}</Typography>{company.tradeName && <Typography variant="caption" color="text.secondary">Razón social: {company.legalName}</Typography>}</TableCell><TableCell>{company.rnc || '—'}</TableCell><TableCell>{company.email || company.phone || '—'}</TableCell><TableCell>{company.activeEstablishmentCount}/{company.establishmentCount} activos</TableCell><TableCell><Chip size="small" color={company.status === 'ACTIVE' ? 'success' : 'default'} label={displayLabel(company.status)} /></TableCell></TableRow>)}</TableBody>
       </Table></TableContainer>
       <TablePagination component="div" count={total} page={page} rowsPerPage={rowsPerPage} rowsPerPageOptions={[10, 20, 50]} onPageChange={(_, value) => setPage(value)} onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0) }} labelRowsPerPage="Filas:" />
     </Card>

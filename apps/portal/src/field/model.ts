@@ -239,7 +239,18 @@ export async function finalizeLocal(userId: string, id: string): Promise<FieldSt
   return state
 }
 
-export async function syncFieldState(userId: string, id: string): Promise<FieldState> {
+const activeSyncs = new Map<string, Promise<FieldState>>()
+
+export function syncFieldState(userId: string, id: string): Promise<FieldState> {
+  const key = `${userId}:${id}`
+  const running = activeSyncs.get(key)
+  if (running) return running
+  const task = syncFieldStateOnce(userId, id).finally(() => activeSyncs.delete(key))
+  activeSyncs.set(key, task)
+  return task
+}
+
+async function syncFieldStateOnce(userId: string, id: string): Promise<FieldState> {
   if (!navigator.onLine || !core.authenticated) throw new Error('Conéctese e inicie sesión para sincronizar.')
   const state = await openFieldState(userId, id)
   if (state.renewalConflict) throw new Error('Compare la versión de Core y confirme la revisión antes de sincronizar.')

@@ -14,7 +14,7 @@ export type ContactPatch = Partial<ContactCreate> & { version: number }
 export type RelationshipType = 'LEGAL_REPRESENTATIVE' | 'QUALITY_CONTACT' | 'PRIMARY_CONTACT' | 'OWNER' | 'REPRESENTATIVE'
 export type ContactLink = { contactId?: string; contact?: ContactCreate; relationshipType: RelationshipType; isPrimary: boolean; effectiveFrom: string }
 export type ContactRelation = { id: string; companyId?: string; establishmentId?: string; relationshipType: RelationshipType; isPrimary: boolean; effectiveFrom: string; effectiveTo: string | null; version: number; contact: Contact }
-export type CompanyRequest = { id: string; companyId: string; establishmentId: string; establishmentName?: string; requestType: string; reason: string; observations?: string | null; status: 'DRAFT' | 'PENDING_ASSIGNMENT'; submittedAt?: string | null; version: number; createdAt: string; updatedAt: string }
+export type CompanyRequest = { id: string; companyId: string; establishmentId: string; establishmentName?: string; requestType: string; reason: string; observations?: string | null; status: 'DRAFT' | 'PENDING_ASSIGNMENT'; caseStatus?: 'PENDING_REVIEW' | 'PENDING_ASSIGNMENT' | 'ASSIGNED' | 'NO_ACTION' | 'REFERRED' | 'CLOSED' | null; progressStatus?: 'DRAFT' | 'PENDING_REVIEW' | 'PENDING_ASSIGNMENT' | 'ASSIGNED' | 'NO_ACTION' | 'REFERRED' | 'CLOSED'; caseUpdatedAt?: string | null; submittedAt?: string | null; version: number; createdAt: string; updatedAt: string }
 export type CompanyRequestCreate = { companyId?: string; establishmentId: string; requestType: string; reason: string; observations?: string | null }
 export type CompanyRequestPatch = Partial<Omit<CompanyRequestCreate, 'companyId'>> & { version: number }
 export type RequestContact = { id: string; contactId: string; relationshipType: RelationshipType; fullName: string; phone: string | null; email: string | null; isPrimary: boolean; removedAt: string | null; version: number }
@@ -23,7 +23,7 @@ export type DocumentType = 'AUTHORIZATION_LETTER' | 'SUPPORTING_DOCUMENT'
 export type RequestDocument = { id: string; requestId: string; documentType: DocumentType; fileName: string; mimeType: string; sizeBytes: number; status: 'PENDING' | 'VALID' | 'REJECTED' | 'ARCHIVED'; rejectionReason: string | null; version: number }
 export type PendingDocument = { id: string; requestId: string; documentType: DocumentType; fileName: string; version: number; establishmentName: string; requestType: string }
 
-type PageQuery = { page: number; limit: number; search?: string; status?: string; companyId?: string; establishmentId?: string; requestType?: string }
+type PageQuery = { page: number; limit: number; search?: string; status?: string; progressStatus?: string; companyId?: string; establishmentId?: string; requestType?: string }
 const query = (values: PageQuery) => { const params = new URLSearchParams(); Object.entries(values).forEach(([key, value]) => { if (value !== undefined && value !== '') params.set(key, String(value)) }); return `?${params}` }
 const path = (id: string) => encodeURIComponent(id)
 const get = async <T,>(url: string) => (await core.request<T>(url, { cache: 'no-store' })).data

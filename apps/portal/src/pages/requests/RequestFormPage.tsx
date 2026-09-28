@@ -8,6 +8,7 @@ import { isStaleVersion, routeForError, supportMessage } from '../../api/present
 import { useSession } from '../../session/SessionContext'
 import { useNotification } from '../../components/NoticeProvider'
 import { canEditRequest } from '../../access/resourceRules'
+import { otherRequestType, requestTypeChoice, requestTypeOptions } from './requestTypes'
 
 export const RequestFormPage = () => {
   const { id } = useParams()
@@ -20,7 +21,8 @@ export const RequestFormPage = () => {
   const [establishmentSearch, setEstablishmentSearch] = useState('')
   const [companyId, setCompanyId] = useState(user?.companyId ?? '')
   const [establishmentId, setEstablishmentId] = useState('')
-  const [requestType, setRequestType] = useState('REGISTRATION')
+  const [requestType, setRequestType] = useState('')
+  const [customRequestType, setCustomRequestType] = useState('')
   const [reason, setReason] = useState('')
   const [observations, setObservations] = useState('')
   const [version, setVersion] = useState<number | null>(null)
@@ -39,7 +41,7 @@ export const RequestFormPage = () => {
         if (!canEditRequest(user, request.companyId, request.status)) { navigate('/denegado', { replace: true }); return }
         resolvedCompanyId = request.companyId
         resolvedEstablishmentId = request.establishmentId
-        setCompanyId(request.companyId); setEstablishmentId(request.establishmentId); setRequestType(request.requestType); setReason(request.reason); setObservations(request.observations || ''); setVersion(request.version)
+        setCompanyId(request.companyId); setEstablishmentId(request.establishmentId); setRequestType(requestTypeChoice(request.requestType)); setCustomRequestType(requestTypeChoice(request.requestType) === otherRequestType ? request.requestType : ''); setReason(request.reason); setObservations(request.observations || ''); setVersion(request.version)
       }
       const [companyResult, establishmentResult] = await Promise.all([
         isGlobal ? companiesApi.list({ page: 1, limit: 100, status: 'ACTIVE' }) : Promise.resolve({ data: [] as Company[], meta: { correlationId: '' } }),
@@ -73,14 +75,16 @@ export const RequestFormPage = () => {
   }
 
   const save = async () => {
-    if (!establishmentId || !requestType.trim() || !reason.trim() || (isGlobal && !companyId)) return showError('Empresa, establecimiento, tipo y motivo son obligatorios.')
+    const value = (requestType === otherRequestType ? customRequestType : requestType).trim()
+    if (!establishmentId || !value || !reason.trim() || (isGlobal && !companyId)) return showError('Empresa, establecimiento, tipo y motivo son obligatorios.')
+    if (value.length > 80) return showError('El tipo de solicitud admite hasta 80 caracteres.')
     setSaving(true)
     try {
       if (id && version) {
-        const updated = await requestsApi.update(id, { version, establishmentId, requestType: requestType.trim(), reason: reason.trim(), observations: observations.trim() || null })
+        const updated = await requestsApi.update(id, { version, establishmentId, requestType: value, reason: reason.trim(), observations: observations.trim() || null })
         setVersion(updated.version); setStale(false); showSuccess('Borrador actualizado.'); navigate(`/solicitudes/${id}`)
       } else {
-        const created = await requestsApi.create({ ...(isGlobal ? { companyId } : {}), establishmentId, requestType: requestType.trim(), reason: reason.trim(), observations: observations.trim() || null })
+        const created = await requestsApi.create({ ...(isGlobal ? { companyId } : {}), establishmentId, requestType: value, reason: reason.trim(), observations: observations.trim() || null })
         showSuccess('Borrador creado con UUID real.'); navigate(`/solicitudes/${created.id}`, { replace: true })
       }
     } catch (error) { if (isStaleVersion(error)) setStale(true); else { const route = routeForError(error); if (route) navigate(route, { replace: true }); else showError(supportMessage(error, 'No fue posible guardar el borrador.')) } }
@@ -97,7 +101,8 @@ export const RequestFormPage = () => {
       {isGlobal && <TextField select label="Empresa" required value={companyId} onChange={(event) => void reloadEstablishments(event.target.value)}>{companies.map((company) => <MenuItem key={company.id} value={company.id}>{company.legalName}</MenuItem>)}</TextField>}
       <Stack direction="row" spacing={1}><TextField fullWidth label="Buscar establecimiento" value={establishmentSearch} onChange={(event) => setEstablishmentSearch(event.target.value)} disabled={!companyId} /><Button onClick={() => void searchEstablishment()} disabled={!companyId}>Buscar</Button></Stack>
       <TextField select label="Establecimiento" required value={establishmentId} onChange={(event) => setEstablishmentId(event.target.value)} disabled={!companyId && isGlobal}>{establishments.map((establishment) => <MenuItem key={establishment.id} value={establishment.id}>{establishment.name}</MenuItem>)}</TextField>
-      <TextField label="Tipo de solicitud" required value={requestType} onChange={(event) => setRequestType(event.target.value)} />
+      <TextField select label="Tipo de solicitud" required value={requestType} onChange={(event) => setRequestType(event.target.value)}><MenuItem value="" disabled>Seleccione un tipo</MenuItem>{requestTypeOptions.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}<MenuItem value={otherRequestType}>Otro (especificar)</MenuItem></TextField>
+      {requestType === otherRequestType && <TextField label="Especifique el tipo de solicitud" required value={customRequestType} onChange={(event) => setCustomRequestType(event.target.value)} slotProps={{ htmlInput: { maxLength: 80 } }} helperText="Se guardará tal como lo escriba. Máximo 80 caracteres." />}
       <TextField label="Motivo" required multiline minRows={3} value={reason} onChange={(event) => setReason(event.target.value)} />
       <TextField label="Observaciones" multiline minRows={3} value={observations} onChange={(event) => setObservations(event.target.value)} />
       <Button variant="contained" startIcon={<SaveIcon />} disabled={saving || stale} onClick={() => void save()}>{id ? 'Guardar borrador' : 'Crear borrador'}</Button>
