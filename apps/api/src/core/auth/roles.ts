@@ -1,0 +1,1 @@
+export const roleCodes=['ADMIN','COMPANY_ADMIN','DELEGATE','COORDINATOR','EVALUATOR','UNIVERSAL'] as const; export type RoleCode=typeof roleCodes[number]; export const canAccess=(actual:RoleCode,allowed:readonly RoleCode[])=>actual==='UNIVERSAL'||allowed.includes(actual);

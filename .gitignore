@@ -1,6 +1,7 @@
 # Dependencies and builds
 node_modules/
 dist/
+dev-dist/
 build/
 coverage/
 .vite/
@@ -28,7 +29,9 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 .cache/
+.local-browsers/
 uploads/
+postgres-data/
 
 # Generated reports
 reports/

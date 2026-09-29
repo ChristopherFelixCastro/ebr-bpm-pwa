@@ -1,0 +1,60 @@
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Alert, Box, Button, Card, CardContent, List, ListItemButton, ListItemText, MenuItem, TextField, Typography } from '@mui/material'
+import { availableOfflineIdentities, listOfflinePackages, type OfflineIdentity } from '../offline/vault'
+import { useSession } from '../session/SessionContext'
+
+export function OfflineAccessPage() {
+  const { offlineUser, unlockOffline } = useSession()
+  const [identities, setIdentities] = useState<OfflineIdentity[]>([])
+  const [userId, setUserId] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { void availableOfflineIdentities().then(setIdentities).catch(() => setError('No se pudo leer el almacenamiento local.')) }, [])
+  if (offlineUser) return <Navigate to="/campo/paquetes" replace />
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    setBusy(true); setError('')
+    try { await unlockOffline(userId, password) }
+    catch (caught) { setError(caught instanceof Error ? caught.message : 'No se pudo desbloquear el trabajo local.') }
+    finally { setBusy(false); setPassword('') }
+  }
+  return <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 2 }}>
+    <Card sx={{ width: '100%', maxWidth: 520 }}><CardContent sx={{ p: 4 }}>
+      <Typography variant="h5" sx={{ mb: 2 }}>Trabajo de campo sin conexión</Typography>
+      <Typography sx={{ mb: 2 }}>Las inspecciones que abrió previamente con conexión están guardadas y cifradas en este navegador. Desbloquéelas con la contraseña de su cuenta. El acceso sin conexión requiere un permiso vigente.</Typography>
+      {navigator.onLine && <Alert severity="info" sx={{ mb: 2 }}>Si tiene conexión, inicie sesión normalmente para validar su cuenta.</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {identities.length ? <Box component="form" onSubmit={submit}>
+        <TextField select fullWidth label="Cuenta de campo" value={userId} onChange={(event) => setUserId(event.target.value)} sx={{ mb: 2 }}>
+          {identities.map((identity) => <MenuItem key={identity.id} value={identity.id}>{identity.fullName}</MenuItem>)}
+        </TextField>
+        <TextField fullWidth label="Contraseña" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} sx={{ mb: 2 }} />
+        <Button fullWidth type="submit" variant="contained" disabled={!userId || !password || busy}>Desbloquear inspecciones</Button>
+      </Box> : <Alert severity="warning">No hay cuentas de campo habilitadas localmente en este origen. Primero inicie sesión con conexión.</Alert>}
+      <Button component={Link} to="/login" sx={{ mt: 2 }}>Volver al inicio de sesión</Button>
+    </CardContent></Card>
+  </Box>
+}
+
+export function OfflinePackagesPage() {
+  const { offlineUser, lockOffline } = useSession()
+  const navigate = useNavigate()
+  const [packageIds, setPackageIds] = useState<string[]>([])
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!offlineUser) return
+    void listOfflinePackages(offlineUser.id).then(setPackageIds).catch(() => setError('No se pudieron leer las inspecciones guardadas.'))
+  }, [offlineUser])
+  if (!offlineUser) return <Navigate to="/acceso-sin-conexion" replace />
+  return <Box sx={{ p: 4, maxWidth: 800 }}>
+    <Typography variant="h4" sx={{ mb: 1 }}>Inspecciones guardadas</Typography>
+    <Typography sx={{ mb: 2 }}>Cuenta: {offlineUser.fullName}</Typography>
+    <Alert severity="info" sx={{ mb: 3 }}>Puede abrir sin conexión las inspecciones con permiso vigente. Los cambios pendientes permanecen cifrados si el permiso vence; reconéctese para renovarlo.</Alert>
+    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+    {packageIds.length ? <List>{packageIds.map((id) => <ListItemButton key={id} onClick={() => navigate(`/campo/inspecciones/${id}`)}><ListItemText primary={id} secondary="Abrir inspección cifrada" /></ListItemButton>)}</List>
+      : <Typography>No hay inspecciones preparadas para trabajar sin conexión en este navegador. Abra una con conexión primero.</Typography>}
+    <Button onClick={() => { lockOffline(); navigate('/acceso-sin-conexion', { replace: true }) }} sx={{ mt: 3 }}>Bloquear y salir</Button>
+  </Box>
+}

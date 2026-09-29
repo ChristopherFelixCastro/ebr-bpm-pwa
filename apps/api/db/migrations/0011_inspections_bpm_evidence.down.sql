@@ -1,0 +1,15 @@
+DROP TABLE IF EXISTS inspection_operations;
+DROP TABLE IF EXISTS inspection_evidence;
+DROP TABLE IF EXISTS inspection_food_snapshots;
+DROP TABLE IF EXISTS inspection_bpm_responses;
+DROP TABLE IF EXISTS inspections;
+DROP FUNCTION IF EXISTS inspection_operation_guard();
+DROP FUNCTION IF EXISTS inspection_evidence_guard();
+DROP FUNCTION IF EXISTS inspection_food_snapshot_guard();
+DROP FUNCTION IF EXISTS inspection_bpm_response_guard();
+DROP FUNCTION IF EXISTS inspection_guard();
+DROP FUNCTION IF EXISTS inspection_is_editable(uuid);
+DROP TYPE IF EXISTS operation_processing_status;
+DROP TYPE IF EXISTS inspection_operation_type;
+DROP TYPE IF EXISTS evidence_status;
+DROP TYPE IF EXISTS inspection_status;

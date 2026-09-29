@@ -1,0 +1,12 @@
+import{z}from'zod';
+export const uuid=z.string().uuid();const text=(n:number)=>z.string().trim().min(1).max(n);const nullable=(n:number)=>z.string().trim().max(n).nullable().optional();
+export const createDefinitionSchema=z.object({code:text(80).transform(x=>x.toUpperCase()),name:text(160),description:nullable(4000),supportsHierarchy:z.boolean().default(false)}).strict();
+export const patchDefinitionSchema=z.object({version:z.number().int().positive(),name:text(160).optional(),description:nullable(4000),supportsHierarchy:z.boolean().optional()}).strict().refine(x=>x.name!==undefined||x.description!==undefined||x.supportsHierarchy!==undefined);
+export const createVersionSchema=z.object({cloneFromVersionId:uuid.optional()}).strict();
+export const publishSchema=z.object({version:z.number().int().positive(),effectiveFrom:z.string().datetime({offset:true}),publicationNote:nullable(2000)}).strict();
+export const retireSchema=z.object({version:z.number().int().positive()}).strict();
+export const createItemSchema=z.object({code:text(120).transform(x=>x.toUpperCase()),name:text(300),description:nullable(4000),parentId:uuid.nullable().optional(),entryType:z.enum(['NODE','LEAF']),sortOrder:z.number().int().min(0),isActive:z.boolean().default(true),sourceReference:nullable(500),attributes:z.record(z.unknown()).default({})}).strict();
+export const patchItemSchema=z.object({version:z.number().int().positive(),name:text(300).optional(),description:nullable(4000),entryType:z.enum(['NODE','LEAF']).optional(),isActive:z.boolean().optional(),sourceReference:nullable(500),attributes:z.record(z.unknown()).optional()}).strict();
+export const moveItemSchema=z.object({version:z.number().int().positive(),parentId:uuid.nullable(),sortOrder:z.number().int().min(0)}).strict();
+export const deleteItemSchema=z.object({version:z.coerce.number().int().positive()}).strict();
+export type CreateDefinition= z.infer<typeof createDefinitionSchema>;export type PatchDefinition=z.infer<typeof patchDefinitionSchema>;export type CreateItem=z.infer<typeof createItemSchema>;export type PatchItem=z.infer<typeof patchItemSchema>;export type MoveItem=z.infer<typeof moveItemSchema>;

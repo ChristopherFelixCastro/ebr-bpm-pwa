@@ -1,0 +1,4 @@
+import{z}from'zod';import{id}from'../cases/schemas.js';const text=(n:number)=>z.string().trim().min(1).max(n);const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const createSchema=z.object({companyId:id.optional(),establishmentId:id.optional(),programReference:z.string().trim().max(200).nullable().optional(),plannedDate:date.nullable().optional(),reason:text(2000),observations:z.string().trim().max(5000).nullable().optional()}).strict().refine(x=>!x.establishmentId||Boolean(x.companyId));
+export const patchSchema=z.object({version:z.number().int().positive(),programReference:z.string().trim().max(200).nullable().optional(),plannedDate:date.nullable().optional(),reason:text(2000).optional(),observations:z.string().trim().max(5000).nullable().optional()}).strict().refine(x=>Object.keys(x).length>1);
+export type CreateInput=z.infer<typeof createSchema>;export type PatchInput=z.infer<typeof patchSchema>;

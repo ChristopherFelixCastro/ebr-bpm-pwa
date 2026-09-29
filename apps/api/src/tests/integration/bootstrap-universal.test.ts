@@ -1,0 +1,10 @@
+import { beforeEach,describe,expect,it,vi } from 'vitest';
+const mocks=vi.hoisted(()=>({query:vi.fn(),hash:vi.fn()}));
+vi.mock('../../db/client.js',()=>({withTransaction:(fn:any)=>fn({query:mocks.query})}));
+vi.mock('../../core/auth/password.js',()=>({hashPassword:mocks.hash}));
+import { bootstrapUniversal } from '../../modules/bootstrap-universal/service.js';
+
+describe('first UNIVERSAL bootstrap',()=>{beforeEach(()=>{vi.clearAllMocks();mocks.hash.mockResolvedValue('argon2id-secret-hash')});
+  it('creates an approved UNIVERSAL transactionally without exposing the password hash',async()=>{mocks.query.mockResolvedValueOnce({rows:[]}).mockResolvedValueOnce({rows:[{id:'11111111-1111-4111-8111-111111111111',is_universal:true}]}).mockResolvedValueOnce({rows:[]}).mockResolvedValueOnce({rowCount:0,rows:[]}).mockResolvedValueOnce({rows:[{id:'22222222-2222-4222-8222-222222222222'}]}).mockResolvedValueOnce({rows:[]});const result=await bootstrapUniversal({fullName:'Initial Universal',email:' INITIAL@EXAMPLE.TEST ',password:'long-password-value'});expect(result).toEqual({id:'22222222-2222-4222-8222-222222222222',created:true,role:'UNIVERSAL'});expect(JSON.stringify(result)).not.toMatch(/password|hash|argon/i);expect(mocks.hash).toHaveBeenCalledWith('long-password-value');expect(mocks.query.mock.calls[4][1][2]).toBe('initial@example.test')});
+  it('is idempotent for the same UNIVERSAL email and rejects weak passwords',async()=>{mocks.query.mockResolvedValueOnce({rows:[]}).mockResolvedValueOnce({rows:[{id:'11111111-1111-4111-8111-111111111111',is_universal:true}]}).mockResolvedValueOnce({rows:[{id:'22222222-2222-4222-8222-222222222222',role_code:'UNIVERSAL'}]});await expect(bootstrapUniversal({fullName:'Initial Universal',email:'initial@example.test',password:'long-password-value'})).resolves.toMatchObject({created:false});await expect(bootstrapUniversal({fullName:'Initial Universal',email:'initial@example.test',password:'short'})).rejects.toBeTruthy();expect(mocks.hash).not.toHaveBeenCalled()});
+});

@@ -1,0 +1,3 @@
+import { SignJWT,jwtVerify } from 'jose'; import { randomUUID } from 'node:crypto'; import { env } from '../../config/env.js'; import type { RoleCode } from './roles.js';
+const key=()=>{if(!env.JWT_ACCESS_SECRET)throw new Error('JWT_ACCESS_SECRET no configurado');return new TextEncoder().encode(env.JWT_ACCESS_SECRET)};
+export const signAccessToken=(id:string,role:RoleCode,authTime=Math.floor(Date.now()/1000))=>new SignJWT({role,auth_time:authTime}).setProtectedHeader({alg:'HS256',typ:'JWT'}).setSubject(id).setIssuedAt().setJti(randomUUID()).setExpirationTime(env.JWT_ACCESS_TTL).sign(key()); export const verifyAccessToken=async(token:string)=>jwtVerify(token,key(),{algorithms:['HS256']});

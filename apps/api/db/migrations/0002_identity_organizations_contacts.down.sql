@@ -1,0 +1,13 @@
+DROP TABLE IF EXISTS establishment_contacts;
+DROP TABLE IF EXISTS company_contacts;
+DROP TABLE IF EXISTS contacts;
+DROP TABLE IF EXISTS establishment_operational_profiles;
+DROP TABLE IF EXISTS establishments;
+DROP TABLE IF EXISTS companies;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
+DROP FUNCTION IF EXISTS set_updated_at_and_version();
+DROP FUNCTION IF EXISTS normalize_identifier(text);
+DROP TYPE IF EXISTS contact_relationship_type;
+DROP TYPE IF EXISTS user_status;

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "importType": "BPM",
+  "template": {
+    "code": "BPM_OFFICIAL",
+    "name": "Ficha oficial BPM"
+  },
+  "allItems": {
+    "logicalName": "allItems",
+    "path": "../../sources/all-items.sql"
+  },
+  "workbooks": [
+    {
+      "logicalName": "bpmForm",
+      "path": "../../sources/bpm-form.xlsx",
+      "sheet": "Guía de Llenado"
+    },
+    {
+      "logicalName": "foodMatrix",
+      "path": "../../sources/food-risk-matrix.xlsx"
+    },
+    {
+      "logicalName": "riskRulesForm",
+      "path": "../../sources/risk-frequency-form.xlsx"
+    }
+  ],
+  "guide": {
+    "logicalName": "bpmForm",
+    "sheet": "Guía de Llenado"
+  },
+  "allItemsOverrides": [
+    {
+      "itemOrder": 28,
+      "expectedSourceCode": "1.2.2.1",
+      "canonicalCode": "1.2.2",
+      "expectedDescription": "1.2.2. Instalaciones de limpieza",
+      "canonicalDescription": "1.2.2. Instalaciones de limpieza"
+    },
+    {
+      "itemOrder": 59,
+      "expectedSourceCode": "3.1.3",
+      "canonicalCode": "3.1.2",
+      "expectedDescription": "3.1.2. Métodos y procedimientos de limpieza y desinfección",
+      "canonicalDescription": "3.1.2. Métodos y procedimientos de limpieza y desinfección"
+    }
+  ]
+}

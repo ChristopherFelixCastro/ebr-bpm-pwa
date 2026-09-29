@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "allowArbitraryExtensions": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": [
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/api/**/*.ts",
+    "src/components/AppShell.tsx",
+    "src/components/ConfirmDialog.tsx",
+    "src/components/ContactRelationsPanel.tsx",
+    "src/components/StatusChip.tsx",
+    "src/context/AuthContext.tsx",
+    "src/context/NotificationContext.tsx",
+    "src/context/ReauthenticationContext.tsx",
+    "src/pages/auth/**/*.tsx",
+    "src/pages/companies/**/*.tsx",
+    "src/pages/dashboard/**/*.tsx",
+    "src/pages/requests/**/*.tsx",
+    "src/pages/system/**/*.tsx",
+    "src/pages/users/**/*.tsx",
+    "src/routes/**/*.ts",
+    "src/test/setup.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/theme/**/*.ts"
+  ]
+}

@@ -1,0 +1,654 @@
+const correlationMeta = {
+  type: 'object',
+  required: ['correlationId'],
+  properties: { correlationId: { type: 'string', format: 'uuid' } },
+} as const;
+
+const augmentInspectionReviewsOpenApi=()=>{
+const inspectionIdParameter={name:'inspectionId',in:'path',required:true,schema:{type:'string',format:'uuid'}} as const;
+const reviewIdParameter={name:'reviewId',in:'path',required:true,schema:{type:'string',format:'uuid'}} as const;
+const reportIdParameter={name:'reportId',in:'path',required:true,schema:{type:'string',format:'uuid'}} as const;
+const bpmItemIdParameter={name:'bpmItemId',in:'path',required:true,schema:{type:'string',format:'uuid'}} as const;
+const institutionalErrors={'400':errorResponse('DTO estricto o identificador inválido.'),'401':errorResponse('Autenticación o reautenticación reciente requerida.'),'403':errorResponse('Rol o recurso fuera del alcance institucional.'),'404':errorResponse('Recurso no encontrado.'),'409':errorResponse('Estado, idempotencia o versión en conflicto.'),'413':errorResponse('PDF excede el límite privado de 5 MB.'),'422':errorResponse('Datos de cálculo incompletos.')} as const;
+const jsonBody=(schema:object)=>({required:true,content:{'application/json':{schema}}});
+const secured={security:[{bearerAuth:[]}],tags:['Inspection Reviews & Reports']} as const;
+Object.assign((openApiDocument as any).tags,[...(openApiDocument as any).tags,{name:'Inspection Reviews & Reports',description:'Revisión institucional, correcciones limitadas, PDF privado, oficialización y cierre.'}]);
+Object.assign((openApiDocument as any).paths,{
+  '/v1/review-corrections':{get:{...secured,summary:'Bandeja paginada de correcciones del evaluador asignado',description:'Solo EVALUATOR. El servidor filtra por actor y ciclo actual RETURNED_FOR_CORRECTION; devuelve metadatos mínimos y total de inspecciones, sin respuestas BPM ni datos de otras cuentas.',parameters:[{name:'page',in:'query',schema:{type:'integer',minimum:1,default:1}},{name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:50,default:20}}],responses:{'200':successResponse({type:'array',items:{type:'object'}}),'403':errorResponse('Solo EVALUATOR.')}}},
+  '/v1/inspections/{inspectionId}/reviews':{
+    post:{...secured,summary:'Abrir revisión',description:'COORDINATOR y UNIVERSAL pueden abrir; ADMIN solo consulta. Exige inspección SUBMITTED, cálculo vigente coincidente, caso abierto y ausencia de ciclo activo o informe oficial.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false}),responses:{'201':successResponse({type:'object'}),...institutionalErrors}},
+    get:{...secured,summary:'Listar ciclos de revisión',description:'Lectura global institucional; EVALUATOR solo sobre su inspección. Nunca expone observaciones BPM ni texto de auditoría.',parameters:[inspectionIdParameter],responses:{'200':successResponse({type:'array',items:{type:'object'}}),...institutionalErrors}},
+  },
+  '/v1/inspections/{inspectionId}/reviews/current':{get:{...secured,summary:'Consultar revisión actual',description:'Devuelve ciclo, devoluciones históricas, versiones de respuesta y eventos saneados.',parameters:[inspectionIdParameter],responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/reviews/{reviewId}':{get:{...secured,summary:'Consultar ciclo de revisión',parameters:[inspectionIdParameter,reviewIdParameter],responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/reviews/{reviewId}/return':{post:{...secured,summary:'Devolver criterios para corrección',description:'COORDINATOR opera normalmente; UNIVERSAL requiere reautenticación reciente y ADMIN solo consulta. Motivo general y uno o más criterios evaluables únicos; el cálculo previo queda supersedido atómicamente.',parameters:[inspectionIdParameter,reviewIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['reason','bpmItemIds'],properties:{reason:{type:'string',minLength:1,maxLength:1000},bpmItemIds:{type:'array',minItems:1,maxItems:200,uniqueItems:true,items:{type:'string',format:'uuid'}}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/reviews/{reviewId}/corrections/{bpmItemId}':{
+    put:{...secured,summary:'Corregir criterio señalado',description:'Solo el EVALUATOR asignado. baseVersion aplica control optimista. Factores, alimentos, evidencias, agenda y asignación continúan bloqueados.',parameters:[inspectionIdParameter,reviewIdParameter,bpmItemIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['baseVersion','responseValue'],properties:{baseVersion:{type:'integer',minimum:1},responseValue:{type:'string',enum:['C','CP','IT','NA']},observations:{type:['string','null'],maxLength:2000}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}},
+    delete:{...secured,summary:'Eliminar respuesta de criterio señalado',description:'Solo el EVALUATOR asignado; eliminar cuenta como mutación trazable, pero el reenvío exige nuevamente todas las respuestas.',parameters:[inspectionIdParameter,reviewIdParameter,bpmItemIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['baseVersion'],properties:{baseVersion:{type:'integer',minimum:1}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}},
+  },
+  '/v1/inspections/{inspectionId}/reviews/{reviewId}/resubmit':{post:{...secured,summary:'Reenviar corrección y recalcular',description:'Exclusivamente online y para el EVALUATOR asignado. En una transacción valida todas las correcciones, usa el motor oficial, crea un cálculo COMPLETED vigente y mueve el mismo ciclo a RESUBMITTED.',parameters:[inspectionIdParameter,reviewIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/reviews/{reviewId}/approve':{post:{...secured,summary:'Aprobar revisión',description:'COORDINATOR opera normalmente; UNIVERSAL requiere reautenticación reciente y ADMIN solo consulta. El ciclo aprobado y sus snapshots de participantes son inmutables.',parameters:[inspectionIdParameter,reviewIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,properties:{note:{type:'string',maxLength:1000}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/reports':{get:{...secured,summary:'Listar informes activos',description:'Metadatos autorizados únicamente: nunca storagePath, SHA-256 interno ni URL firmada.',parameters:[inspectionIdParameter],responses:{'200':successResponse({type:'array',items:{type:'object'}}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/report-content':{
+    get:{...secured,summary:'Consultar contenido redactado del informe',description:'COORDINATOR y UNIVERSAL. Devuelve resumen ejecutivo, hallazgos adicionales, recomendaciones y versión.',parameters:[inspectionIdParameter],responses:{'200':successResponse({type:'object'}),...institutionalErrors}},
+    put:{...secured,summary:'Guardar contenido redactado del informe',description:'Solo tras aprobar la revisión y antes de oficializar. Control optimista mediante version; cualquier cambio exige regenerar el borrador.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['version','executiveSummary','additionalFindings','recommendations'],properties:{version:{type:'integer',minimum:0},executiveSummary:{type:'string',maxLength:4000},additionalFindings:{type:'string',maxLength:4000},recommendations:{type:'string',maxLength:4000}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}},
+  },
+  '/v1/inspections/{inspectionId}/reports/{reportId}':{get:{...secured,summary:'Consultar metadatos de informe',description:'Incluye verificationId público, estado y versiones; omite rutas y hashes.',parameters:[inspectionIdParameter,reportIdParameter],responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/reports/generate':{post:{...secured,summary:'Generar o regenerar borrador PDF',description:'COORDINATOR y UNIVERSAL pueden generar tras guardar resumen ejecutivo y recomendaciones. El borrador congela contenido, hallazgos, evidencias y cálculo; operationId UUID hace el reintento idempotente. El PDF se guarda en Storage privado.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['operationId'],properties:{operationId:{type:'string',format:'uuid'}}}),responses:{'201':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/reports/{reportId}/officialize':{post:{...secured,summary:'Oficializar informe',description:'Operación separada. Exige DRAFT, revisión APPROVED, cálculo vigente y snapshots de evaluador/aprobador. COORDINATOR normal; UNIVERSAL con reautenticación reciente; ADMIN solo consulta. OFFICIAL es inmutable.',parameters:[inspectionIdParameter,reportIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/reports/{reportId}/download-url':{post:{...secured,summary:'Emitir URL privada temporal',description:'Solo usuario institucional autorizado. La URL firmada dura exactamente 60 segundos, se entrega únicamente aquí y se audita sin persistirla.',parameters:[inspectionIdParameter,reportIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false}),responses:{'200':successResponse({type:'object',required:['signedUrl','expiresInSeconds'],properties:{signedUrl:{type:'string',format:'uri'},expiresInSeconds:{const:60}}}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/close':{post:{...secured,summary:'Cerrar inspección y caso',description:'Acción posterior e idempotente para la misma identidad. COORDINATOR normal; UNIVERSAL con reautenticación reciente; ADMIN solo consulta. Cancela agenda, cierra asignación y caso, conserva historiales y crea inspection_closures atómicamente.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['reportId'],properties:{reportId:{type:'string',format:'uuid'},reason:{type:'string',maxLength:500}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/closure':{get:{...secured,summary:'Consultar cierre',description:'Metadatos históricos saneados del cierre. COMPANY_ADMIN y DELEGATE no tienen acceso.',parameters:[inspectionIdParameter],responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
+});
+for(const route of ['/v1/inspections/{inspectionId}/reports/generate','/v1/inspections/{inspectionId}/reports/{reportId}/officialize','/v1/inspections/{inspectionId}/reports/{reportId}/download-url']){
+  const response=(openApiDocument as any).paths[route].post.responses;
+  response['503']=errorResponse('REPORT_STORAGE_UNAVAILABLE: almacenamiento privado temporalmente no disponible.');
+  response['404']=errorResponse('REPORT_OBJECT_NOT_FOUND: archivo privado ausente o recurso no encontrado.');
+}
+};
+
+const augmentAnalyticsOpenApi=()=>{
+  const secured={security:[{bearerAuth:[]}],tags:['Analytics']} as const;
+  const errors={'400':errorResponse('Filtros o identificador inválidos.'),'401':errorResponse('Autenticación requerida.'),'403':errorResponse('Disponible solo para ADMIN, COORDINATOR y UNIVERSAL.'),'404':errorResponse('Evaluación no encontrada.')} as const;
+  const id={name:'inspectionId',in:'path',required:true,schema:{type:'string',format:'uuid'}} as const;
+  const evaluation={type:'object',required:['id','caseId','inspectionStatus','lifecycleStatus','createdAt'],properties:{
+    id:{type:'string',format:'uuid'},caseId:{type:'string',format:'uuid'},origin:{type:'string'},priority:{type:'string'},inspectionStatus:{type:'string'},lifecycleStatus:{enum:['DRAFT','IN_PROGRESS','PENDING_SUBMISSION','READY_FOR_REVIEW','PENDING_REVIEW','RETURNED_FOR_CORRECTION','RESUBMITTED','APPROVED','CLOSED']},riskLevel:{type:['string','null'],enum:['LOW','MEDIUM','HIGH',null]},companyId:{type:['string','null'],format:'uuid'},companyName:{type:['string','null']},companyTradeName:{type:['string','null']},establishmentId:{type:['string','null'],format:'uuid'},establishmentName:{type:['string','null']},evaluatorUserId:{type:'string',format:'uuid'},evaluatorName:{type:'string'},createdAt:{type:'string',format:'date-time'},startedAt:{type:['string','null'],format:'date-time'},submittedAt:{type:['string','null'],format:'date-time'},currentCalculation:{type:['object','null']},currentReview:{type:['object','null']},latestReport:{type:['object','null']},closure:{type:['object','null']},
+  }};
+  const filters=[
+    {name:'page',in:'query',schema:{type:'integer',minimum:1,default:1}},
+    {name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:100,default:20}},
+    {name:'search',in:'query',schema:{type:'string',maxLength:120}},
+    {name:'companyId',in:'query',schema:{type:'string',format:'uuid'}},
+    {name:'establishmentId',in:'query',schema:{type:'string',format:'uuid'}},
+    {name:'lifecycleStatus',in:'query',schema:{enum:['DRAFT','IN_PROGRESS','PENDING_SUBMISSION','READY_FOR_REVIEW','PENDING_REVIEW','RETURNED_FOR_CORRECTION','RESUBMITTED','APPROVED','CLOSED']}},
+    {name:'riskLevel',in:'query',schema:{enum:['LOW','MEDIUM','HIGH']}},
+    {name:'reportStatus',in:'query',schema:{enum:['DRAFT','OFFICIAL']}},
+    {name:'createdFrom',in:'query',schema:{type:'string',format:'date-time'}},
+    {name:'createdTo',in:'query',schema:{type:'string',format:'date-time'}},
+  ];
+  (openApiDocument as any).tags.push({name:'Analytics',description:'Lecturas institucionales agregadas sobre datos autoritativos del Core.'});
+  Object.assign((openApiDocument as any).paths,{
+    '/v1/analytics/summary':{get:{...secured,summary:'Resumen analítico global',description:'Agrega estados de inspección, revisión, informe y cierre sin recalcular ni persistir resultados.',responses:{'200':successResponse({type:'object',required:['total','readyForReview','pendingReview','returnedForCorrection','approved','officialReports','closed','byRisk'],properties:{total:{type:'integer'},readyForReview:{type:'integer'},pendingReview:{type:'integer'},returnedForCorrection:{type:'integer'},approved:{type:'integer'},officialReports:{type:'integer'},closed:{type:'integer'},byRisk:{type:'object',properties:{LOW:{type:'integer'},MEDIUM:{type:'integer'},HIGH:{type:'integer'}}}}}),...errors}}},
+    '/v1/analytics/evaluations':{get:{...secured,summary:'Historial analítico paginado',description:'Proyección de solo lectura basada en inspecciones, cálculos vigentes, revisiones, informes activos y cierres reales del Core.',parameters:filters,responses:{'200':successResponse({type:'array',items:evaluation}),...errors}}},
+    '/v1/analytics/evaluations/{inspectionId}':{get:{...secured,summary:'Detalle analítico de una evaluación',description:'Devuelve la misma proyección autoritativa usada por el historial; no expone rutas de Storage ni hashes.',parameters:[id],responses:{'200':successResponse(evaluation),...errors}}},
+  });
+};
+
+const successResponse = (schema: object) => ({
+  description: 'Operación completada.',
+  content: {
+    'application/json': {
+      schema: {
+        type: 'object',
+        required: ['data', 'meta'],
+        properties: { data: schema, meta: correlationMeta },
+      },
+    },
+  },
+});
+
+const errorResponse = (description: string) => ({
+  description,
+  content: {
+    'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
+  },
+});
+
+export const openApiDocument = {
+  openapi: '3.1.0',
+  info: {
+    title: 'SIRA Tech API',
+    version: '0.2.0',
+    description: 'API del sistema de evaluaciones basadas en riesgo y buenas prácticas de manufactura.',
+  },
+  servers: [{ url: '/', description: 'Servidor actual' }],
+  tags: [
+    { name: 'Auth', description: 'Autenticación, sesión y perfil actual.' },
+    { name: 'Companies', description: 'Administración de empresas y su estado operativo.' },
+    { name: 'Establishments', description: 'Establecimientos y sus perfiles operativos históricos.' },
+    { name: 'Contacts', description: 'Contactos reutilizables y relaciones históricas.' },
+    { name: 'Company Requests', description: 'Solicitudes empresariales, contactos, documentos y envío a casos.' },
+    { name: 'Intake Cases', description: 'Programas institucionales, alertas sanitarias y denuncias.' },
+    { name: 'Assignments & Schedules', description: 'Asignaciones de evaluadores y programación de inspecciones.' },
+    { name: 'Inspection Execution', description: 'Captura BPM, evidencia privada, sincronización offline y cálculos de riesgo.' },
+    { name: 'Users', description: 'Administración de usuarios y su alcance empresarial.' },
+  ],
+  components: {
+    securitySchemes: {
+      bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      refreshCookie: { type: 'apiKey', in: 'cookie', name: 'refresh_token' },
+    },
+    schemas: {
+      Credentials: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email', example: 'universal@ebr-bpm.local' },
+          password: { type: 'string', format: 'password', writeOnly: true, example: 'PruebaSegura123!' },
+        },
+      },
+      PasswordConfirmation: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['password'],
+        properties: {
+          password: { type: 'string', format: 'password', writeOnly: true, example: 'PruebaSegura123!' },
+        },
+      },
+      ForgotPasswordRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email', maxLength: 320 },
+        },
+      },
+      ResetPasswordRequest: {
+        type: 'object', additionalProperties: false, required: ['token', 'password'],
+        properties: { token: { type: 'string', writeOnly: true }, password: { type: 'string', format: 'password', minLength: 12, maxLength: 1024, writeOnly: true } },
+      },
+      AccessToken: {
+        type: 'object',
+        required: ['accessToken'],
+        properties: { accessToken: { type: 'string', description: 'JWT de acceso de corta duración.' } },
+      },
+      CurrentUser: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['id', 'fullName', 'roleCode', 'status', 'companyId', 'authTime'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          fullName: { type: 'string' },
+          roleCode: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] },
+          status: { type: 'string', enum: ['PENDING_VALIDATION', 'APPROVED', 'REJECTED', 'INACTIVE'] },
+          companyId: { type: ['string', 'null'], format: 'uuid', description: 'Alcance empresarial vigente disponible. No implica asignaciones por establecimiento.' },
+          authTime: { type: 'integer', description: 'Fecha Unix de la autenticación de contraseña.' },
+        },
+      },
+      User: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['id', 'fullName', 'email', 'phone', 'status', 'version', 'roleCode', 'companyId', 'companyName', 'createdAt', 'updatedAt', 'authorizationLetterStatus'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          fullName: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          phone: { type: ['string', 'null'] },
+          status: { type: 'string', enum: ['PENDING_VALIDATION', 'APPROVED', 'REJECTED', 'INACTIVE'] },
+          version: { type: 'integer', minimum: 1 },
+          roleCode: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] },
+          companyId: { type: ['string', 'null'], format: 'uuid' },
+          companyName: { type: ['string', 'null'] },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          authorizationLetterStatus: { type: ['string', 'null'], enum: ['PENDING', 'VALID', 'REJECTED', null], description: 'Estado de la carta activa de la cuenta; null si no existe.' },
+        },
+      },
+      UserAuthorizationLetter: {
+        type: 'object',
+        additionalProperties: false,
+        description: 'Metadatos de la carta de autorización de la cuenta. Nunca incluye ruta privada, contenido ni URL firmada.',
+        required: ['id', 'userId', 'status', 'fileName', 'mimeType', 'sizeBytes', 'sha256', 'uploadedByUserId', 'uploadedAt', 'reviewedByUserId', 'reviewedAt', 'rejectionReason', 'archivedAt', 'version'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['PENDING', 'VALID', 'REJECTED', 'ARCHIVED'] },
+          fileName: { type: 'string' },
+          mimeType: { type: 'string', enum: ['application/pdf', 'image/jpeg', 'image/png'] },
+          sizeBytes: { type: 'integer', minimum: 1, maximum: 5242880 },
+          sha256: { type: 'string', pattern: '^[0-9a-f]{64}$' },
+          uploadedByUserId: { type: 'string', format: 'uuid' },
+          uploadedAt: { type: 'string', format: 'date-time' },
+          reviewedByUserId: { type: ['string', 'null'], format: 'uuid' },
+          reviewedAt: { type: ['string', 'null'], format: 'date-time' },
+          rejectionReason: { type: ['string', 'null'] },
+          archivedAt: { type: ['string', 'null'], format: 'date-time' },
+          version: { type: 'integer', minimum: 1 },
+        },
+      },
+      UserCreateRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['fullName', 'email', 'password', 'roleCode'],
+        properties: {
+          fullName: { type: 'string', minLength: 1, maxLength: 200 },
+          email: { type: 'string', format: 'email', maxLength: 320 },
+          phone: { type: 'string', minLength: 1, maxLength: 40 },
+          password: { type: 'string', minLength: 12, maxLength: 1024 },
+          roleCode: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] },
+          companyId: { type: 'string', format: 'uuid' },
+        },
+      },
+      UserPatchRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['version'],
+        properties: {
+          version: { type: 'integer', minimum: 1 },
+          fullName: { type: 'string', minLength: 1, maxLength: 200 },
+          phone: { type: ['string', 'null'] },
+          roleCode: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] },
+          companyId: { type: ['string', 'null'], format: 'uuid' },
+        },
+      },
+      Company: {
+        type: 'object', additionalProperties: false,
+        required: ['id', 'legalName', 'tradeName', 'rnc', 'address', 'phone', 'email', 'economicActivityCode', 'status', 'version', 'createdAt', 'updatedAt', 'establishmentCount', 'activeEstablishmentCount'],
+        properties: {
+          id: { type: 'string', format: 'uuid' }, legalName: { type: 'string' }, tradeName: { type: ['string', 'null'] }, rnc: { type: ['string', 'null'] }, address: { type: ['string', 'null'] }, phone: { type: ['string', 'null'] }, email: { type: ['string', 'null'], format: 'email' }, economicActivityCode: { type: ['string', 'null'] },
+          status: { type: 'string', enum: ['ACTIVE', 'INACTIVE'] }, version: { type: 'integer', minimum: 1 }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' }, establishmentCount: { type: 'integer', minimum: 0 }, activeEstablishmentCount: { type: 'integer', minimum: 0 },
+        },
+      },
+      CompanyCreateRequest: {
+        type: 'object', additionalProperties: false, required: ['legalName', 'rnc'],
+        properties: { legalName: { type: 'string', minLength: 1, maxLength: 300 }, tradeName: { type: ['string', 'null'] }, rnc: { type: 'string', minLength: 1, maxLength: 40 }, address: { type: ['string', 'null'] }, phone: { type: ['string', 'null'] }, email: { type: ['string', 'null'], format: 'email' }, economicActivityCode: { type: ['string', 'null'] } },
+      },
+      CompanyPatchRequest: {
+        type: 'object', additionalProperties: false, required: ['version'],
+        description: 'Incluya la versión actualmente leída y al menos un campo de empresa.',
+        properties: { version: { type: 'integer', minimum: 1 }, legalName: { type: 'string' }, tradeName: { type: ['string', 'null'] }, rnc: { type: 'string' }, address: { type: ['string', 'null'] }, phone: { type: ['string', 'null'] }, email: { type: ['string', 'null'], format: 'email' }, economicActivityCode: { type: ['string', 'null'] } },
+      },
+      VersionRequest: { type: 'object', additionalProperties: false, required: ['version'], properties: { version: { type: 'integer', minimum: 1 } } },
+      Establishment: {
+        type: 'object', additionalProperties: false,
+        required: ['id', 'companyId', 'companyLegalName', 'companyTradeName', 'name', 'establishmentTypeCode', 'address', 'provinceCode', 'municipalityCode', 'healthJurisdictionCode', 'sanitaryPermitNumber', 'sanitaryPermitExpiresAt', 'operationsStartedAt', 'status', 'version', 'createdAt', 'updatedAt', 'currentOperationalProfile'],
+        properties: { id: { type: 'string', format: 'uuid' }, companyId: { type: 'string', format: 'uuid' }, companyLegalName: { type: 'string' }, companyTradeName: { type: ['string', 'null'] }, name: { type: 'string' }, establishmentTypeCode: { type: ['string', 'null'] }, address: { type: ['string', 'null'] }, provinceCode: { type: ['string', 'null'] }, municipalityCode: { type: ['string', 'null'] }, healthJurisdictionCode: { type: ['string', 'null'] }, sanitaryPermitNumber: { type: ['string', 'null'] }, sanitaryPermitExpiresAt: { type: ['string', 'null'], format: 'date' }, operationsStartedAt: { type: ['string', 'null'], format: 'date' }, status: { type: 'string', enum: ['ACTIVE', 'INACTIVE'] }, version: { type: 'integer', minimum: 1 }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' }, currentOperationalProfile: { anyOf: [{ $ref: '#/components/schemas/OperationalProfile' }, { type: 'null' }] } },
+      },
+      OperationalProfile: {
+        type: 'object', additionalProperties: false,
+        required: ['id', 'establishmentId', 'annualProduction', 'marketTarget', 'commercializationScope', 'employeeCount', 'maleEmployeeCount', 'femaleEmployeeCount', 'haccpStatus', 'haccpImplementationLevel', 'samplingPlanStatus', 'samplingPlanScope', 'inabieSupplierStatus', 'inabieDistributionScope', 'effectiveFrom', 'effectiveTo', 'version', 'createdAt', 'updatedAt'],
+        properties: { id: { type: 'string', format: 'uuid' }, establishmentId: { type: 'string', format: 'uuid' }, annualProduction: { type: ['number', 'null'], minimum: 0 }, marketTarget: { type: ['string', 'null'] }, commercializationScope: { type: ['string', 'null'] }, employeeCount: { type: ['integer', 'null'], minimum: 0 }, maleEmployeeCount: { type: ['integer', 'null'], minimum: 0 }, femaleEmployeeCount: { type: ['integer', 'null'], minimum: 0 }, haccpStatus: { type: ['string', 'null'] }, haccpImplementationLevel: { type: ['string', 'null'] }, samplingPlanStatus: { type: ['string', 'null'] }, samplingPlanScope: { type: ['string', 'null'] }, inabieSupplierStatus: { type: ['string', 'null'] }, inabieDistributionScope: { type: ['string', 'null'] }, effectiveFrom: { type: 'string', format: 'date' }, effectiveTo: { type: ['string', 'null'], format: 'date' }, version: { type: 'integer', minimum: 1 }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' } },
+      },
+      EstablishmentCreateRequest: { type: 'object', additionalProperties: false, required: ['companyId', 'name'], properties: { companyId: { type: 'string', format: 'uuid' }, name: { type: 'string' }, establishmentTypeCode: { type: ['string', 'null'] }, address: { type: ['string', 'null'] }, provinceCode: { type: ['string', 'null'] }, municipalityCode: { type: ['string', 'null'] }, healthJurisdictionCode: { type: ['string', 'null'] }, sanitaryPermitNumber: { type: ['string', 'null'] }, sanitaryPermitExpiresAt: { type: ['string', 'null'], format: 'date' }, operationsStartedAt: { type: ['string', 'null'], format: 'date' } } },
+      EstablishmentPatchRequest: { type: 'object', additionalProperties: false, required: ['version'], description: 'companyId, status e id no son editables.', properties: { version: { type: 'integer', minimum: 1 }, name: { type: 'string' }, establishmentTypeCode: { type: ['string', 'null'] }, address: { type: ['string', 'null'] }, provinceCode: { type: ['string', 'null'] }, municipalityCode: { type: ['string', 'null'] }, healthJurisdictionCode: { type: ['string', 'null'] }, sanitaryPermitNumber: { type: ['string', 'null'] }, sanitaryPermitExpiresAt: { type: ['string', 'null'], format: 'date' }, operationsStartedAt: { type: ['string', 'null'], format: 'date' } } },
+      OperationalProfileCreateRequest: { type: 'object', additionalProperties: false, required: ['effectiveFrom'], description: 'effectiveTo lo administra el servidor. Solo se acepta un perfil nuevo por establecimiento y día.', properties: { annualProduction: { type: ['number', 'null'], minimum: 0 }, marketTarget: { type: ['string', 'null'] }, commercializationScope: { type: ['string', 'null'] }, employeeCount: { type: ['integer', 'null'], minimum: 0 }, maleEmployeeCount: { type: ['integer', 'null'], minimum: 0 }, femaleEmployeeCount: { type: ['integer', 'null'], minimum: 0 }, haccpStatus: { type: ['string', 'null'] }, haccpImplementationLevel: { type: ['string', 'null'] }, samplingPlanStatus: { type: ['string', 'null'] }, samplingPlanScope: { type: ['string', 'null'] }, inabieSupplierStatus: { type: ['string', 'null'] }, inabieDistributionScope: { type: ['string', 'null'] }, effectiveFrom: { type: 'string', format: 'date' } } },
+      Contact: { type: 'object', required: ['id','fullName','identityDocumentMasked','phone','email','version','createdAt','updatedAt'], properties: { id:{type:'string',format:'uuid'},fullName:{type:'string'},identityDocumentMasked:{type:['string','null'],description:'Documento siempre enmascarado salvo detalle autorizado.'},identityDocument:{type:['string','null'],writeOnly:true},phone:{type:['string','null']},email:{type:['string','null'],format:'email'},version:{type:'integer'},createdAt:{type:'string',format:'date-time'},updatedAt:{type:'string',format:'date-time'} } },
+      ContactRequest: { type:'object',additionalProperties:false,required:['fullName'],properties:{fullName:{type:'string'},identityDocument:{type:['string','null'],writeOnly:true},phone:{type:['string','null']},email:{type:['string','null'],format:'email'}} },
+      ContactPatchRequest: { type:'object',additionalProperties:false,required:['version'],properties:{version:{type:'integer',minimum:1},fullName:{type:'string'},identityDocument:{type:['string','null'],writeOnly:true},phone:{type:['string','null']},email:{type:['string','null'],format:'email'}} },
+      ContactLinkRequest: { type:'object',additionalProperties:false,required:['relationshipType','isPrimary','effectiveFrom'],properties:{contactId:{type:'string',format:'uuid'},contact:{$ref:'#/components/schemas/ContactRequest'},relationshipType:{type:'string',enum:['LEGAL_REPRESENTATIVE','QUALITY_CONTACT','PRIMARY_CONTACT','OWNER','REPRESENTATIVE']},isPrimary:{type:'boolean'},effectiveFrom:{type:'string',format:'date'}} },
+      ContactRelation: { type:'object',additionalProperties:false,required:['id','relationshipType','isPrimary','effectiveFrom','effectiveTo','version','contact'],properties:{id:{type:'string',format:'uuid'},companyId:{type:'string',format:'uuid'},establishmentId:{type:'string',format:'uuid'},relationshipType:{type:'string',enum:['LEGAL_REPRESENTATIVE','QUALITY_CONTACT','PRIMARY_CONTACT','OWNER','REPRESENTATIVE']},isPrimary:{type:'boolean'},effectiveFrom:{type:'string',format:'date'},effectiveTo:{type:['string','null'],format:'date'},version:{type:'integer',minimum:1},contact:{$ref:'#/components/schemas/Contact'}} },
+      ContactRelationEndRequest: { type:'object',additionalProperties:false,required:['version','effectiveTo'],properties:{version:{type:'integer',minimum:1},effectiveTo:{type:'string',format:'date'}} },
+      CompanyRequest: { type:'object',additionalProperties:false,required:['id','companyId','establishmentId','requestType','reason','status','version','createdAt','updatedAt'],properties:{id:{type:'string',format:'uuid'},companyId:{type:'string',format:'uuid'},establishmentId:{type:'string',format:'uuid'},establishmentName:{type:'string'},requestType:{type:'string'},reason:{type:'string'},observations:{type:['string','null']},status:{type:'string',enum:['DRAFT','PENDING_ASSIGNMENT']},submittedAt:{type:['string','null'],format:'date-time'},createdByUserId:{type:'string',format:'uuid'},version:{type:'integer'},createdAt:{type:'string',format:'date-time'},updatedAt:{type:'string',format:'date-time'}} },
+      CompanyRequestCreate: { type:'object',additionalProperties:false,required:['establishmentId','requestType','reason'],properties:{companyId:{type:'string',format:'uuid',description:'Obligatorio solo para ADMIN/UNIVERSAL.'},establishmentId:{type:'string',format:'uuid'},requestType:{type:'string',maxLength:80},reason:{type:'string',maxLength:2000},observations:{type:['string','null'],maxLength:5000}} },
+      CompanyRequestPatch: { type:'object',additionalProperties:false,required:['version'],properties:{version:{type:'integer',minimum:1},establishmentId:{type:'string',format:'uuid'},requestType:{type:'string',maxLength:80},reason:{type:'string',maxLength:2000},observations:{type:['string','null'],maxLength:5000}} },
+      RequestContactCreate: { type:'object',additionalProperties:false,required:['contactId','relationshipType','isPrimary'],properties:{contactId:{type:'string',format:'uuid'},relationshipType:{type:'string',enum:['LEGAL_REPRESENTATIVE','QUALITY_CONTACT','PRIMARY_CONTACT','OWNER','REPRESENTATIVE']},isPrimary:{type:'boolean'}} },
+      RequestContactLinkResult: { type:'object',additionalProperties:false,required:['id','contactId','relationshipType','isPrimary'],properties:{id:{type:'string',format:'uuid'},contactId:{type:'string',format:'uuid'},relationshipType:{type:'string',enum:['LEGAL_REPRESENTATIVE','QUALITY_CONTACT','PRIMARY_CONTACT','OWNER','REPRESENTATIVE']},isPrimary:{type:'boolean'}} },
+      RequestContact: { type:'object',additionalProperties:false,required:['id','contactId','relationshipType','fullName','phone','email','isPrimary','removedAt','version','createdAt'],properties:{id:{type:'string',format:'uuid'},contactId:{type:'string',format:'uuid'},relationshipType:{type:'string',enum:['LEGAL_REPRESENTATIVE','QUALITY_CONTACT','PRIMARY_CONTACT','OWNER','REPRESENTATIVE']},fullName:{type:'string'},phone:{type:['string','null']},email:{type:['string','null'],format:'email'},isPrimary:{type:'boolean'},removedAt:{type:['string','null'],format:'date-time'},version:{type:'integer',minimum:1},createdAt:{type:'string',format:'date-time'}} },
+      RequestDocumentSummary: { type:'object',additionalProperties:false,required:['total','pending','valid','rejected','archived'],properties:{total:{type:'integer',minimum:0},pending:{type:'integer',minimum:0},valid:{type:'integer',minimum:0},rejected:{type:'integer',minimum:0},archived:{type:'integer',minimum:0}} },
+      CompanyRequestDetail: { allOf:[{$ref:'#/components/schemas/CompanyRequest'},{type:'object',required:['caseId','contacts','documentSummary'],properties:{caseId:{type:['string','null'],format:'uuid',description:'Caso operativo vinculado tras enviar la solicitud.'},contacts:{type:'array',items:{$ref:'#/components/schemas/RequestContact'}},documentSummary:{$ref:'#/components/schemas/RequestDocumentSummary'}}}] },
+      RequestDocument: { type:'object',additionalProperties:false,required:['id','requestId','documentType','fileName','mimeType','sizeBytes','status','uploadedAt','validatedAt','validatedByUserId','rejectionReason','archivedAt','version','createdAt','updatedAt'],properties:{id:{type:'string',format:'uuid'},requestId:{type:'string',format:'uuid'},documentType:{type:'string',enum:['AUTHORIZATION_LETTER','SUPPORTING_DOCUMENT']},fileName:{type:'string'},mimeType:{type:'string',enum:['application/pdf','image/jpeg','image/png']},sizeBytes:{type:'integer',maximum:5242880},status:{type:'string',enum:['PENDING','VALID','REJECTED','ARCHIVED']},uploadedAt:{type:'string',format:'date-time'},validatedAt:{type:['string','null'],format:'date-time'},validatedByUserId:{type:['string','null'],format:'uuid'},rejectionReason:{type:['string','null']},archivedAt:{type:['string','null'],format:'date-time'},version:{type:'integer'},createdAt:{type:'string',format:'date-time'},updatedAt:{type:'string',format:'date-time'}} },
+      DocumentDecision: { type:'object',additionalProperties:false,required:['version'],properties:{version:{type:'integer',minimum:1},reason:{type:'string',maxLength:1000}} },
+      CompanyRequestSubmitResult: { type:'object',additionalProperties:false,required:['request','caseId'],properties:{request:{$ref:'#/components/schemas/CompanyRequest'},caseId:{type:'string',format:'uuid'}} },
+      DownloadUrl: { type:'object',additionalProperties:false,required:['signedUrl','expiresInSeconds'],properties:{signedUrl:{type:'string',format:'uri'},expiresInSeconds:{type:'integer',minimum:1,maximum:60}} },
+      IntakeOrganization: { type:'object',additionalProperties:false,properties:{companyId:{type:'string',format:'uuid'},establishmentId:{type:'string',format:'uuid',description:'Requiere companyId y debe pertenecer a esa empresa.'}} },
+      ComplainantData: { type:'object',additionalProperties:false,required:['preferredContactMethod'],properties:{fullName:{type:'string',maxLength:200},phone:{type:'string',maxLength:40},email:{type:'string',format:'email',maxLength:320},preferredContactMethod:{type:'string',enum:['PHONE','EMAIL','NONE']}} },
+      IntakeCase: { type:'object',required:['id','origin','status','priority','companyId','establishmentId','createdAt','updatedAt','source'],properties:{id:{type:'string',format:'uuid'},origin:{type:'string',enum:['COMPANY_REQUEST','INSTITUTIONAL_PROGRAM','HEALTH_ALERT','COMPLAINT']},status:{type:'string',enum:['PENDING_REVIEW','PENDING_ASSIGNMENT','ASSIGNED','NO_ACTION','REFERRED','CLOSED']},priority:{type:'string',enum:['MEDIUM','HIGH']},companyId:{type:['string','null'],format:'uuid'},establishmentId:{type:['string','null'],format:'uuid'},createdAt:{type:'string',format:'date-time'},updatedAt:{type:'string',format:'date-time'},source:{type:'object',description:'Resumen seguro según origin; COMPANY_REQUEST incluye requestId, requestType y establecimiento, con reason solo en detalle; complainantData solo aparece en detalle autorizado.'}} },
+      InstitutionalProgramCreate: { type:'object',additionalProperties:false,required:['reason'],properties:{companyId:{type:'string',format:'uuid'},establishmentId:{type:'string',format:'uuid'},programReference:{type:['string','null'],maxLength:200},plannedDate:{type:['string','null'],format:'date'},reason:{type:'string',minLength:1,maxLength:2000},observations:{type:['string','null'],maxLength:5000}} },
+      InstitutionalProgramPatch: { type:'object',additionalProperties:false,required:['version'],properties:{version:{type:'integer',minimum:1},programReference:{type:['string','null'],maxLength:200},plannedDate:{type:['string','null'],format:'date'},reason:{type:'string',minLength:1,maxLength:2000},observations:{type:['string','null'],maxLength:5000}} },
+      HealthAlertCreate: { type:'object',additionalProperties:false,required:['alertNumber','alertDate','productDescription','description'],properties:{companyId:{type:'string',format:'uuid'},establishmentId:{type:'string',format:'uuid'},alertNumber:{type:'string',minLength:1,maxLength:120},alertDate:{type:'string',format:'date'},productDescription:{type:'string',minLength:1,maxLength:2000},description:{type:'string',minLength:1,maxLength:5000}} },
+      HealthAlertPatch: { type:'object',additionalProperties:false,required:['version'],properties:{version:{type:'integer',minimum:1},companyId:{type:['string','null'],format:'uuid'},establishmentId:{type:['string','null'],format:'uuid'},alertNumber:{type:'string',maxLength:120},alertDate:{type:'string',format:'date'},productDescription:{type:'string',maxLength:2000},description:{type:'string',maxLength:5000}} },
+      HealthAlertDecision: { type:'object',additionalProperties:false,required:['version','decision'],properties:{version:{type:'integer',minimum:1},decision:{type:'string',enum:['PROCEEDS','NOT_PROCEEDS']},reason:{type:'string',description:'Obligatorio para NOT_PROCEEDS; opcional para PROCEEDS.',maxLength:2000}} },
+      ComplaintCreate: { type:'object',additionalProperties:false,required:['complaintType','receivedAt','description'],properties:{companyId:{type:'string',format:'uuid'},establishmentId:{type:'string',format:'uuid'},complaintType:{type:'string',maxLength:120},receivedAt:{type:'string',format:'date-time'},description:{type:'string',maxLength:5000},complainantData:{$ref:'#/components/schemas/ComplainantData'}} },
+      ComplaintPatch: { type:'object',additionalProperties:false,required:['version'],properties:{version:{type:'integer',minimum:1},companyId:{type:['string','null'],format:'uuid'},establishmentId:{type:['string','null'],format:'uuid'},complaintType:{type:'string',maxLength:120},receivedAt:{type:'string',format:'date-time'},description:{type:'string',maxLength:5000},complainantData:{anyOf:[{$ref:'#/components/schemas/ComplainantData'},{type:'null'}]}} },
+      ComplaintDecision: { type:'object',additionalProperties:false,required:['version','decision'],properties:{version:{type:'integer',minimum:1},decision:{type:'string',enum:['PROCEEDS','NOT_PROCEEDS','REFERRED']},decisionReason:{type:'string',description:'Obligatorio para NOT_PROCEEDS; opcional para PROCEEDS y prohibido para REFERRED.'},referralReason:{type:'string',description:'Obligatorio únicamente para REFERRED.'},referralDestination:{type:'string',description:'Obligatorio únicamente para REFERRED.',maxLength:300}} },
+      Assignment: {type:'object',additionalProperties:false,required:['id','caseId','evaluator','assignedBy','assignedAt','isActive','hasEditableInspection','version','case'],properties:{id:{type:'string',format:'uuid'},caseId:{type:'string',format:'uuid'},evaluator:{type:'object',required:['id','fullName'],properties:{id:{type:'string',format:'uuid'},fullName:{type:'string'}}},assignedBy:{type:'object',required:['id','fullName'],properties:{id:{type:'string',format:'uuid'},fullName:{type:'string'}}},assignedAt:{type:'string',format:'date-time'},unassignedAt:{type:['string','null'],format:'date-time'},isActive:{type:'boolean'},hasEditableInspection:{type:'boolean',description:'Core bloquea la reasignación cuando existe una inspección editable.'},reason:{type:['string','null']},version:{type:'integer'},case:{type:'object',properties:{origin:{type:'string'},status:{type:'string'},priority:{type:'string'},companyId:{type:['string','null'],format:'uuid'},establishmentId:{type:['string','null'],format:'uuid'}}}}},
+      Schedule: {type:'object',additionalProperties:false,required:['id','caseId','assignmentId','evaluator','scheduledStartAt','scheduledEndAt','timezone','status','version'],properties:{id:{type:'string',format:'uuid'},caseId:{type:'string',format:'uuid'},assignmentId:{type:'string',format:'uuid'},evaluator:{type:'object',required:['id','fullName'],properties:{id:{type:'string',format:'uuid'},fullName:{type:'string'}}},scheduledStartAt:{type:'string',format:'date-time'},scheduledEndAt:{type:'string',format:'date-time'},timezone:{const:'America/Santo_Domingo'},status:{type:'string',enum:['SCHEDULED','RESCHEDULED','CANCELLED']},notes:{type:['string','null']},cancellationReason:{type:['string','null']},cancelledAt:{type:['string','null'],format:'date-time'},rescheduledFromScheduleId:{type:['string','null'],format:'uuid'},companyName:{type:['string','null']},companyTradeName:{type:['string','null']},establishmentName:{type:['string','null']},establishmentAddress:{type:['string','null']},version:{type:'integer'}}},
+      AssignmentCreate: {type:'object',additionalProperties:false,required:['evaluatorUserId'],properties:{evaluatorUserId:{type:'string',format:'uuid'},reason:{type:'string',maxLength:500}}},
+      Reassignment: {type:'object',additionalProperties:false,required:['newEvaluatorUserId','currentAssignmentVersion','reason'],properties:{newEvaluatorUserId:{type:'string',format:'uuid'},currentAssignmentVersion:{type:'integer',minimum:1},reason:{type:'string',minLength:1,maxLength:500}}},
+      ScheduleCreate: {type:'object',additionalProperties:false,required:['scheduledStartAt','scheduledEndAt'],properties:{scheduledStartAt:{type:'string',format:'date-time'},scheduledEndAt:{type:'string',format:'date-time'},notes:{type:'string',maxLength:2000}}},
+      ScheduleReschedule: {type:'object',additionalProperties:false,required:['version','scheduledStartAt','scheduledEndAt','reason'],properties:{version:{type:'integer',minimum:1},scheduledStartAt:{type:'string',format:'date-time'},scheduledEndAt:{type:'string',format:'date-time'},reason:{type:'string',minLength:1,maxLength:500},notes:{type:'string',maxLength:2000}}},
+      ScheduleCancel: {type:'object',additionalProperties:false,required:['version','reason'],properties:{version:{type:'integer',minimum:1},reason:{type:'string',minLength:1,maxLength:500}}},
+      Inspection: {type:'object',additionalProperties:false,required:['id','caseId','assignmentId','evaluatorUserId','status','version','contentRevision','bpmTemplateVersionId','riskRuleVersionId'],properties:{id:{type:'string',format:'uuid'},caseId:{type:'string',format:'uuid'},assignmentId:{type:'string',format:'uuid'},evaluatorUserId:{type:'string',format:'uuid'},establishmentId:{type:['string','null'],format:'uuid'},establishmentName:{type:['string','null']},establishmentAddress:{type:['string','null']},companyName:{type:['string','null']},status:{type:'string',enum:['DRAFT','IN_PROGRESS','PENDING_SUBMISSION','SUBMITTED']},version:{type:'integer',minimum:1,description:'Versión optimista general.'},contentRevision:{type:'integer',minimum:1,description:'Cambia con entradas BPM, riesgo, ubicación o desbloqueo.'},bpmTemplateVersionId:{type:'string',format:'uuid'},riskRuleVersionId:{type:'string',format:'uuid'},startedAt:{type:['string','null'],format:'date-time'},finalizedAt:{type:['string','null'],format:'date-time'},submittedAt:{type:['string','null'],format:'date-time'}}},
+      BpmGuidanceItem: {type:'object',additionalProperties:false,required:['id','criterionItemId','text','sortOrder','criticality','sourceReference','sourceRowNumber'],properties:{id:{type:'string',format:'uuid'},criterionItemId:{type:'string',format:'uuid'},text:{type:'string'},sortOrder:{type:'integer',minimum:0},criticality:{type:['string','null'],enum:['CRITICA','MAYOR','MENOR',null]},sourceReference:{type:['string','null'],maxLength:500},sourceRowNumber:{type:['integer','null'],minimum:1},version:{type:'integer',minimum:1}}},
+      BpmTemplateItem: {type:'object',additionalProperties:false,required:['id','itemKind','title','sortOrder','isEvaluable','defaultCriticality','guidanceItems'],properties:{id:{type:'string',format:'uuid'},parentItemId:{type:['string','null'],format:'uuid'},itemKind:{type:'string',enum:['SECTION','SUBSECTION','GROUP','CRITERION']},displayCode:{type:['string','null']},title:{type:'string'},sortOrder:{type:'integer',minimum:0},isEvaluable:{type:'boolean'},defaultCriticality:{type:['string','null'],enum:['CRITICA','MAYOR','MENOR',null]},guidanceItems:{type:'array',items:{$ref:'#/components/schemas/BpmGuidanceItem'}}}},
+      InspectionWorkPackage: {type:'object',required:['inspection','bpmTemplate','responses','riskRule','factorSelections','foodSnapshots','evidence','generatedAt'],properties:{inspection:{$ref:'#/components/schemas/Inspection'},bpmTemplate:{type:'object',required:['versionId','items'],properties:{versionId:{type:'string',format:'uuid'},items:{type:'array',items:{$ref:'#/components/schemas/BpmTemplateItem'}}}},responses:{type:'array',items:{type:'object'}},riskRule:{type:'object'},factorSelections:{type:'array',items:{type:'object'}},foodSnapshots:{type:'array',items:{type:'object'}},evidence:{type:'array',items:{type:'object'}},currentCalculation:{type:['object','null']},generatedAt:{type:'string',format:'date-time'}}},
+      BpmResponseInput: {type:'object',additionalProperties:false,required:['baseVersion','responseValue'],properties:{baseVersion:{type:'integer',minimum:1},responseValue:{type:'string',enum:['C','CP','IT','NA'],description:'C=1, CP=0.5, IT=0, NA excluido del denominador.'},observations:{type:['string','null'],maxLength:2000}}},
+      RiskFactorSelectionInput: {type:'object',additionalProperties:false,required:['baseVersion','optionId'],properties:{baseVersion:{type:'integer',minimum:1},optionId:{type:'string',format:'uuid'}}},
+      FoodSnapshotInput: {type:'object',additionalProperties:false,required:['baseVersion','foodRiskSubcategoryId'],properties:{baseVersion:{type:'integer',minimum:1},foodRiskSubcategoryId:{type:'string',format:'uuid'}}},
+      OfflineBatch: {type:'object',additionalProperties:false,required:['operations'],properties:{operations:{type:'array',minItems:1,maxItems:100,items:{type:'object',additionalProperties:false,required:['operationId','operationType','baseVersion','payload','payloadHash','createdAt'],properties:{operationId:{type:'string',format:'uuid'},operationType:{type:'string',enum:['UPSERT_BPM_RESPONSE','DELETE_BPM_RESPONSE','UPSERT_RISK_FACTOR_SELECTION','ADD_FOOD_SNAPSHOT','ADD_EVIDENCE','SOFT_DELETE_EVIDENCE','FINALIZE']},baseVersion:{type:'integer',minimum:1},payload:{type:'object'},payloadHash:{type:'string',pattern:'^[0-9a-f]{64}$',description:'SHA-256 hexadecimal del JSON canónico de payload.'},createdAt:{type:'string',format:'date-time'}}}}}},
+      Calculation: {type:'object',additionalProperties:false,properties:{id:{type:'string',format:'uuid'},calculationNumber:{type:'integer',minimum:1},status:{type:'string',enum:['COMPLETED','SUPERSEDED']},isCurrent:{type:'boolean'},contentRevision:{type:'integer',minimum:1},bpmPercentage:{type:'number'},productRiskScore:{type:'number'},establishmentRiskScore:{type:'number'},totalRiskScore:{type:'number'},frequency:{type:'string',enum:['ANNUAL','SEMIANNUAL','QUARTERLY']},snapshots:{type:'object'}}},
+      ErrorResponse: {
+        type: 'object',
+        required: ['error', 'meta'],
+        properties: {
+          error: {
+            type: 'object',
+            required: ['code', 'message'],
+            properties: { code: { type: 'string' }, message: { type: 'string' } },
+          },
+          meta: correlationMeta,
+        },
+      },
+    },
+  },
+  paths: {
+    '/v1/inspections': {get:{tags:['Inspection Execution'],summary:'Listar inspecciones',security:[{bearerAuth:[]}],description:'ADMIN, UNIVERSAL y COORDINATOR leen globalmente; EVALUATOR solo propias. Admite page, limit, status, evaluatorUserId, caseId, origin, createdFrom y createdTo.',responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/Inspection'}}),'400':errorResponse('Filtros inválidos.'),'401':errorResponse('Bearer requerido.'),'403':errorResponse('Fuera de alcance.')}}},
+    '/v1/cases/{caseId}/inspections': {post:{tags:['Inspection Execution'],summary:'Crear inspección para la asignación activa',security:[{bearerAuth:[]}],description:'EVALUATOR asignado o UNIVERSAL. El servidor fija las versiones BPM y riesgo publicadas predeterminadas; no acepta contexto técnico.',responses:{'201':successResponse({$ref:'#/components/schemas/Inspection'}),'400':errorResponse('Payload no permitido.'),'401':errorResponse('Bearer requerido.'),'403':errorResponse('No autorizado.'),'404':errorResponse('Caso no encontrado.'),'409':errorResponse('Caso no asignado o inspección editable existente.')}}},
+    '/v1/inspections/{id}': {get:{tags:['Inspection Execution'],summary:'Detalle seguro de inspección',security:[{bearerAuth:[]}],responses:{'200':successResponse({$ref:'#/components/schemas/Inspection'}),'403':errorResponse('Fuera de alcance.'),'404':errorResponse('No encontrada.')}}},
+    '/v1/inspections/{id}/work-package': {get:{tags:['Inspection Execution'],summary:'Paquete autocontenido offline',security:[{bearerAuth:[]}],description:'Incluye solo las versiones fijadas, preguntas BPM con sus instrucciones auxiliares y trazabilidad segura, respuestas, seis factores, catálogo alimentario, snapshots, metadatos seguros de evidencia y cálculo vigente. Nunca storagePath, signedUrl, tokens ni secretos.',responses:{'200':successResponse({$ref:'#/components/schemas/InspectionWorkPackage'}),'403':errorResponse('Fuera de alcance.'),'404':errorResponse('No encontrada.')}}},
+    '/v1/inspections/{id}/offline-package': {post:{tags:['Inspection Execution'],summary:'Descargar paquete con permiso offline Ed25519',security:[{bearerAuth:[]}],description:'Solo EVALUATOR asignado o UNIVERSAL con cuenta APPROVED e inspección editable. Devuelve paquete y permiso firmado ligado al usuario, inspección y hash del paquete, con vigencia máxima de 72 horas. La clave privada nunca se envía; Cache-Control: no-store. Al reconectar Core valida nuevamente permisos, estado y versión.',requestBody:{content:{'application/json':{schema:{type:'object',additionalProperties:false}}}},responses:{'200':successResponse({type:'object'}),'403':errorResponse('Sin permiso.'),'409':errorResponse('Inspección no editable.'),'503':errorResponse('Firma offline no configurada.')}}},
+    '/v1/inspections/{id}/start': {post:{tags:['Inspection Execution'],summary:'Iniciar DRAFT',security:[{bearerAuth:[]}],description:'DRAFT → IN_PROGRESS. Solo evaluador asignado y version vigente.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/VersionRequest'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/Inspection'}),'403':errorResponse('Fuera de alcance.'),'409':errorResponse('STALE_VERSION o transición inválida.')}}},
+    '/v1/inspections/{id}/finalize': {post:{tags:['Inspection Execution'],summary:'Finalizar y calcular atómicamente',security:[{bearerAuth:[]}],description:'Online-required. IN_PROGRESS → PENDING_SUBMISSION y cálculo vigente en la misma transacción; exige BPM completo, seis factores y alimentos aplicables.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/VersionRequest'}}}},responses:{'200':successResponse({type:'object'}),'403':errorResponse('Fuera de alcance.'),'409':errorResponse('STALE_VERSION o transición inválida.'),'422':errorResponse('Entradas de cálculo incompletas.')}}},
+    '/v1/inspections/{id}/submit': {post:{tags:['Inspection Execution'],summary:'Enviar inspección finalizada',security:[{bearerAuth:[]}],description:'PENDING_SUBMISSION → SUBMITTED; requiere cálculo COMPLETED current con igual contentRevision. No recalcula.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/VersionRequest'}}}},responses:{'200':successResponse({type:'object'}),'409':errorResponse('STALE_VERSION, cálculo no vigente o ALREADY_SUBMITTED.')}}},
+    '/v1/inspections/{id}/unlock': {post:{tags:['Inspection Execution'],summary:'Desbloqueo excepcional',security:[{bearerAuth:[]}],description:'ADMIN, UNIVERSAL y COORDINATOR requieren reautenticación reciente. PENDING_SUBMISSION → IN_PROGRESS, incrementa contentRevision y supersede cálculo; SUBMITTED es terminal.',requestBody:{required:true,content:{'application/json':{schema:{type:'object',required:['version','reason'],properties:{version:{type:'integer'},reason:{type:'string'}}}}}},responses:{'200':successResponse({$ref:'#/components/schemas/Inspection'}),'401':errorResponse('Reautenticación requerida.'),'403':errorResponse('Rol no autorizado.'),'409':errorResponse('Estado o versión en conflicto.')}}},
+    '/v1/inspections/{id}/bpm-responses/{bpmItemId}': {put:{tags:['Inspection Execution'],summary:'Crear o actualizar respuesta BPM',security:[{bearerAuth:[]}],description:'Solo evaluador asignado en DRAFT/IN_PROGRESS; criterio evaluable de la versión fijada.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/BpmResponseInput'}}}},responses:{'200':successResponse({type:'object'}),'400':errorResponse('Criterio o respuesta inválida.'),'403':errorResponse('Fuera de alcance.'),'409':errorResponse('STALE_VERSION o inspección bloqueada.')}},delete:{tags:['Inspection Execution'],summary:'Eliminar respuesta BPM editable',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{type:'object',required:['baseVersion'],properties:{baseVersion:{type:'integer'}}}}}},responses:{'200':successResponse({type:'object'}),'403':errorResponse('Fuera de alcance.'),'404':errorResponse('Respuesta inexistente.'),'409':errorResponse('STALE_VERSION o inspección bloqueada.')}}},
+    '/v1/inspections/{id}/risk-factors/{factorId}': {put:{tags:['Inspection Execution'],summary:'Seleccionar opción de factor oficial',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/RiskFactorSelectionInput'}}}},responses:{'200':successResponse({type:'object'}),'400':errorResponse('Factor u opción fuera de versión.'),'409':errorResponse('STALE_VERSION.')}}},
+    '/v1/inspections/{id}/food-snapshots': {get:{tags:['Inspection Execution'],summary:'Listar snapshots alimentarios',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:'array',items:{type:'object'}}),'403':errorResponse('Fuera de alcance.')}},post:{tags:['Inspection Execution'],summary:'Capturar snapshot desde catálogo servidor',security:[{bearerAuth:[]}],description:'No acepta nombres, códigos, riesgos ni puntajes del cliente. NULL/NULL representa NA.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/FoodSnapshotInput'}}}},responses:{'201':successResponse({type:'object'}),'400':errorResponse('Subcategoría fuera de versión.'),'409':errorResponse('Duplicado o STALE_VERSION.')}}},
+    '/v1/inspections/{id}/location': {get:{tags:['Inspection Execution'],summary:'Última ubicación opcional de la inspección',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:['object','null']}),'403':errorResponse('Fuera de alcance.')}},post:{tags:['Inspection Execution'],summary:'Registrar ubicación capturada con consentimiento',security:[{bearerAuth:[]}],description:'Idempotente por operationId, actor, inspección, versión base y hash. La bitácora no almacena coordenadas.',requestBody:{required:true,content:{'application/json':{schema:{type:'object',required:['operationId','baseVersion','payloadHash','latitude','longitude','accuracyMeters','capturedAt'],properties:{operationId:{type:'string',format:'uuid'},baseVersion:{type:'integer'},payloadHash:{type:'string'},latitude:{type:'number'},longitude:{type:'number'},accuracyMeters:{type:'number'},capturedAt:{type:'string',format:'date-time'}}}}}},responses:{'201':successResponse({type:'object'}),'400':errorResponse('Ubicación o hash inválido.'),'403':errorResponse('Fuera de alcance.'),'409':errorResponse('Versión o estado en conflicto.')}}},
+    '/v1/inspections/{id}/evidence': {get:{tags:['Inspection Execution'],summary:'Listar metadatos seguros de evidencia',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:'array',items:{type:'object'}}),'403':errorResponse('Fuera de alcance.')}},post:{tags:['Inspection Execution'],summary:'Subir evidencia privada',security:[{bearerAuth:[]}],description:'multipart/form-data, un archivo, máximo 5 MB, PDF/JPEG/PNG/WebP/MP4/WebM con extensión, MIME y magic bytes coherentes. El bucket privado debe autorizar los seis MIME. Máximo 10 activas; REJECTED cuenta. bpmItemId opcional vincula el archivo a un criterio evaluable de la plantilla fijada. payloadHash usa el SHA-256 del JSON canónico con baseVersion, contentSha256, fileName normalizado, mimeType, operationType=ADD_EVIDENCE, sizeBytes y bpmItemId cuando se indica.',requestBody:{required:true,content:{'multipart/form-data':{schema:{type:'object',required:['file'],properties:{file:{type:'string',format:'binary'},operationId:{type:'string',format:'uuid'},baseVersion:{type:'integer'},bpmItemId:{type:'string',format:'uuid'},payloadHash:{type:'string',pattern:'^[0-9a-f]{64}$'}}}}}},responses:{'201':successResponse({type:'object'}),'400':errorResponse('Archivo o payloadHash inválido.'),'409':errorResponse('Límite, estado, versión o identidad idempotente en conflicto.'),'413':errorResponse('Máximo 5 MB.'),'500':errorResponse('EVIDENCE_PERSISTENCE_FAILED: no se pudo registrar la evidencia.'),'503':errorResponse('STORAGE_UNAVAILABLE: almacenamiento privado no disponible.')}}},
+    '/v1/inspections/{id}/evidence/{evidenceId}/delete': {post:{tags:['Inspection Execution'],summary:'Archivar evidencia lógicamente',security:[{bearerAuth:[]}],description:'Solo evaluador asignado en estado editable. REJECTED también puede archivarse y libera cupo.',responses:{'200':successResponse({type:'object'}),'409':errorResponse('Versión o estado en conflicto.')}}},
+    '/v1/inspections/{id}/evidence/{evidenceId}/validate': {post:{tags:['Inspection Execution'],summary:'Validar evidencia UPLOADED',security:[{bearerAuth:[]}],description:'ADMIN, UNIVERSAL o COORDINATOR.',responses:{'200':successResponse({type:'object'}),'403':errorResponse('Rol no autorizado.'),'409':errorResponse('Estado o versión en conflicto.')}}},
+    '/v1/inspections/{id}/evidence/{evidenceId}/reject': {post:{tags:['Inspection Execution'],summary:'Rechazar evidencia UPLOADED',security:[{bearerAuth:[]}],description:'Motivo obligatorio; REJECTED conserva cupo hasta archivado.',responses:{'200':successResponse({type:'object'}),'400':errorResponse('Motivo requerido.'),'409':errorResponse('Estado o versión en conflicto.')}}},
+    '/v1/inspections/{id}/evidence/{evidenceId}/download-url': {post:{tags:['Inspection Execution'],summary:'Emitir URL privada por 60 segundos',security:[{bearerAuth:[]}],description:'Solo roles globales o evaluador asignado; ARCHIVED no descarga. La auditoría nunca contiene URL ni storagePath.',responses:{'200':successResponse({type:'object'}),'403':errorResponse('Fuera de alcance.'),'404':errorResponse('No disponible.')}}},
+    '/v1/inspections/{id}/offline-operations/batch': {post:{tags:['Inspection Execution'],summary:'Sincronizar lote offline',security:[{bearerAuth:[]}],description:'Hasta 100, en orden y aisladas. Un reintento exige el mismo UUID, inspección, tipo, baseVersion, actor y hash canónico, y devuelve exactamente el mismo resultado funcional. Cualquier reutilización incompatible produce IDEMPOTENCY_KEY_REUSED. La reserva concurrente evita dobles efectos. Conflictos no se fusionan; FINALIZE es ONLINE_REQUIRED y ADD_EVIDENCE exige multipart.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/OfflineBatch'}}}},responses:{'200':successResponse({type:'array',items:{type:'object'}}),'400':errorResponse('Lote o hash inválido.'),'409':errorResponse('IDEMPOTENCY_KEY_REUSED.')}}},
+    '/v1/inspections/{id}/offline-operations': {get:{tags:['Inspection Execution'],summary:'Historial sanitizado de operaciones offline',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:'array',items:{type:'object'}}),'403':errorResponse('Fuera de alcance.')}}},
+    '/v1/inspections/{id}/offline-conflicts': {get:{tags:['Inspection Execution'],summary:'Conflictos offline recuperables',security:[{bearerAuth:[]}],description:'currentValue contiene únicamente el recurso afectado; nunca PII, storagePath, URL o token.',responses:{'200':successResponse({type:'array',items:{type:'object'}}),'403':errorResponse('Fuera de alcance.')}}},
+    '/v1/inspections/{id}/calculations/preview': {post:{tags:['Inspection Execution'],summary:'Previsualizar cálculo sin persistencia',security:[{bearerAuth:[]}],description:'Misma fórmula oficial: BPM excluye NA; producto=max alimento aplicable; establecimiento=sum(score×weight); total=producto×establecimiento; rango con límites inclusivos/exclusivos.',responses:{'200':successResponse({type:'object'}),'403':errorResponse('Fuera de alcance.'),'422':errorResponse('CALCULATION_INPUT_INCOMPLETE con códigos.')}}},
+    '/v1/inspections/{id}/calculations': {get:{tags:['Inspection Execution'],summary:'Historial de cálculos',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/Calculation'}}),'403':errorResponse('Fuera de alcance.')}}},
+    '/v1/inspections/{id}/calculations/current': {get:{tags:['Inspection Execution'],summary:'Cálculo vigente',security:[{bearerAuth:[]}],responses:{'200':successResponse({$ref:'#/components/schemas/Calculation'}),'404':errorResponse('No existe vigente.')}}},
+    '/v1/inspections/{id}/calculations/{calculationId}': {get:{tags:['Inspection Execution'],summary:'Detalle y snapshots históricos',security:[{bearerAuth:[]}],responses:{'200':successResponse({$ref:'#/components/schemas/Calculation'}),'404':errorResponse('No encontrado.')}}},
+    '/v1/inspections/{id}/calculations/recalculate': {post:{tags:['Inspection Execution'],summary:'Recálculo administrativo SUBMITTED',security:[{bearerAuth:[]}],description:'ADMIN, UNIVERSAL o COORDINATOR. Motivo obligatorio, supersede current, serializa calculationNumber y conserva snapshots.',requestBody:{required:true,content:{'application/json':{schema:{type:'object',required:['reason'],properties:{reason:{type:'string'}}}}}},responses:{'200':successResponse({$ref:'#/components/schemas/Calculation'}),'400':errorResponse('Motivo requerido.'),'403':errorResponse('Rol no autorizado.'),'409':errorResponse('Solo SUBMITTED.'),'422':errorResponse('Entradas inválidas.')}}},
+    '/v1/assignable-evaluators': {get:{tags:['Assignments & Schedules'],summary:'Buscar evaluadores asignables',security:[{bearerAuth:[]}],description:'Solo ADMIN, UNIVERSAL y COORDINATOR. Devuelve id y fullName de usuarios EVALUATOR APPROVED; no expone el directorio general.',parameters:[{name:'page',in:'query',schema:{type:'integer',minimum:1,default:1}},{name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:100,default:20}},{name:'search',in:'query',schema:{type:'string',maxLength:100}}],responses:{'200':successResponse({type:'array',items:{type:'object',required:['id','fullName'],additionalProperties:false,properties:{id:{type:'string',format:'uuid'},fullName:{type:'string'}}}}),'400':errorResponse('Consulta inválida.'),'401':errorResponse('Autenticación requerida.'),'403':errorResponse('Rol no autorizado.')}}},
+    '/v1/assignments': {get:{tags:['Assignments & Schedules'],summary:'Listar asignaciones',security:[{bearerAuth:[]}],description:'ADMIN, UNIVERSAL y COORDINATOR ven el historial global. EVALUATOR solo sus asignaciones activas e históricas.',parameters:[{name:'page',in:'query',schema:{type:'integer',minimum:1}},{name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:100}},{name:'active',in:'query',schema:{type:'boolean'}},{name:'evaluatorUserId',in:'query',schema:{type:'string',format:'uuid'}},{name:'caseId',in:'query',schema:{type:'string',format:'uuid'}},{name:'origin',in:'query',schema:{type:'string'}},{name:'assignedFrom',in:'query',schema:{type:'string',format:'date-time'}},{name:'assignedTo',in:'query',schema:{type:'string',format:'date-time'}}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/Assignment'}}),'400':errorResponse('Filtros inválidos.'),'401':errorResponse('Autenticación requerida.'),'403':errorResponse('Rol o evaluador fuera de alcance.')}}},
+    '/v1/cases/{caseId}/assignments': {parameters:[{name:'caseId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],get:{tags:['Assignments & Schedules'],summary:'Historial de asignaciones del caso',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/Assignment'}}),'403':errorResponse('Caso fuera de alcance.'),'404':errorResponse('Caso no encontrado.')}},post:{tags:['Assignments & Schedules'],summary:'Asignar evaluador',security:[{bearerAuth:[]}],description:'Solo ADMIN, UNIVERSAL o COORDINATOR. El evaluador debe ser EVALUATOR APPROVED; la operación cambia el caso a ASSIGNED.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/AssignmentCreate'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/Assignment'}),'400':errorResponse('Payload o evaluador inválido.'),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('Caso o evaluador no encontrado.'),'409':errorResponse('Caso no asignable o ya asignado.')}}},
+    '/v1/cases/{caseId}/reassign': {post:{tags:['Assignments & Schedules'],summary:'Reasignar atómicamente',security:[{bearerAuth:[]}],description:'Cierra la asignación anterior, crea la nueva y reemplaza cualquier agenda activa conservando fecha, hora y notas. Requiere versión optimista y motivo.',parameters:[{name:'caseId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/Reassignment'}}}},responses:{'200':successResponse({type:'object',properties:{assignment:{$ref:'#/components/schemas/Assignment'},schedule:{type:['object','null']}}}),'400':errorResponse('Payload inválido.'),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('Caso o evaluador no encontrado.'),'409':errorResponse('STALE_VERSION, mismo evaluador o conflicto de estado.')}}},
+    '/v1/schedules': {get:{tags:['Assignments & Schedules'],summary:'Listar agenda',security:[{bearerAuth:[]}],description:'EVALUATOR solo ve programaciones vinculadas a sus asignaciones activas o históricas.',parameters:[{name:'page',in:'query',schema:{type:'integer',minimum:1}},{name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:100}},{name:'status',in:'query',schema:{type:'string',enum:['SCHEDULED','RESCHEDULED','CANCELLED']}},{name:'evaluatorUserId',in:'query',schema:{type:'string',format:'uuid'}},{name:'caseId',in:'query',schema:{type:'string',format:'uuid'}},{name:'startFrom',in:'query',schema:{type:'string',format:'date-time'}},{name:'startTo',in:'query',schema:{type:'string',format:'date-time'}}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/Schedule'}}),'400':errorResponse('Filtros inválidos.'),'403':errorResponse('Rol o evaluador fuera de alcance.')}}},
+    '/v1/cases/{caseId}/schedules': {parameters:[{name:'caseId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],get:{tags:['Assignments & Schedules'],summary:'Agenda histórica del caso',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/Schedule'}}),'403':errorResponse('Caso fuera de alcance.')}},post:{tags:['Assignments & Schedules'],summary:'Programar inspección',security:[{bearerAuth:[]}],description:'Solo roles administrativos. Inicio futuro, duración entre 15 minutos y 12 horas, timezone fijo America/Santo_Domingo. Los solapamientos generan meta.warnings y no bloquean.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ScheduleCreate'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/Schedule'}),'400':errorResponse('Ventana temporal inválida.'),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('Caso no encontrado.'),'409':errorResponse('Caso sin asignación o agenda ya activa.')}}},
+    '/v1/cases/{caseId}/schedules/{scheduleId}/reschedule': {post:{tags:['Assignments & Schedules'],summary:'Reprogramar inspección',security:[{bearerAuth:[]}],description:'Cierra la entrada anterior como RESCHEDULED y crea otra SCHEDULED. Devuelve advertencias de solapamiento sin revelar otros casos.',parameters:[{name:'caseId',in:'path',required:true,schema:{type:'string',format:'uuid'}},{name:'scheduleId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ScheduleReschedule'}}}},responses:{'200':successResponse({type:'object'}),'400':errorResponse('Ventana o payload inválido.'),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('Programación no encontrada.'),'409':errorResponse('STALE_VERSION.')}}},
+    '/v1/cases/{caseId}/schedules/{scheduleId}/cancel': {post:{tags:['Assignments & Schedules'],summary:'Cancelar programación',security:[{bearerAuth:[]}],description:'Conserva caso y asignación activos; requiere versión y motivo. No crea otra entrada.',parameters:[{name:'caseId',in:'path',required:true,schema:{type:'string',format:'uuid'}},{name:'scheduleId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ScheduleCancel'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/Schedule'}),'400':errorResponse('Payload inválido.'),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('Programación no encontrada.'),'409':errorResponse('STALE_VERSION o ALREADY_CANCELLED.')}}},
+    '/v1/cases': {get:{tags:['Intake Cases'],summary:'Listar bandeja de casos de ingreso',security:[{bearerAuth:[]}],description:'Solo ADMIN, UNIVERSAL y COORDINATOR. Incluye los cuatro orígenes; la búsqueda usa únicamente referencias no sensibles.',parameters:[{name:'page',in:'query',schema:{type:'integer',minimum:1}},{name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:100}},{name:'origin',in:'query',schema:{type:'string',enum:['COMPANY_REQUEST','INSTITUTIONAL_PROGRAM','HEALTH_ALERT','COMPLAINT']}},{name:'status',in:'query',schema:{type:'string'}},{name:'priority',in:'query',schema:{type:'string'}},{name:'companyId',in:'query',schema:{type:'string',format:'uuid'}},{name:'establishmentId',in:'query',schema:{type:'string',format:'uuid'}},{name:'dateFrom',in:'query',schema:{type:'string',format:'date'}},{name:'dateTo',in:'query',schema:{type:'string',format:'date'}},{name:'search',in:'query',schema:{type:'string',maxLength:100}}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/IntakeCase'}}),'400':errorResponse('Filtros inválidos.'),'401':errorResponse('Autenticación requerida.'),'403':errorResponse('Rol no autorizado.')}}},
+    '/v1/cases/{id}': {get:{tags:['Intake Cases'],summary:'Consultar caso y fuente',security:[{bearerAuth:[]}],parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}}],responses:{'200':successResponse({$ref:'#/components/schemas/IntakeCase'}),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('Caso no encontrado.')}}},
+    '/v1/institutional-program-cases': {post:{tags:['Intake Cases'],summary:'Crear programa institucional',security:[{bearerAuth:[]}],description:'Crea atómicamente caso MEDIUM/PENDING_ASSIGNMENT. Empresa y establecimiento son opcionales.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/InstitutionalProgramCreate'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/IntakeCase'}),'400':errorResponse('Payload inválido.'),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('Organización inexistente.'),'409':errorResponse('Organización inactiva.')}}},
+    '/v1/institutional-program-cases/{caseId}': {parameters:[{name:'caseId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],get:{tags:['Intake Cases'],summary:'Consultar programa institucional',security:[{bearerAuth:[]}],responses:{'200':successResponse({$ref:'#/components/schemas/IntakeCase'}),'404':errorResponse('No encontrado.')}},patch:{tags:['Intake Cases'],summary:'Editar programa no asignado',security:[{bearerAuth:[]}],description:'Requiere version. Solo PENDING_ASSIGNMENT sin asignación activa.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/InstitutionalProgramPatch'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/IntakeCase'}),'409':errorResponse('STALE_VERSION o ALREADY_ASSIGNED.')}}},
+    '/v1/health-alerts': {post:{tags:['Intake Cases'],summary:'Crear alerta sanitaria',security:[{bearerAuth:[]}],description:'Crea atómicamente caso HIGH/PENDING_REVIEW; alertNumber es oficial y único sin distinguir mayúsculas o espacios externos.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/HealthAlertCreate'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/IntakeCase'}),'400':errorResponse('Payload inválido.'),'409':errorResponse('Número duplicado u organización inactiva.')}}},
+    '/v1/health-alerts/{caseId}': {parameters:[{name:'caseId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],get:{tags:['Intake Cases'],summary:'Consultar alerta',security:[{bearerAuth:[]}],responses:{'200':successResponse({$ref:'#/components/schemas/IntakeCase'})}},patch:{tags:['Intake Cases'],summary:'Editar alerta pendiente',security:[{bearerAuth:[]}],description:'Requiere version; no acepta campos de decisión.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/HealthAlertPatch'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/IntakeCase'}),'409':errorResponse('STALE_VERSION o ALREADY_DECIDED.')}}},
+    '/v1/health-alerts/{caseId}/decide': {post:{tags:['Intake Cases'],summary:'Decidir alerta',security:[{bearerAuth:[]}],description:'PROCEEDS o NOT_PROCEEDS; reason es obligatorio para NOT_PROCEEDS. Decisión irreversible y sincronizada con el caso.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/HealthAlertDecision'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/IntakeCase'}),'400':errorResponse('Campos condicionales inválidos.'),'409':errorResponse('ALREADY_DECIDED o versión obsoleta.')}}},
+    '/v1/complaints': {post:{tags:['Intake Cases'],summary:'Crear denuncia anónima o identificada',security:[{bearerAuth:[]}],description:'Crea caso MEDIUM/PENDING_REVIEW. complainantData usa allowlist estricta y nunca se incluye en listados o auditoría.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ComplaintCreate'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/IntakeCase'}),'400':errorResponse('Payload o complainantData inválido.')}}},
+    '/v1/complaints/{caseId}': {parameters:[{name:'caseId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],get:{tags:['Intake Cases'],summary:'Consultar denuncia',security:[{bearerAuth:[]}],description:'El detalle puede incluir complainantData.',responses:{'200':successResponse({$ref:'#/components/schemas/IntakeCase'})}},patch:{tags:['Intake Cases'],summary:'Editar denuncia pendiente',security:[{bearerAuth:[]}],description:'Requiere version; no acepta campos de decisión.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ComplaintPatch'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/IntakeCase'}),'409':errorResponse('STALE_VERSION o ALREADY_DECIDED.')}}},
+    '/v1/complaints/{caseId}/decide': {post:{tags:['Intake Cases'],summary:'Decidir denuncia',security:[{bearerAuth:[]}],description:'PROCEEDS, NOT_PROCEEDS o REFERRED. REFERRED exige referralReason y referralDestination; NOT_PROCEEDS exige decisionReason.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ComplaintDecision'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/IntakeCase'}),'400':errorResponse('Campos condicionales inválidos.'),'409':errorResponse('ALREADY_DECIDED o versión obsoleta.')}}},
+    '/v1/company-requests': {
+      get:{tags:['Company Requests'],summary:'Listar solicitudes según alcance',security:[{bearerAuth:[]}],description:'ADMIN, UNIVERSAL y COORDINATOR leen globalmente; COMPANY_ADMIN y DELEGATE solo su empresa activa; EVALUATOR está prohibido. La respuesta incluye page, limit y total en meta.',parameters:[{name:'page',in:'query',schema:{type:'integer',minimum:1,default:1}},{name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:100,default:20}},{name:'status',in:'query',schema:{type:'string',enum:['DRAFT','PENDING_ASSIGNMENT']}},{name:'establishmentId',in:'query',schema:{type:'string',format:'uuid'}},{name:'requestType',in:'query',schema:{type:'string',maxLength:80}},{name:'search',in:'query',schema:{type:'string',maxLength:100}}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/CompanyRequest'}}),'400':errorResponse('Filtros inválidos.'),'401':errorResponse('Autenticación requerida.'),'403':errorResponse('Rol no autorizado.')}},
+      post:{tags:['Company Requests'],summary:'Crear solicitud en borrador',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/CompanyRequestCreate'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/CompanyRequest'}),'400':errorResponse('Datos inválidos.'),'401':errorResponse('Autenticación requerida.'),'403':errorResponse('Fuera de alcance.'),'404':errorResponse('Organización no encontrada.'),'409':errorResponse('Organización inactiva.')}},
+    },
+    '/v1/company-requests/documents/pending': {get:{tags:['Company Requests'],summary:'Bandeja paginada de documentos pendientes',security:[{bearerAuth:[]}],description:'Solo ADMIN, UNIVERSAL y COORDINATOR. Filtra documentos PENDING no eliminados ni archivados de solicitudes DRAFT. meta.total cuenta documentos.',parameters:[{name:'page',in:'query',schema:{type:'integer',minimum:1,default:1}},{name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:100,default:20}}],responses:{'200':successResponse({type:'array',items:{type:'object',additionalProperties:false,properties:{id:{type:'string',format:'uuid'},requestId:{type:'string',format:'uuid'},documentType:{type:'string'},fileName:{type:'string'},version:{type:'integer'},establishmentName:{type:'string'},requestType:{type:'string'}}}}),'400':errorResponse('Paginación inválida.'),'401':errorResponse('Autenticación requerida.'),'403':errorResponse('Rol no autorizado.')}}},
+    '/v1/company-requests/{id}': {
+      get:{tags:['Company Requests'],summary:'Consultar solicitud y resumen',security:[{bearerAuth:[]}],parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}}],responses:{'200':successResponse({$ref:'#/components/schemas/CompanyRequestDetail'}),'403':errorResponse('Fuera de alcance.'),'404':errorResponse('No encontrada.')}},
+      patch:{tags:['Company Requests'],summary:'Modificar borrador con versión optimista',security:[{bearerAuth:[]}],parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/CompanyRequestPatch'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/CompanyRequest'}),'403':errorResponse('Sin escritura.'),'409':errorResponse('ALREADY_SUBMITTED o STALE_VERSION.')}},
+    },
+    '/v1/company-requests/{id}/submit': {parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}}],post:{tags:['Company Requests'],summary:'Enviar solicitud y crear caso atómicamente',security:[{bearerAuth:[]}],description:'Exige 1–10 documentos activos, exactamente una carta válida, contactos y exactamente un contacto primario. Crea un caso MEDIUM/PENDING_ASSIGNMENT. Una repetición devuelve ALREADY_SUBMITTED.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/VersionRequest'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/CompanyRequestSubmitResult'}),'403':errorResponse('Fuera de alcance o rol sin escritura.'),'404':errorResponse('Solicitud no encontrada.'),'409':errorResponse('ALREADY_SUBMITTED, precondición o versión en conflicto.')}}},
+    '/v1/company-requests/{id}/contacts': {parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}}],post:{tags:['Company Requests'],summary:'Vincular contacto al borrador',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/RequestContactCreate'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/RequestContactLinkResult'}),'400':errorResponse('Payload inválido.'),'403':errorResponse('Contacto fuera de alcance.'),'404':errorResponse('Solicitud o contacto no encontrado.'),'409':errorResponse('Solicitud enviada o relación duplicada.')}}},
+    '/v1/company-requests/{id}/contacts/{requestContactId}/remove': {parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}},{name:'requestContactId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],post:{tags:['Company Requests'],summary:'Retirar contacto del borrador',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/VersionRequest'}}}},responses:{'200':{description:'Contacto retirado lógicamente.'},'403':errorResponse('Fuera de alcance.'),'404':errorResponse('Solicitud no encontrada.'),'409':errorResponse('STALE_VERSION o solicitud enviada.')}}},
+    '/v1/company-requests/{id}/documents': {
+      parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}}],
+      get:{tags:['Company Requests'],summary:'Listar metadatos de documentos',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/RequestDocument'}}),'403':errorResponse('Fuera de alcance.')}},
+      post:{tags:['Company Requests'],summary:'Cargar documento privado',security:[{bearerAuth:[]}],description:'Máximo 5 MB. Se validan MIME, extensión y bytes mágicos; si falla la persistencia se elimina el objeto cargado.',requestBody:{required:true,content:{'multipart/form-data':{schema:{type:'object',additionalProperties:false,required:['documentType','file'],properties:{documentType:{type:'string',enum:['AUTHORIZATION_LETTER','SUPPORTING_DOCUMENT']},file:{type:'string',format:'binary'}}}}}},responses:{'201':successResponse({$ref:'#/components/schemas/RequestDocument'}),'400':errorResponse('Archivo inválido.'),'413':errorResponse('PAYLOAD_TOO_LARGE.')}},
+    },
+    '/v1/company-requests/{id}/documents/{documentId}/validate': {parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}},{name:'documentId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],post:{tags:['Company Requests'],summary:'Validar documento pendiente',security:[{bearerAuth:[]}],description:'ADMIN, UNIVERSAL o COORDINATOR.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/VersionRequest'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/RequestDocument'}),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('No encontrado.'),'409':errorResponse('Estado o versión en conflicto.')}}},
+    '/v1/company-requests/{id}/documents/{documentId}/reject': {parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}},{name:'documentId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],post:{tags:['Company Requests'],summary:'Rechazar documento pendiente',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{allOf:[{$ref:'#/components/schemas/DocumentDecision'}],required:['version','reason']}}}},responses:{'200':successResponse({$ref:'#/components/schemas/RequestDocument'}),'400':errorResponse('Motivo requerido.'),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('No encontrado.'),'409':errorResponse('Estado o versión en conflicto.')}}},
+    '/v1/company-requests/{id}/documents/{documentId}/archive': {parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}},{name:'documentId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],post:{tags:['Company Requests'],summary:'Archivar documento rechazado',security:[{bearerAuth:[]}],description:'Archivado lógico; el objeto privado se conserva.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/VersionRequest'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/RequestDocument'}),'403':errorResponse('Fuera de alcance.'),'404':errorResponse('No encontrado.'),'409':errorResponse('Solo documentos REJECTED o versión vigente.')}}},
+    '/v1/company-requests/{id}/documents/{documentId}/download-url': {parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}},{name:'documentId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],post:{tags:['Company Requests'],summary:'Emitir URL firmada de descarga',security:[{bearerAuth:[]}],description:'La URL privada vence en 60 segundos y la emisión queda auditada sin registrar URL ni storagePath.',responses:{'200':successResponse({$ref:'#/components/schemas/DownloadUrl'}),'403':errorResponse('Fuera de alcance.'),'404':errorResponse('Documento u objeto privado no disponible.'),'503':errorResponse('Storage temporalmente no disponible.')}}},
+    '/v1/contacts': { get:{tags:['Contacts'],summary:'Listar contactos en alcance',security:[{bearerAuth:[]}],parameters:[{name:'page',in:'query',schema:{type:'integer',minimum:1,default:1}},{name:'limit',in:'query',schema:{type:'integer',minimum:1,maximum:100,default:20}},{name:'search',in:'query',schema:{type:'string',maxLength:100}}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/Contact'}}),'403':errorResponse('Fuera de alcance.')}},post:{tags:['Contacts'],summary:'Crear contacto global',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ContactRequest'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/Contact'}),'403':errorResponse('Solo administración global.')}} },
+    '/v1/contacts/{id}': { parameters:[{name:'id',in:'path',required:true,schema:{type:'string',format:'uuid'}}],get:{tags:['Contacts'],summary:'Consultar contacto',description:'ADMIN y UNIVERSAL requieren reautenticación reciente para recibir identityDocument; los demás reciben solo máscara.',security:[{bearerAuth:[]}],responses:{'200':successResponse({$ref:'#/components/schemas/Contact'}),'401':errorResponse('Reautenticación requerida.')}},patch:{tags:['Contacts'],summary:'Editar contacto con versión',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ContactPatchRequest'}}}},responses:{'200':successResponse({$ref:'#/components/schemas/Contact'}),'409':errorResponse('Versión o documento en conflicto.')}} },
+    '/v1/companies/{companyId}/contacts': { parameters:[{name:'companyId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],get:{tags:['Contacts'],summary:'Listar relaciones de empresa',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/ContactRelation'}})}},post:{tags:['Contacts'],summary:'Vincular contacto reutilizable a empresa',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ContactLinkRequest'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/ContactRelation'}),'403':errorResponse('Contacto o empresa fuera de alcance.'),'409':errorResponse('Relación en conflicto.')}} },
+    '/v1/companies/{companyId}/contacts/{relationId}/end': { parameters:[{name:'companyId',in:'path',required:true,schema:{type:'string',format:'uuid'}},{name:'relationId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],post:{tags:['Contacts'],summary:'Finalizar relación histórica de empresa',security:[{bearerAuth:[]}],description:'Exige version y effectiveTo posterior a effectiveFrom.',requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ContactRelationEndRequest'}}}},responses:{'200':successResponse({type:'object',required:['ended'],properties:{ended:{const:true}}}),'409':errorResponse('Versión o fecha en conflicto.')}} },
+    '/v1/establishments/{establishmentId}/contacts': { parameters:[{name:'establishmentId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],get:{tags:['Contacts'],summary:'Listar relaciones de establecimiento',security:[{bearerAuth:[]}],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/ContactRelation'}})}},post:{tags:['Contacts'],summary:'Vincular contacto a establecimiento',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ContactLinkRequest'}}}},responses:{'201':successResponse({$ref:'#/components/schemas/ContactRelation'}),'403':errorResponse('Contacto o establecimiento fuera de alcance.'),'409':errorResponse('Relación en conflicto.')}} },
+    '/v1/establishments/{establishmentId}/contacts/{relationId}/end': { parameters:[{name:'establishmentId',in:'path',required:true,schema:{type:'string',format:'uuid'}},{name:'relationId',in:'path',required:true,schema:{type:'string',format:'uuid'}}],post:{tags:['Contacts'],summary:'Finalizar relación histórica de establecimiento',security:[{bearerAuth:[]}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/ContactRelationEndRequest'}}}},responses:{'200':successResponse({type:'object',required:['ended'],properties:{ended:{const:true}}}),'409':errorResponse('Versión o fecha en conflicto.')}} },
+    '/v1/establishments': {
+      get: { tags: ['Establishments'], summary: 'Listar establecimientos', security: [{ bearerAuth: [] }], description: 'Paginado y filtrable por estado, empresa, ubicación y vencimiento. ADMIN, UNIVERSAL, COORDINATOR y EVALUATOR leen globalmente; COMPANY_ADMIN y DELEGATE solo su empresa activa.', parameters: [{ name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } }, { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } }, { name: 'search', in: 'query', schema: { type: 'string' } }, { name: 'status', in: 'query', schema: { type: 'string', enum: ['ACTIVE', 'INACTIVE'] } }, { name: 'companyId', in: 'query', schema: { type: 'string', format: 'uuid' } }, { name: 'provinceCode', in: 'query', schema: { type: 'string' } }, { name: 'municipalityCode', in: 'query', schema: { type: 'string' } }, { name: 'healthJurisdictionCode', in: 'query', schema: { type: 'string' } }, { name: 'sanitaryPermitExpiresBefore', in: 'query', schema: { type: 'string', format: 'date' } }], responses: { '200': successResponse({ type: 'array', items: { $ref: '#/components/schemas/Establishment' } }), '400': errorResponse('Consulta inválida.'), '403': errorResponse('Fuera de alcance.') } },
+      post: { tags: ['Establishments'], summary: 'Crear establecimiento activo', security: [{ bearerAuth: [] }], description: 'ADMIN y UNIVERSAL crean para cualquier empresa activa; COMPANY_ADMIN únicamente para su empresa activa.', requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/EstablishmentCreateRequest' } } } }, responses: { '201': successResponse({ $ref: '#/components/schemas/Establishment' }), '400': errorResponse('Datos inválidos.'), '403': errorResponse('Fuera de alcance.'), '404': errorResponse('Empresa inexistente.'), '409': errorResponse('Empresa inactiva.') } },
+    },
+    '/v1/establishments/{id}': {
+      get: { tags: ['Establishments'], summary: 'Consultar establecimiento', security: [{ bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { '200': successResponse({ $ref: '#/components/schemas/Establishment' }), '403': errorResponse('Fuera de alcance.'), '404': errorResponse('No encontrado.') } },
+      patch: { tags: ['Establishments'], summary: 'Modificar establecimiento', security: [{ bearerAuth: [] }], description: 'Exige versión y no permite traslado de empresa. Solo ADMIN, UNIVERSAL o el COMPANY_ADMIN de la empresa activa.', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/EstablishmentPatchRequest' } } } }, responses: { '200': successResponse({ $ref: '#/components/schemas/Establishment' }), '400': errorResponse('Datos inválidos.'), '403': errorResponse('Fuera de alcance.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') } },
+    },
+    '/v1/establishments/{id}/deactivate': { post: { tags: ['Establishments'], summary: 'Desactivar establecimiento', security: [{ bearerAuth: [] }], description: 'Exige reautenticación reciente y versión. Es idempotente únicamente con versión coincidente; no elimina historial.', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } }, responses: { '200': successResponse({ $ref: '#/components/schemas/Establishment' }), '401': errorResponse('Reautenticación requerida.'), '403': errorResponse('Fuera de alcance.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') } } },
+    '/v1/establishments/{id}/operational-profiles': {
+      get: { tags: ['Establishments'], summary: 'Listar historial de perfiles', security: [{ bearerAuth: [] }], description: 'Orden descendente por effectiveFrom.', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { '200': successResponse({ type: 'array', items: { $ref: '#/components/schemas/OperationalProfile' } }), '403': errorResponse('Fuera de alcance.'), '404': errorResponse('No encontrado.') } },
+      post: { tags: ['Establishments'], summary: 'Crear perfil operativo vigente', security: [{ bearerAuth: [] }], description: 'Solo escritores permitidos. Empresa y establecimiento deben estar ACTIVE. Cierra el perfil vigente en la misma transacción; evita fecha igual, anterior y solapamientos.', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/OperationalProfileCreateRequest' } } } }, responses: { '201': successResponse({ $ref: '#/components/schemas/OperationalProfile' }), '400': errorResponse('Datos inválidos.'), '403': errorResponse('Fuera de alcance.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Fecha o estado en conflicto.') } },
+    },
+    '/v1/establishments/{id}/operational-profiles/current': { get: { tags: ['Establishments'], summary: 'Consultar perfil operativo vigente', security: [{ bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], responses: { '200': successResponse({ $ref: '#/components/schemas/OperationalProfile' }), '403': errorResponse('Fuera de alcance.'), '404': errorResponse('Establecimiento o perfil no encontrado.') } } },
+    '/v1/companies': {
+      get: {
+        tags: ['Companies'], summary: 'Listar empresas paginadas', security: [{ bearerAuth: [] }],
+        description: 'ADMIN y UNIVERSAL consultan el alcance global. COMPANY_ADMIN recibe exclusivamente su empresa activa resuelta desde la membresía del servidor.',
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } }, { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } }, { name: 'search', in: 'query', schema: { type: 'string', maxLength: 100 } }, { name: 'status', in: 'query', schema: { type: 'string', enum: ['ACTIVE', 'INACTIVE'] } },
+        ],
+        responses: { '200': successResponse({ type: 'array', items: { $ref: '#/components/schemas/Company' } }), '400': errorResponse('Consulta inválida.'), '403': errorResponse('Rol no autorizado.') },
+      },
+      post: {
+        tags: ['Companies'], summary: 'Crear empresa activa', security: [{ bearerAuth: [] }],
+        description: 'Solo ADMIN o UNIVERSAL. El estado inicial es ACTIVE; el RNC debe ser único tras normalización.',
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CompanyCreateRequest' } } } },
+        responses: { '201': successResponse({ $ref: '#/components/schemas/Company' }), '400': errorResponse('Datos inválidos.'), '403': errorResponse('Rol no autorizado.'), '409': errorResponse('RNC duplicado.') },
+      },
+    },
+    '/v1/companies/{id}': {
+      get: {
+        tags: ['Companies'], summary: 'Consultar empresa', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': successResponse({ $ref: '#/components/schemas/Company' }), '403': errorResponse('Empresa fuera de alcance.'), '404': errorResponse('Empresa no encontrada.') },
+      },
+      patch: {
+        tags: ['Companies'], summary: 'Modificar empresa con versión optimista', security: [{ bearerAuth: [] }],
+        description: 'ADMIN y UNIVERSAL tienen alcance global. COMPANY_ADMIN solo puede modificar su empresa activa. Una versión vieja retorna STALE_VERSION.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CompanyPatchRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/Company' }), '400': errorResponse('Datos inválidos.'), '403': errorResponse('Empresa fuera de alcance.'), '404': errorResponse('Empresa no encontrada.'), '409': errorResponse('RNC duplicado o versión desactualizada.') },
+      },
+    },
+    '/v1/companies/{id}/deactivate': {
+      post: {
+        tags: ['Companies'], summary: 'Desactivar empresa y establecimientos activos', security: [{ bearerAuth: [] }],
+        description: 'Solo ADMIN o UNIVERSAL, con JWT reautenticado dentro del período configurado. La operación es transaccional e idempotente únicamente si la versión coincide.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }], requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/Company' }), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado.'), '404': errorResponse('Empresa no encontrada.'), '409': errorResponse('Versión desactualizada.') },
+      },
+    },
+    '/v1/users': {
+      get: {
+        tags: ['Users'], summary: 'Listar usuarios', security: [{ bearerAuth: [] }],
+        description: 'ADMIN y UNIVERSAL. ADMIN no recibe cuentas UNIVERSAL en resultados ni en meta.total.',
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string', maxLength: 100 } },
+          { name: 'status', in: 'query', schema: { type: 'string', enum: ['PENDING_VALIDATION', 'APPROVED', 'REJECTED', 'INACTIVE'] } },
+          { name: 'roleCode', in: 'query', schema: { type: 'string', enum: ['ADMIN', 'COMPANY_ADMIN', 'DELEGATE', 'COORDINATOR', 'EVALUATOR', 'UNIVERSAL'] } },
+        ],
+        responses: { '200': successResponse({ type: 'array', items: { $ref: '#/components/schemas/User' } }), '400': errorResponse('Consulta inválida.'), '403': errorResponse('Rol no autorizado.') },
+      },
+      post: {
+        tags: ['Users'], summary: 'Crear usuario pendiente', security: [{ bearerAuth: [] }],
+        description: 'Crear UNIVERSAL solo por UNIVERSAL con reautenticación reciente.',
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UserCreateRequest' } } } },
+        responses: { '201': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Datos inválidos.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado.'), '409': errorResponse('Correo duplicado.') },
+      },
+    },
+    '/v1/users/{id}': {
+      get: {
+        tags: ['Users'], summary: 'Consultar usuario', security: [{ bearerAuth: [] }],
+        description: 'Una cuenta UNIVERSAL responde 404 a ADMIN.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Identificador inválido.'), '404': errorResponse('No encontrado.') },
+      },
+      patch: {
+        tags: ['Users'], summary: 'Modificar usuario con versión optimista', security: [{ bearerAuth: [] }],
+        description: 'Cambiar hacia o desde UNIVERSAL exige UNIVERSAL con reautenticación reciente. Un cambio de rol revoca las sesiones de la cuenta.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UserPatchRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Modificación inválida.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada.') },
+      },
+    },
+    '/v1/users/{id}/approve': {
+      post: {
+        tags: ['Users'], summary: 'Aprobar usuario', security: [{ bearerAuth: [] }],
+        description: 'Exige reautenticación reciente y una carta de autorización activa VALID, comprobada dentro de la operación y por la base de datos. Desde PENDING_VALIDATION o INACTIVE.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado o autogestión.'), '409': errorResponse('Versión desactualizada, estado inválido, carta requerida (AUTHORIZATION_LETTER_REQUIRED) o último UNIVERSAL.') },
+      },
+    },
+    '/v1/users/{id}/reject': {
+      post: {
+        tags: ['Users'], summary: 'Rechazar usuario', security: [{ bearerAuth: [] }],
+        description: 'Exige reautenticación reciente. Solo desde PENDING_VALIDATION. Revoca sesiones.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado o autogestión.'), '409': errorResponse('Versión desactualizada, estado inválido, carta requerida (AUTHORIZATION_LETTER_REQUIRED) o último UNIVERSAL.') },
+      },
+    },
+    '/v1/users/{id}/deactivate': {
+      post: {
+        tags: ['Users'], summary: 'Desactivar usuario y revocar sesiones', security: [{ bearerAuth: [] }],
+        description: 'Exige reautenticación reciente. No permite autodesactivación ni dejar el sistema sin UNIVERSAL aprobado.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Solicitud inválida.'), '404': errorResponse('No encontrado.'), '401': errorResponse('Reautenticación reciente requerida.'), '403': errorResponse('Rol no autorizado o autogestión.'), '409': errorResponse('Versión desactualizada, estado inválido, carta requerida (AUTHORIZATION_LETTER_REQUIRED) o último UNIVERSAL.') },
+      },
+    },
+    '/v1/users/{id}/authorization-letters': {
+      get: {
+        tags: ['Users'], summary: 'Historial de cartas de autorización de la cuenta', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': successResponse({ type: 'array', items: { $ref: '#/components/schemas/UserAuthorizationLetter' } }), '404': errorResponse('No encontrado.') },
+      },
+      post: {
+        tags: ['Users'], summary: 'Adjuntar o reemplazar la carta de una cuenta pendiente o inactiva', security: [{ bearerAuth: [] }],
+        description: 'PDF, JPEG o PNG de hasta 5 MB; se validan MIME, extensión y firma y se calcula SHA-256. Reemplazar archiva la carta activa anterior.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'multipart/form-data': { schema: { type: 'object', required: ['file'], properties: { file: { type: 'string', format: 'binary' } } } } } },
+        responses: { '201': successResponse({ $ref: '#/components/schemas/UserAuthorizationLetter' }), '400': errorResponse('Archivo inválido.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Estado inválido.'), '413': errorResponse('Archivo mayor de 5 MB.'), '415': errorResponse('Formato no permitido.'), '503': errorResponse('Storage no disponible.') },
+      },
+    },
+    '/v1/users/{id}/authorization-letters/{letterId}/validate': {
+      post: {
+        tags: ['Users'], summary: 'Marcar la carta pendiente como VALID', security: [{ bearerAuth: [] }],
+        description: 'Exige reautenticación reciente y versión. La cuenta no puede revisar su propia carta.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }, { name: 'letterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/VersionRequest' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/UserAuthorizationLetter' }), '401': errorResponse('Reautenticación reciente requerida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada o estado inválido.') },
+      },
+    },
+    '/v1/users/{id}/authorization-letters/{letterId}/reject': {
+      post: {
+        tags: ['Users'], summary: 'Rechazar la carta pendiente con motivo', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }, { name: 'letterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', additionalProperties: false, required: ['version', 'reason'], properties: { version: { type: 'integer', minimum: 1 }, reason: { type: 'string', minLength: 1, maxLength: 1000 } } } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/UserAuthorizationLetter' }), '401': errorResponse('Reautenticación reciente requerida.'), '404': errorResponse('No encontrado.'), '409': errorResponse('Versión desactualizada o estado inválido.') },
+      },
+    },
+    '/v1/users/{id}/authorization-letters/{letterId}/download-url': {
+      post: {
+        tags: ['Users'], summary: 'Emitir URL temporal de descarga (60 s)', security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }, { name: 'letterId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': successResponse({ type: 'object', required: ['signedUrl', 'expiresInSeconds'], properties: { signedUrl: { type: 'string', format: 'uri' }, expiresInSeconds: { type: 'integer' } } }), '404': errorResponse('No encontrado.'), '503': errorResponse('Storage no disponible.') },
+      },
+    },
+    '/health/live': { get: { summary: 'Comprobar que el proceso está activo', responses: { '200': successResponse({ type: 'object', properties: { status: { const: 'ok' } } }) } } },
+    '/health/ready': { get: { summary: 'Comprobar la conexión con PostgreSQL', responses: { '200': successResponse({ type: 'object', properties: { status: { const: 'ready' } } }), '500': errorResponse('La API no está lista.') } } },
+    '/v1/auth/login': {
+      post: {
+        tags: ['Auth'], summary: 'Iniciar sesión',
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/Credentials' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/AccessToken' }), '400': errorResponse('Solicitud inválida.'), '401': errorResponse('Credenciales inválidas.') },
+      },
+    },
+    '/v1/auth/register': {
+      post: {
+        tags: ['Auth'], summary: 'Registro público de usuario empresarial',
+        description: 'Crea un usuario en estado PENDING_VALIDATION con rol COMPANY_ADMIN o DELEGATE, sin sesión ni vínculo empresarial. Requiere carta de autorización; la administración identifica y asigna la empresa antes de aprobar.',
+        requestBody: { required: true, content: {
+          'multipart/form-data': { schema: { type: 'object', required: ['fullName', 'email', 'password', 'roleCode', 'authorizationLetter'], properties: { fullName: { type: 'string' }, email: { type: 'string', format: 'email' }, phone: { type: 'string' }, password: { type: 'string' }, roleCode: { type: 'string', enum: ['COMPANY_ADMIN', 'DELEGATE'] }, authorizationLetter: { type: 'string', format: 'binary' } } } },
+        } },
+        responses: { '201': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Datos inválidos o carta requerida.'), '409': errorResponse('Correo duplicado.'), '413': errorResponse('Archivo mayor de 5 MB.'), '415': errorResponse('Formato no permitido.'), '503': errorResponse('Storage no disponible.') },
+      },
+    },
+    '/v1/auth/forgot-password': {
+      post: {
+        tags: ['Auth'], summary: 'Solicitud pública de recuperación de contraseña',
+        description: 'Siempre responde éxito no enumerable. Para una cuenta aprobada se encola un enlace de un solo uso válido durante 30 minutos.',
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/ForgotPasswordRequest' } } } },
+        responses: { '200': successResponse({ type: 'object', required: ['requested'], properties: { requested: { const: true } } }), '400': errorResponse('Correo inválido.') },
+      },
+    },
+    '/v1/auth/reset-password': {
+      post: {
+        tags: ['Auth'], summary: 'Cambiar contraseña con enlace de recuperación',
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/ResetPasswordRequest' } } } },
+        responses: { '200': successResponse({ type: 'object', required: ['changed'], properties: { changed: { const: true } } }), '400': errorResponse('Enlace inválido, caducado o datos inválidos.') },
+      },
+    },
+    '/v1/auth/refresh': {
+      post: {
+        tags: ['Auth'], summary: 'Rotar el refresh token', security: [{ refreshCookie: [] }],
+        description: 'Usa y reemplaza la cookie HttpOnly refresh_token. La solicitud debe provenir de un Origin autorizado.',
+        responses: { '200': successResponse({ $ref: '#/components/schemas/AccessToken' }), '401': errorResponse('Refresh token inválido.'), '403': errorResponse('Origin no autorizado.') },
+      },
+    },
+    '/v1/auth/logout': {
+      post: {
+        tags: ['Auth'], summary: 'Cerrar sesión', security: [{ refreshCookie: [] }],
+        responses: { '200': successResponse({ type: 'object', properties: { loggedOut: { const: true } } }), '403': errorResponse('Origin no autorizado.') },
+      },
+    },
+    '/v1/auth/reauthenticate': {
+      post: {
+        tags: ['Auth'], summary: 'Confirmar nuevamente la contraseña', security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/PasswordConfirmation' } } } },
+        responses: { '200': successResponse({ $ref: '#/components/schemas/AccessToken' }), '400': errorResponse('Solicitud inválida.'), '401': errorResponse('Autenticación o contraseña inválida.') },
+      },
+    },
+    '/v1/auth/me': {
+      get: {
+        tags: ['Auth'], summary: 'Consultar la identidad autenticada', security: [{ bearerAuth: [] }],
+        responses: { '200': successResponse({ $ref: '#/components/schemas/CurrentUser' }), '401': errorResponse('Autenticación requerida.') },
+      },
+    },
+  },
+} as const;
+const augmentVersionedDefinitionsOpenApi=()=>{
+  const secured={security:[{bearerAuth:[]}]} as const;
+  const errors={'400':errorResponse('Contrato estricto inválido.'),'401':errorResponse('Autenticación o reautenticación reciente requerida.'),'403':errorResponse('Rol sin acceso administrativo.'),'404':errorResponse('Definición o versión no encontrada.'),'409':errorResponse('STALE_VERSION, borrador único o vigencia en conflicto.'),'422':errorResponse('PUBLICATION_INVALID con códigos estables de todos los errores.')} as const;
+  const id=(name:string)=>({name,in:'path',required:true,schema:{type:'string',format:'uuid'}} as const);
+  const body=(properties:object,required:string[]=[])=>({required:true,content:{'application/json':{schema:{type:'object',additionalProperties:false,required,properties}}}});
+  const version={type:'integer',minimum:1},uuid={type:'string',format:'uuid'},effectiveFrom={type:'string',format:'date-time'};
+  const read=(tag:string,summary:string,parameters:any[]=[])=>({...secured,tags:[tag],summary,parameters,responses:{'200':successResponse({type:'object'}),...errors}});
+  const mutation=(tag:string,summary:string,parameters:any[],requestBody:object,status='200')=>({...secured,tags:[tag],summary,description:'ADMIN y UNIVERSAL mutan borradores con versión optimista. Publicar y retirar requieren reautenticación reciente. Las versiones publicadas o retiradas son históricas e inmutables; importación Excel queda fuera de alcance.',parameters,requestBody,responses:{[status]:successResponse({type:'object'}),...errors}});
+  Object.assign((openApiDocument as any).tags,[...(openApiDocument as any).tags,{name:'Catalog Administration'},{name:'BPM Template Administration'},{name:'Risk Rule Administration'}]);
+  const common=(base:string,resource:string,tag:string)=>({
+    [base]:{get:read(tag,`Listar ${resource}`),post:mutation(tag,`Crear ${resource}`,[],body({code:{type:'string'},name:{type:'string'}},['code','name']),'201')},
+    [`${base}/{resourceId}`]:{get:read(tag,`Consultar ${resource}`,[id('resourceId')])},
+    [`${base}/{resourceId}/versions`]:{get:read(tag,'Listar versiones',[id('resourceId')]),post:mutation(tag,'Crear o clonar versión',[id('resourceId')],body({cloneFromVersionId:{...uuid}}),'201')},
+    [`${base}/{resourceId}/versions/{versionId}`]:{get:read(tag,'Consultar versión',[id('resourceId'),id('versionId')])},
+    [`${base}/{resourceId}/versions/{versionId}/preview`]:{get:read(tag,'Previsualizar snapshot ordenado sin mutación',[id('resourceId'),id('versionId')])},
+    [`${base}/{resourceId}/versions/{versionId}/validate`]:{get:read(tag,'Validar sin modificar versión, estado ni updatedAt',[id('resourceId'),id('versionId')])},
+    [`${base}/{resourceId}/versions/{versionId}/publish`]:{post:mutation(tag,'Publicar inmediata o programadamente',[id('resourceId'),id('versionId')],body({version,effectiveFrom,publicationNote:{type:['string','null']}},['version','effectiveFrom']))},
+    [`${base}/{resourceId}/versions/{versionId}/retire`]:{post:mutation(tag,'Retirar conservando historia',[id('resourceId'),id('versionId')],body({version},['version']))},
+  });
+  Object.assign((openApiDocument as any).paths,common('/v1/admin/catalogs','catálogos','Catalog Administration'),common('/v1/admin/bpm-templates','plantillas BPM','BPM Template Administration'),common('/v1/admin/risk-rule-sets','reglas de riesgo','Risk Rule Administration'));
+  const paths:any=(openApiDocument as any).paths;
+  const renameParameter=(operation:any,from:string,to:string)=>{for(const parameter of operation?.parameters??[])if(parameter.in==='path'&&parameter.name===from)parameter.name=to};
+  const renamePathOperations=(path:any,from:string,to:string)=>{for(const operation of Object.values(path??{}))renameParameter(operation,from,to)};
+  paths['/v1/admin/catalogs/{catalogId}']={...paths['/v1/admin/catalogs/{resourceId}'],patch:mutation('Catalog Administration','Actualizar metadatos antes de publicar',[id('catalogId')],body({version,name:{type:'string'},description:{type:['string','null']},supportsHierarchy:{type:'boolean'}},['version']))};delete paths['/v1/admin/catalogs/{resourceId}'];
+  renamePathOperations(paths['/v1/admin/catalogs/{catalogId}'],'resourceId','catalogId');
+  for(const suffix of['versions','versions/{versionId}','versions/{versionId}/preview','versions/{versionId}/validate','versions/{versionId}/publish','versions/{versionId}/retire']){paths[`/v1/admin/catalogs/{catalogId}/${suffix}`]=paths[`/v1/admin/catalogs/{resourceId}/${suffix}`];renamePathOperations(paths[`/v1/admin/catalogs/{catalogId}/${suffix}`],'resourceId','catalogId');delete paths[`/v1/admin/catalogs/{resourceId}/${suffix}`]}
+  for(const [base,param]of[['/v1/admin/bpm-templates','templateId'],['/v1/admin/risk-rule-sets','setId']]as const){for(const suffix of['','/versions','/versions/{versionId}','/versions/{versionId}/preview','/versions/{versionId}/validate','/versions/{versionId}/publish','/versions/{versionId}/retire']){const old=`${base}/{resourceId}${suffix}`,next=`${base}/{${param}}${suffix}`;paths[next]=paths[old];renamePathOperations(paths[next],'resourceId',param);delete paths[old]}}
+  const defaultableResource={type:'object',required:['id','code','name','isDefault','version'],properties:{id:uuid,code:{type:'string'},name:{type:'string'},isDefault:{type:'boolean'},version}};
+  for(const [base,param]of[['/v1/admin/bpm-templates','templateId'],['/v1/admin/risk-rule-sets','setId']]as const){
+    paths[base].get.responses['200']=successResponse({type:'array',items:defaultableResource});
+    paths[`${base}/{${param}}`].get.responses['200']=successResponse(defaultableResource);
+  }
+  paths['/v1/admin/bpm-templates/{templateId}/set-default']={post:mutation('BPM Template Administration','Designar plantilla BPM predeterminada',[id('templateId')],body({version},['version']))};
+  paths['/v1/admin/risk-rule-sets/{setId}/set-default']={post:mutation('Risk Rule Administration','Designar conjunto de riesgo predeterminado',[id('setId')],body({version},['version']))};
+  paths['/v1/admin/bpm-templates/{templateId}/set-default'].post.responses['200']=successResponse(defaultableResource);
+  paths['/v1/admin/risk-rule-sets/{setId}/set-default'].post.responses['200']=successResponse(defaultableResource);
+  paths['/v1/admin/bpm-templates/{templateId}/set-default'].post.description='ADMIN o UNIVERSAL con reautenticación reciente. Usa control optimista y lock global; afecta solo inspecciones futuras. La respuesta incluye isDefault=true.';
+  paths['/v1/admin/risk-rule-sets/{setId}/set-default'].post.description='ADMIN o UNIVERSAL con reautenticación reciente. Usa control optimista y lock global; afecta solo inspecciones futuras. La respuesta incluye isDefault=true.';
+  const catalogItem='/v1/admin/catalogs/{catalogId}/versions/{versionId}/items';paths[catalogItem]={post:mutation('Catalog Administration','Crear nodo de borrador',[id('catalogId'),id('versionId')],body({code:{type:'string'},name:{type:'string'},entryType:{enum:['NODE','LEAF']},sortOrder:{type:'integer'}},['code','name','entryType','sortOrder']),'201')};paths[`${catalogItem}/{itemId}`]={patch:mutation('Catalog Administration','Editar nodo con versión',[id('catalogId'),id('versionId'),id('itemId')],body({version},['version'])),delete:mutation('Catalog Administration','Eliminar nodo sin hijos',[id('catalogId'),id('versionId'),id('itemId')],body({version},['version']))};paths[`${catalogItem}/{itemId}/move`]={post:mutation('Catalog Administration','Mover o reordenar nodo',[id('catalogId'),id('versionId'),id('itemId')],body({version,parentId:{...uuid,type:['string','null']},sortOrder:{type:'integer'}},['version','parentId','sortOrder']))};
+  const bpmItem='/v1/admin/bpm-templates/{templateId}/versions/{versionId}/items';paths[bpmItem]={post:mutation('BPM Template Administration','Crear SECTION, SUBSECTION, GROUP o CRITERION',[id('templateId'),id('versionId')],body({itemKind:{enum:['SECTION','SUBSECTION','GROUP','CRITERION']},title:{type:'string'},sortOrder:{type:'integer'},isEvaluable:{type:'boolean'},defaultCriticality:{type:['string','null'],enum:['CRITICA','MAYOR','MENOR',null]}},['itemKind','title','sortOrder','isEvaluable']),'201')};paths[`${bpmItem}/{itemId}`]={patch:mutation('BPM Template Administration','Editar ítem BPM',[id('templateId'),id('versionId'),id('itemId')],body({version},['version'])),delete:mutation('BPM Template Administration','Eliminar ítem BPM',[id('templateId'),id('versionId'),id('itemId')],body({version},['version']))};paths[`${bpmItem}/{itemId}/move`]={post:mutation('BPM Template Administration','Mover o reordenar ítem BPM',[id('templateId'),id('versionId'),id('itemId')],body({version,parentId:{...uuid,type:['string','null']},sortOrder:{type:'integer'}},['version','parentId','sortOrder']))};const bpmGuidance=`${bpmItem}/{itemId}/guidance`;paths[bpmGuidance]={get:{tags:['BPM Template Administration'],summary:'Listar instrucciones del criterio',["security"]:[{bearerAuth:[]}],parameters:[id('templateId'),id('versionId'),id('itemId')],responses:{'200':successResponse({type:'array',items:{$ref:'#/components/schemas/BpmGuidanceItem'}}),'403':errorResponse('Rol no autorizado.'),'404':errorResponse('Criterio no encontrado.')}},post:mutation('BPM Template Administration','Crear instrucción auxiliar',[id('templateId'),id('versionId'),id('itemId')],body({text:{type:'string'},sortOrder:{type:'integer',minimum:0},criticality:{type:['string','null'],enum:['CRITICA','MAYOR','MENOR',null]},sourceReference:{type:['string','null']},sourceRowNumber:{type:['integer','null'],minimum:1}},['text','sortOrder']),'201')};paths[`${bpmGuidance}/{guidanceId}`]={patch:mutation('BPM Template Administration','Editar instrucción auxiliar',[id('templateId'),id('versionId'),id('itemId'),id('guidanceId')],body({version,text:{type:'string'},sortOrder:{type:'integer',minimum:0},criticality:{type:['string','null'],enum:['CRITICA','MAYOR','MENOR',null]}},['version'])),delete:mutation('BPM Template Administration','Eliminar instrucción auxiliar',[id('templateId'),id('versionId'),id('itemId'),id('guidanceId')],body({version},['version']))};
+  const riskBase='/v1/admin/risk-rule-sets/{setId}/versions/{versionId}';for(const resource of['factors','factors/{factorId}/options','food-categories','food-categories/{categoryId}/subcategories','frequency-ranges']){const parents=resource.includes('{factorId}')?[id('factorId')]:resource.includes('{categoryId}')?[id('categoryId')]:[];paths[`${riskBase}/${resource}`]={post:mutation('Risk Rule Administration',`Crear ${resource}`,[id('setId'),id('versionId'),...parents],body({sortOrder:{type:'integer'}},['sortOrder']),'201')}}for(const [resource,key]of[['factors','factorId'],['factors/{factorId}/options','optionId'],['food-categories','categoryId'],['food-categories/{categoryId}/subcategories','subcategoryId'],['frequency-ranges','rangeId']]as const){const parents=resource.includes('{factorId}')?[id('factorId')]:resource.includes('{categoryId}')?[id('categoryId')]:[];paths[`${riskBase}/${resource}/{${key}}`]={patch:mutation('Risk Rule Administration',`Editar ${resource}`,[id('setId'),id('versionId'),...parents,id(key)],body({version},['version'])),delete:mutation('Risk Rule Administration',`Eliminar ${resource}`,[id('setId'),id('versionId'),...parents,id(key)],body({version},['version']))};paths[`${riskBase}/${resource}/{${key}}/move`]={post:mutation('Risk Rule Administration',`Reordenar ${resource}`,[id('setId'),id('versionId'),...parents,id(key)],body({version,sortOrder:{type:'integer'}},['version','sortOrder']))}}
+};
+augmentInspectionReviewsOpenApi();
+augmentAnalyticsOpenApi();
+augmentVersionedDefinitionsOpenApi();

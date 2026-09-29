@@ -1,0 +1,19 @@
+
+:root {
+  --color-primary: #78350f;
+  --color-secondary: #d97706;
+  --color-accent: #f59e0b;
+  --color-bg-page: #fffbeb;
+  --color-surface: #ffffff;
+  --color-border: #fde68a;
+  --color-text-main: #451a03;
+  --color-text-muted: #92400e;
+  --color-text-on-primary: #ffffff;
+  --color-risk-low: #15803d;
+  --color-risk-medium: #d97706;
+  --color-risk-high: #b91c1c;
+  --sira-shadow: 0 4px 6px -1px rgba(120, 53, 15, .06), 0 2px 4px -1px rgba(120, 53, 15, .04);
+}
+body { background: var(--color-bg-page); color: var(--color-text-main); }
+:focus-visible { outline: 3px solid var(--color-secondary); outline-offset: 2px; }
+button, a, [role="button"] { min-height: 44px; }

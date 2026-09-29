@@ -1,0 +1,2 @@
+import type { NextFunction,Request,Response } from 'express'; import { env } from '../../config/env.js';
+export const requireRecentReauthentication=(req:Request,res:Response,next:NextFunction)=>{const age=Math.floor(Date.now()/1000)-(req.auth?.authTime??0);if(!req.auth||age>env.JWT_REAUTH_MAX_AGE_MINUTES*60)return res.status(401).json({error:{code:'REAUTHENTICATION_REQUIRED',message:'Se requiere autenticación reciente.'},meta:{correlationId:req.context.correlationId}});next()};
