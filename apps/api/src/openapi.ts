@@ -29,8 +29,12 @@ Object.assign((openApiDocument as any).paths,{
   '/v1/inspections/{inspectionId}/reviews/{reviewId}/resubmit':{post:{...secured,summary:'Reenviar corrección y recalcular',description:'Exclusivamente online y para el EVALUATOR asignado. En una transacción valida todas las correcciones, usa el motor oficial, crea un cálculo COMPLETED vigente y mueve el mismo ciclo a RESUBMITTED.',parameters:[inspectionIdParameter,reviewIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
   '/v1/inspections/{inspectionId}/reviews/{reviewId}/approve':{post:{...secured,summary:'Aprobar revisión',description:'COORDINATOR opera normalmente; UNIVERSAL requiere reautenticación reciente y ADMIN solo consulta. El ciclo aprobado y sus snapshots de participantes son inmutables.',parameters:[inspectionIdParameter,reviewIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,properties:{note:{type:'string',maxLength:1000}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
   '/v1/inspections/{inspectionId}/reports':{get:{...secured,summary:'Listar informes activos',description:'Metadatos autorizados únicamente: nunca storagePath, SHA-256 interno ni URL firmada.',parameters:[inspectionIdParameter],responses:{'200':successResponse({type:'array',items:{type:'object'}}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/report-content':{
+    get:{...secured,summary:'Consultar contenido redactado del informe',description:'COORDINATOR y UNIVERSAL. Devuelve resumen ejecutivo, hallazgos adicionales, recomendaciones y versión.',parameters:[inspectionIdParameter],responses:{'200':successResponse({type:'object'}),...institutionalErrors}},
+    put:{...secured,summary:'Guardar contenido redactado del informe',description:'Solo tras aprobar la revisión y antes de oficializar. Control optimista mediante version; cualquier cambio exige regenerar el borrador.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['version','executiveSummary','additionalFindings','recommendations'],properties:{version:{type:'integer',minimum:0},executiveSummary:{type:'string',maxLength:4000},additionalFindings:{type:'string',maxLength:4000},recommendations:{type:'string',maxLength:4000}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}},
+  },
   '/v1/inspections/{inspectionId}/reports/{reportId}':{get:{...secured,summary:'Consultar metadatos de informe',description:'Incluye verificationId público, estado y versiones; omite rutas y hashes.',parameters:[inspectionIdParameter,reportIdParameter],responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
-  '/v1/inspections/{inspectionId}/reports/generate':{post:{...secured,summary:'Generar o regenerar borrador PDF',description:'COORDINATOR y UNIVERSAL pueden generar; ADMIN solo consulta. operationId UUID hace el reintento idempotente. HTML/CSS controlado, sin recursos remotos, se convierte a PDF, calcula SHA-256 y guarda en Storage privado; cualquier fallo SQL compensa el objeto nuevo.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['operationId'],properties:{operationId:{type:'string',format:'uuid'}}}),responses:{'201':successResponse({type:'object'}),...institutionalErrors}}},
+  '/v1/inspections/{inspectionId}/reports/generate':{post:{...secured,summary:'Generar o regenerar borrador PDF',description:'COORDINATOR y UNIVERSAL pueden generar tras guardar resumen ejecutivo y recomendaciones. El borrador congela contenido, hallazgos, evidencias y cálculo; operationId UUID hace el reintento idempotente. El PDF se guarda en Storage privado.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['operationId'],properties:{operationId:{type:'string',format:'uuid'}}}),responses:{'201':successResponse({type:'object'}),...institutionalErrors}}},
   '/v1/inspections/{inspectionId}/reports/{reportId}/officialize':{post:{...secured,summary:'Oficializar informe',description:'Operación separada. Exige DRAFT, revisión APPROVED, cálculo vigente y snapshots de evaluador/aprobador. COORDINATOR normal; UNIVERSAL con reautenticación reciente; ADMIN solo consulta. OFFICIAL es inmutable.',parameters:[inspectionIdParameter,reportIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
   '/v1/inspections/{inspectionId}/reports/{reportId}/download-url':{post:{...secured,summary:'Emitir URL privada temporal',description:'Solo usuario institucional autorizado. La URL firmada dura exactamente 60 segundos, se entrega únicamente aquí y se audita sin persistirla.',parameters:[inspectionIdParameter,reportIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false}),responses:{'200':successResponse({type:'object',required:['signedUrl','expiresInSeconds'],properties:{signedUrl:{type:'string',format:'uri'},expiresInSeconds:{const:60}}}),...institutionalErrors}}},
   '/v1/inspections/{inspectionId}/close':{post:{...secured,summary:'Cerrar inspección y caso',description:'Acción posterior e idempotente para la misma identidad. COORDINATOR normal; UNIVERSAL con reautenticación reciente; ADMIN solo consulta. Cancela agenda, cierra asignación y caso, conserva historiales y crea inspection_closures atómicamente.',parameters:[inspectionIdParameter],requestBody:jsonBody({type:'object',additionalProperties:false,required:['reportId'],properties:{reportId:{type:'string',format:'uuid'},reason:{type:'string',maxLength:500}}}),responses:{'200':successResponse({type:'object'}),...institutionalErrors}}},
@@ -93,7 +97,7 @@ const errorResponse = (description: string) => ({
 export const openApiDocument = {
   openapi: '3.1.0',
   info: {
-    title: 'EBR/BPM API',
+    title: 'SIRA Tech API',
     version: '0.2.0',
     description: 'API del sistema de evaluaciones basadas en riesgo y buenas prácticas de manufactura.',
   },
@@ -132,19 +136,6 @@ export const openApiDocument = {
           password: { type: 'string', format: 'password', writeOnly: true, example: 'PruebaSegura123!' },
         },
       },
-      RegisterRequest: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['fullName', 'email', 'password', 'roleCode'],
-        properties: {
-          fullName: { type: 'string', minLength: 1, maxLength: 200 },
-          email: { type: 'string', format: 'email', maxLength: 320 },
-          phone: { type: 'string', minLength: 1, maxLength: 40 },
-          password: { type: 'string', minLength: 12, maxLength: 1024 },
-          roleCode: { type: 'string', enum: ['COMPANY_ADMIN', 'DELEGATE'] },
-          companyId: { type: 'string', format: 'uuid' },
-        },
-      },
       ForgotPasswordRequest: {
         type: 'object',
         additionalProperties: false,
@@ -152,6 +143,10 @@ export const openApiDocument = {
         properties: {
           email: { type: 'string', format: 'email', maxLength: 320 },
         },
+      },
+      ResetPasswordRequest: {
+        type: 'object', additionalProperties: false, required: ['token', 'password'],
+        properties: { token: { type: 'string', writeOnly: true }, password: { type: 'string', format: 'password', minLength: 12, maxLength: 1024, writeOnly: true } },
       },
       AccessToken: {
         type: 'object',
@@ -298,7 +293,7 @@ export const openApiDocument = {
       ComplaintPatch: { type:'object',additionalProperties:false,required:['version'],properties:{version:{type:'integer',minimum:1},companyId:{type:['string','null'],format:'uuid'},establishmentId:{type:['string','null'],format:'uuid'},complaintType:{type:'string',maxLength:120},receivedAt:{type:'string',format:'date-time'},description:{type:'string',maxLength:5000},complainantData:{anyOf:[{$ref:'#/components/schemas/ComplainantData'},{type:'null'}]}} },
       ComplaintDecision: { type:'object',additionalProperties:false,required:['version','decision'],properties:{version:{type:'integer',minimum:1},decision:{type:'string',enum:['PROCEEDS','NOT_PROCEEDS','REFERRED']},decisionReason:{type:'string',description:'Obligatorio para NOT_PROCEEDS; opcional para PROCEEDS y prohibido para REFERRED.'},referralReason:{type:'string',description:'Obligatorio únicamente para REFERRED.'},referralDestination:{type:'string',description:'Obligatorio únicamente para REFERRED.',maxLength:300}} },
       Assignment: {type:'object',additionalProperties:false,required:['id','caseId','evaluator','assignedBy','assignedAt','isActive','hasEditableInspection','version','case'],properties:{id:{type:'string',format:'uuid'},caseId:{type:'string',format:'uuid'},evaluator:{type:'object',required:['id','fullName'],properties:{id:{type:'string',format:'uuid'},fullName:{type:'string'}}},assignedBy:{type:'object',required:['id','fullName'],properties:{id:{type:'string',format:'uuid'},fullName:{type:'string'}}},assignedAt:{type:'string',format:'date-time'},unassignedAt:{type:['string','null'],format:'date-time'},isActive:{type:'boolean'},hasEditableInspection:{type:'boolean',description:'Core bloquea la reasignación cuando existe una inspección editable.'},reason:{type:['string','null']},version:{type:'integer'},case:{type:'object',properties:{origin:{type:'string'},status:{type:'string'},priority:{type:'string'},companyId:{type:['string','null'],format:'uuid'},establishmentId:{type:['string','null'],format:'uuid'}}}}},
-      Schedule: {type:'object',additionalProperties:false,required:['id','caseId','assignmentId','evaluator','scheduledStartAt','scheduledEndAt','timezone','status','version'],properties:{id:{type:'string',format:'uuid'},caseId:{type:'string',format:'uuid'},assignmentId:{type:'string',format:'uuid'},evaluator:{type:'object',required:['id','fullName'],properties:{id:{type:'string',format:'uuid'},fullName:{type:'string'}}},scheduledStartAt:{type:'string',format:'date-time'},scheduledEndAt:{type:'string',format:'date-time'},timezone:{const:'America/Santo_Domingo'},status:{type:'string',enum:['SCHEDULED','RESCHEDULED','CANCELLED']},notes:{type:['string','null']},cancellationReason:{type:['string','null']},cancelledAt:{type:['string','null'],format:'date-time'},rescheduledFromScheduleId:{type:['string','null'],format:'uuid'},version:{type:'integer'}}},
+      Schedule: {type:'object',additionalProperties:false,required:['id','caseId','assignmentId','evaluator','scheduledStartAt','scheduledEndAt','timezone','status','version'],properties:{id:{type:'string',format:'uuid'},caseId:{type:'string',format:'uuid'},assignmentId:{type:'string',format:'uuid'},evaluator:{type:'object',required:['id','fullName'],properties:{id:{type:'string',format:'uuid'},fullName:{type:'string'}}},scheduledStartAt:{type:'string',format:'date-time'},scheduledEndAt:{type:'string',format:'date-time'},timezone:{const:'America/Santo_Domingo'},status:{type:'string',enum:['SCHEDULED','RESCHEDULED','CANCELLED']},notes:{type:['string','null']},cancellationReason:{type:['string','null']},cancelledAt:{type:['string','null'],format:'date-time'},rescheduledFromScheduleId:{type:['string','null'],format:'uuid'},companyName:{type:['string','null']},companyTradeName:{type:['string','null']},establishmentName:{type:['string','null']},establishmentAddress:{type:['string','null']},version:{type:'integer'}}},
       AssignmentCreate: {type:'object',additionalProperties:false,required:['evaluatorUserId'],properties:{evaluatorUserId:{type:'string',format:'uuid'},reason:{type:'string',maxLength:500}}},
       Reassignment: {type:'object',additionalProperties:false,required:['newEvaluatorUserId','currentAssignmentVersion','reason'],properties:{newEvaluatorUserId:{type:'string',format:'uuid'},currentAssignmentVersion:{type:'integer',minimum:1},reason:{type:'string',minLength:1,maxLength:500}}},
       ScheduleCreate: {type:'object',additionalProperties:false,required:['scheduledStartAt','scheduledEndAt'],properties:{scheduledStartAt:{type:'string',format:'date-time'},scheduledEndAt:{type:'string',format:'date-time'},notes:{type:'string',maxLength:2000}}},
@@ -562,10 +557,9 @@ export const openApiDocument = {
     '/v1/auth/register': {
       post: {
         tags: ['Auth'], summary: 'Registro público de usuario empresarial',
-        description: 'Crea un usuario en estado PENDING_VALIDATION con rol COMPANY_ADMIN o DELEGATE, sin sesión. En multipart/form-data la carta de autorización de la cuenta (authorizationLetter) es obligatoria. El JSON anterior se conserva por compatibilidad: la cuenta queda pendiente y no puede aprobarse sin carta.',
+        description: 'Crea un usuario en estado PENDING_VALIDATION con rol COMPANY_ADMIN o DELEGATE, sin sesión ni vínculo empresarial. Requiere carta de autorización; la administración identifica y asigna la empresa antes de aprobar.',
         requestBody: { required: true, content: {
-          'multipart/form-data': { schema: { type: 'object', required: ['fullName', 'email', 'password', 'roleCode', 'authorizationLetter'], properties: { fullName: { type: 'string' }, email: { type: 'string', format: 'email' }, phone: { type: 'string' }, password: { type: 'string' }, roleCode: { type: 'string', enum: ['COMPANY_ADMIN', 'DELEGATE'] }, companyId: { type: 'string', format: 'uuid' }, authorizationLetter: { type: 'string', format: 'binary' } } } },
-          'application/json': { schema: { $ref: '#/components/schemas/RegisterRequest' } },
+          'multipart/form-data': { schema: { type: 'object', required: ['fullName', 'email', 'password', 'roleCode', 'authorizationLetter'], properties: { fullName: { type: 'string' }, email: { type: 'string', format: 'email' }, phone: { type: 'string' }, password: { type: 'string' }, roleCode: { type: 'string', enum: ['COMPANY_ADMIN', 'DELEGATE'] }, authorizationLetter: { type: 'string', format: 'binary' } } } },
         } },
         responses: { '201': successResponse({ $ref: '#/components/schemas/User' }), '400': errorResponse('Datos inválidos o carta requerida.'), '409': errorResponse('Correo duplicado.'), '413': errorResponse('Archivo mayor de 5 MB.'), '415': errorResponse('Formato no permitido.'), '503': errorResponse('Storage no disponible.') },
       },
@@ -573,9 +567,16 @@ export const openApiDocument = {
     '/v1/auth/forgot-password': {
       post: {
         tags: ['Auth'], summary: 'Solicitud pública de recuperación de contraseña',
-        description: 'Siempre responde éxito no enumerable protegiendo contra enumeración de cuentas.',
+        description: 'Siempre responde éxito no enumerable. Para una cuenta aprobada se encola un enlace de un solo uso válido durante 30 minutos.',
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/ForgotPasswordRequest' } } } },
         responses: { '200': successResponse({ type: 'object', required: ['requested'], properties: { requested: { const: true } } }), '400': errorResponse('Correo inválido.') },
+      },
+    },
+    '/v1/auth/reset-password': {
+      post: {
+        tags: ['Auth'], summary: 'Cambiar contraseña con enlace de recuperación',
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/ResetPasswordRequest' } } } },
+        responses: { '200': successResponse({ type: 'object', required: ['changed'], properties: { changed: { const: true } } }), '400': errorResponse('Enlace inválido, caducado o datos inválidos.') },
       },
     },
     '/v1/auth/refresh': {

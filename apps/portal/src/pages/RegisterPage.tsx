@@ -38,18 +38,18 @@ export function RegisterPage() {
     finally { setSending(false) }
   }
 
-  return <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#F8FAFC', p: 2 }}>
+  return <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#fffbeb', p: 2 }}>
     <Card sx={{ maxWidth: 640, width: '100%' }}>
-      <Box sx={{ p: 3, bgcolor: '#1E3A8A', color: 'white', display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ p: 3, bgcolor: '#78350f', color: 'white', display: 'flex', alignItems: 'center', gap: 2 }}>
         <ShieldIcon /><Typography variant="h6" sx={{ color: 'white' }}>Registro de cuenta empresarial</Typography>
       </Box>
       <CardContent sx={{ p: 4 }}>
         {done ? <Stack spacing={2}>
           <Alert severity="success">Solicitud de cuenta registrada.</Alert>
-          <Typography>La cuenta quedó pendiente de validación. La administración revisará su carta de autorización y vinculará la cuenta con su empresa; podrá iniciar sesión cuando sea aprobada.</Typography>
+          <Typography>La cuenta quedó pendiente de validación. La administración comprobará la carta, identificará la empresa y vinculará su cuenta antes de aprobarla. Podrá iniciar sesión cuando la cuenta sea aprobada.</Typography>
           <Box><Button variant="contained" onClick={() => navigate('/login')}>Volver al inicio de sesión</Button></Box>
         </Stack> : <Stack spacing={2}>
-          <Typography color="text.secondary">Para aprobar la cuenta se requiere la carta de autorización de la persona solicitante, firmada por la empresa.</Typography>
+          <Typography color="text.secondary">Solicite su cuenta con sus datos personales y adjunte la carta de autorización firmada por la empresa. No necesita buscar ni escribir datos de la empresa aquí.</Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField label="Nombre completo" required value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} />
           <TextField label="Correo electrónico" type="email" required value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
@@ -65,7 +65,7 @@ export function RegisterPage() {
             <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => fileInput.current?.click()}>{letter ? 'Cambiar carta' : 'Adjuntar carta de autorización'}</Button>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{letter ? `${letter.name} (${Math.max(1, Math.round(letter.size / 1024))} KB)` : 'PDF, JPG o PNG de hasta 5 MB.'}</Typography>
           </Box>
-          <Alert severity="info">La vinculación con su empresa la realiza la administración durante la validación de la cuenta.</Alert>
+          <Alert severity="info">La carta debe permitir identificar a la empresa y confirmar que usted está autorizado para el tipo de cuenta solicitado. La administración verificará la carta y seleccionará la empresa antes de aprobar su acceso.</Alert>
           <Stack direction="row" spacing={1}>
             <Button variant="contained" disabled={sending} onClick={() => void submit()}>Enviar solicitud</Button>
             <Button onClick={() => navigate('/login')} disabled={sending}>Cancelar</Button>

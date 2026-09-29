@@ -8,8 +8,8 @@ interface StatusChipProps {
 
 export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }) => {
   let label = status;
-  let bg = '#F1F5F9';
-  let color = '#64748B';
+  let bg = '#fffbeb';
+  let color = '#92400e';
   let border = 'transparent';
 
   switch (status) {
@@ -17,9 +17,9 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
     case 'DRAFT':
     case 'BORRADOR':
       label = 'Borrador';
-      bg = '#F1F5F9';
-      color = '#64748B';
-      border = '#E2E8F0';
+      bg = '#fffbeb';
+      color = '#92400e';
+      border = '#fde68a';
       break;
 
     case 'PENDING_ASSIGNMENT':
@@ -39,7 +39,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
 
     case 'EN_PROGRESO':
       label = 'En progreso';
-      bg = '#E0F2FE';
+      bg = '#fef3c7';
       color = '#0284C7';
       border = '#BAE6FD';
       break;
@@ -76,9 +76,9 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
 
     case 'CERRADA':
       label = 'Cerrada';
-      bg = '#E2E8F0';
-      color = '#334155';
-      border = '#CBD5E1';
+      bg = '#fde68a';
+      color = '#451a03';
+      border = '#d97706';
       break;
 
     // User Statuses
@@ -101,9 +101,9 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, size = 'small' }
     case 'INACTIVE':
     case 'INACTIVO':
       label = 'Inactivo';
-      bg = '#F1F5F9';
-      color = '#94A3B8';
-      border = '#E2E8F0';
+      bg = '#fffbeb';
+      color = '#92400e';
+      border = '#fde68a';
       break;
 
     default:

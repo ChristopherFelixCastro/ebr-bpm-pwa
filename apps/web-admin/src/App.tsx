@@ -26,7 +26,7 @@ const UserManagementPage = lazy(() => import('./pages/users/UserManagementPage')
 
 const LoadingFallback = () => (
   <Box sx={{ minHeight: '60vh', display: 'grid', placeItems: 'center' }}>
-    <CircularProgress aria-label="Cargando módulo" sx={{ color: '#1E3A8A' }} />
+    <CircularProgress aria-label="Cargando módulo" sx={{ color: '#78350f' }} />
   </Box>
 )
 

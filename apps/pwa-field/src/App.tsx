@@ -11,7 +11,8 @@ import AppHeader from "./components/AppHeader";
 function Home() {
   return (
     <div style={{ padding: 24 }}>
-      <h1>EBR/BPM - Campo</h1>
+      <img src="/sira-imagotipo.jpeg" alt="SIRA Tech" style={{ width: 240, maxWidth: '100%', height: 100, objectFit: 'cover' }} />
+      <h1>Inspección de campo</h1>
       <Link to="/assigned">Mis evaluaciones</Link>
     </div>
   );

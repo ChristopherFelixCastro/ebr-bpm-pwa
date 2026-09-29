@@ -439,7 +439,7 @@ function DashboardPage() {
             sx={{
               fontSize: '2rem',
               fontWeight: 700,
-              color: '#172033',
+              color: '#451a03',
               mt: 0,
               mb: 1,
             }}
@@ -450,7 +450,7 @@ function DashboardPage() {
           <Box
             component="p"
             sx={{
-              color: '#637083',
+              color: '#92400e',
               mt: 0,
               mb: 0,
             }}
@@ -500,7 +500,7 @@ function DashboardPage() {
               sx={{
                 height: '100%',
                 border:
-                  '1px solid #d9e2ec',
+                  '1px solid #fde68a',
                 borderRadius: 3,
               }}
             >
@@ -528,7 +528,7 @@ function DashboardPage() {
                         component="p"
                         sx={{
                           color:
-                            '#637083',
+                            '#92400e',
                           mt: 0,
                           mb: 1,
                           fontWeight: 500,
@@ -544,7 +544,7 @@ function DashboardPage() {
                             'block',
                           fontSize: '2rem',
                           color:
-                            '#172033',
+                            '#451a03',
                         }}
                       >
                         {metric.value}
@@ -556,7 +556,7 @@ function DashboardPage() {
                         bgcolor:
                           '#e8f1fa',
                         color:
-                          '#0b2545',
+                          '#78350f',
                         borderRadius: 2,
                         p: 1.2,
                         display: 'flex',
@@ -569,7 +569,7 @@ function DashboardPage() {
                   <Box
                     sx={{
                       mt: 2,
-                      color: '#637083',
+                      color: '#92400e',
                       fontSize:
                         '0.85rem',
                     }}
@@ -591,7 +591,7 @@ function DashboardPage() {
           mt: 4,
           p: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -611,7 +611,7 @@ function DashboardPage() {
           sx={{
             mt: 0,
             mb: 2.5,
-            color: '#637083',
+            color: '#92400e',
           }}
         >
           Accesos directos a las
@@ -709,7 +709,7 @@ function DashboardPage() {
               p: 3,
               height: '100%',
               border:
-                '1px solid #d9e2ec',
+                '1px solid #fde68a',
               borderRadius: 3,
             }}
           >
@@ -807,7 +807,7 @@ function DashboardPage() {
               p: 3,
               height: '100%',
               border:
-                '1px solid #d9e2ec',
+                '1px solid #fde68a',
               borderRadius: 3,
             }}
           >
@@ -869,7 +869,7 @@ function DashboardPage() {
                           sx={{
                             mt: 0.5,
                             color:
-                              '#637083',
+                              '#92400e',
                             fontSize:
                               '0.85rem',
                           }}
@@ -893,7 +893,7 @@ function DashboardPage() {
           mt: 3,
           p: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -921,7 +921,7 @@ function DashboardPage() {
 
             <Box
               sx={{
-                color: '#637083',
+                color: '#92400e',
                 mt: 0.5,
                 fontSize: '0.9rem',
               }}
@@ -982,7 +982,7 @@ function DashboardPage() {
                     p: 1.5,
                     borderRadius: 2,
                     bgcolor:
-                      '#f7f9fc',
+                      '#fffbeb',
                   }}
                 >
                   <Box
@@ -1010,7 +1010,7 @@ function DashboardPage() {
                         sx={{
                           mt: 0.3,
                           color:
-                            '#637083',
+                            '#92400e',
                           fontSize:
                             '0.85rem',
                         }}
@@ -1051,7 +1051,7 @@ function DashboardPage() {
                     <Box
                       sx={{
                         color:
-                          '#637083',
+                          '#92400e',
                         fontSize:
                           '0.8rem',
                       }}

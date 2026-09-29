@@ -5,6 +5,10 @@ export type EvaluationDetail = {
   evaluation: AnalyticsEvaluation; workPackage: CoreWorkPackage; calculation: CoreCalculation | null
   review: CoreReview | null; reports: CoreReport[]; closure: CoreClosure | null
 }
+export type ReportContent = { inspectionId: string; executiveSummary: string; additionalFindings: string; recommendations: string; version: number; updatedAt: string | null }
+export const getReportContent = (id: string) => core.request<ReportContent>(`/v1/inspections/${encodeURIComponent(id)}/report-content`)
+export const saveReportContent = (id: string, content: Pick<ReportContent, 'version' | 'executiveSummary' | 'additionalFindings' | 'recommendations'>) =>
+  core.request<ReportContent>(`/v1/inspections/${encodeURIComponent(id)}/report-content`, { method: 'PUT', body: JSON.stringify(content) })
 export type CorrectionInboxItem = {
   inspectionId: string; inspectionVersion: number; reviewId: string; returnCount: number
   returnReason: string; returnedAt: string; companyName: string | null; establishmentName: string | null

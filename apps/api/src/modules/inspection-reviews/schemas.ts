@@ -16,6 +16,12 @@ export const correction = z.object({
 export const deleteCorrection = z.object({ baseVersion: z.number().int().positive() }).strict();
 export const approve = z.object({ note: z.string().trim().max(1000).optional() }).strict();
 export const generate = z.object({ operationId: uuid }).strict();
+export const reportContent = z.object({
+  version: z.number().int().nonnegative(),
+  executiveSummary: z.string().trim().max(4000),
+  additionalFindings: z.string().trim().max(4000),
+  recommendations: z.string().trim().max(4000),
+}).strict();
 export const close = z.object({ reason: z.string().trim().max(500).optional() }).strict();
 export const correctionInbox = z.object({
   page: z.coerce.number().int().min(1).default(1),

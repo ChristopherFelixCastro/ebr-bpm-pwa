@@ -11,15 +11,15 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'Portal EBR / BPM',
-          short_name: 'EBR / BPM',
+          name: 'Portal SIRA Tech',
+          short_name: 'SIRA Tech',
           description: 'Portal único de evaluación e inspección sanitaria',
           start_url: '/',
           scope: '/',
           display: 'standalone',
           lang: 'es',
-          theme_color: '#1E3A8A',
-          background_color: '#F8FAFC',
+          theme_color: '#78350f',
+          background_color: '#fffbeb',
           icons: [
             { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
             { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -39,8 +39,10 @@ export default defineConfig(({ mode }) => {
       port: 5179,
       strictPort: true,
       proxy: {
-        '/v1': { target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000', changeOrigin: true },
-        '/health': { target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000', changeOrigin: true },
+        // El Core comprueba Origin contra Host para peticiones del mismo origen.
+        // Conservar Host permite usar otro puerto local sin ampliar CORS_ORIGINS.
+        '/v1': { target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000', changeOrigin: false },
+        '/health': { target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000', changeOrigin: false },
       },
     },
     test: { environment: 'jsdom', setupFiles: './src/test/setup.ts', clearMocks: true },

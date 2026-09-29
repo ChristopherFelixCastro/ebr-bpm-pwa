@@ -23,6 +23,10 @@ El paquete BPM conserva códigos fuente repetidos y genera `display_code` determ
 
 El paquete de riesgo lee la matriz únicamente hasta el primer encabezado `Puntaje`; ignora toda columna posterior. `standaloneCategoryLeaves` permite declarar una fila autónoma verificando categoría, subcategoría originalmente vacía, riesgo y puntaje. `additionalFactorOptions` incorpora opciones declaradas sin modificar el Excel y valida duplicados, puntajes y rangos porcentuales. Se importan exactamente seis factores, la escala `LOW=1`, `MEDIUM=2`, `HIGH=3`, `NA=NULL` y tres rangos de frecuencia explícitos.
 
+Si la primera columna de puntaje de una matriz institucional usa `2/4/8` para riesgo microbiológico bajo/medio/alto, declare `"matrixScoreScale": "SOURCE_2_4_8"` en el manifiesto. El importador verifica esos valores, los convierte a `1/2/3` para el cálculo existente y conserva el puntaje original en `sourceMicrobiologicalScore` de los atributos de cada entrada del catálogo. Para una fuente que ya usa `1/2/3`, omita la opción o use `"NORMALIZED_1_2_3"`. Las columnas de riesgo químico, segundo puntaje y riesgo total nunca se leen. En `standaloneCategoryLeaves.expectedScore` se declara el valor de la **fuente**, no el convertido.
+
+`excludedMatrixRows` permite excluir una fila de contenido anómalo sin alterar el archivo. Cada exclusión exige coincidencia de número de fila, categoría, subcategoría, riesgo y puntaje de origen. La ejecución informa un registro omitido y una advertencia; si la fuente deja de coincidir, rechaza el paquete. Cuando el puntaje es una fórmula, se comprueba el valor previsto a partir del riesgo y, si existe, el valor guardado en la celda.
+
 El reporte separa `issueCounts` de los conteos de registros. Cada conjunto de `breakdown` cumple `accepted + rejected + skipped = read`; `rejected` y `warned` cuentan registros fuente distintos, no objetos de error. Las filas formateadas pero vacías no se cuentan como leídas ni omitidas. Para BPM, `breakdown` separa `allItems` y `bpmGuidance`; `summary` informa secciones, subsecciones, grupos, criterios, instrucciones totales, con criticidad y sin criticidad.
 
 La migración `0030` registra SHA-256 por archivo, hash del paquete bruto y hash funcional después de normalizar datos. `apply` usa transacción y `pg_advisory_xact_lock`; una repetición exitosa termina como `SKIPPED` sin crear versiones. El mismo paquete con tipo o manifiesto incompatible se rechaza. Un error crítico revierte los datos funcionales. Las advertencias permanecen en el reporte.
@@ -34,7 +38,7 @@ La migración `0030` registra SHA-256 por archivo, hash del paquete bruto y hash
 - `DRAFT_ALREADY_EXISTS`: publique, retire o elimine mediante el flujo administrativo autorizado el borrador preexistente; el importador nunca lo sobrescribe.
 - Hash incompatible: no cambie tipo o manifiesto para los mismos archivos. Prepare un paquete corregido y trazable.
 
-Para las fuentes institucionales revisadas, el manifiesto declara la fila 102 como categoría y hoja `Alimentos preparados`, después de verificar `BAJO=1`, y declara la cuarta opción BPM `96%–100%=1`. Las tres opciones BPM presentes en el Excel deben seguir coincidiendo exactamente con `≤81%=3`, `82%–89%=2.33` y `90%–95%=1.67`; cualquier cambio, duplicado, hueco o solapamiento vuelve a bloquear el `dry-run`.
+Para las fuentes institucionales revisadas, el manifiesto declara la fila 102 como categoría y hoja `Alimentos preparados`, después de verificar `BAJO=2` en la fuente; excluye la fila 111, cuya subcategoría dice solo «p»; y declara la cuarta opción BPM `96%–100%=1`. Las tres opciones BPM presentes en el Excel deben seguir coincidiendo exactamente con `≤81%=3`, `82%–89%=2.33` y `90%–95%=1.67`; cualquier cambio, duplicado, hueco o solapamiento vuelve a bloquear el `dry-run`.
 
 ### Modelo de guía y publicación
 

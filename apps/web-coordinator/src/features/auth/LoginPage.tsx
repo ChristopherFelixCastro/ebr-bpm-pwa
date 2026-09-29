@@ -13,7 +13,6 @@ import {
 } from '@mui/material'
 import EmailIcon from '@mui/icons-material/Email'
 import LockIcon from '@mui/icons-material/Lock'
-import AltRouteIcon from '@mui/icons-material/AltRoute'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { ApiError } from '../../api/http'
@@ -48,16 +47,11 @@ export const LoginPage = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#f4f6f8', p: 2 }}>
-      <Card sx={{ maxWidth: 460, width: '100%', borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,.08)' }}>
-        <Box sx={{ p: 3.5, textAlign: 'center', bgcolor: '#0b2545', color: '#ffffff', borderRadius: '12px 12px 0 0' }}>
-          <Box sx={{ display: 'inline-flex', p: 1.5, borderRadius: 3, bgcolor: 'rgba(255,255,255,.15)', mb: 1.5 }}>
-            <AltRouteIcon sx={{ fontSize: 38, color: '#ffffff' }} />
-          </Box>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: '#ffffff' }}>
-            EBR / BPM
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#bfdbfe', mt: 0.5 }}>
+    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#fffbeb', p: 2 }}>
+      <Card sx={{ maxWidth: 460, width: '100%', borderRadius: 3, border: '1px solid #fde68a', boxShadow: '0 4px 6px -1px rgba(120,53,15,.06)' }}>
+        <Box sx={{ p: 3.5, textAlign: 'center', bgcolor: '#78350f', color: '#ffffff', borderRadius: '12px 12px 0 0' }}>
+          <Box component="img" src="/sira-imagotipo.jpeg" alt="SIRA Tech" sx={{ display: 'block', width: 220, height: 75, mx: 'auto', objectFit: 'cover', borderRadius: 2, mb: 1.5 }} />
+          <Typography variant="body2" sx={{ color: '#fde68a', mt: 0.5 }}>
             Portal de Coordinación y Asignaciones
           </Typography>
         </Box>
@@ -65,7 +59,7 @@ export const LoginPage = () => {
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
             Iniciar sesión
           </Typography>
-          <Typography variant="body2" sx={{ color: '#475569', mb: 3 }}>
+          <Typography variant="body2" sx={{ color: '#92400e', mb: 3 }}>
             Ingrese con sus credenciales de Coordinador o Administrador.
           </Typography>
           {errorMessage && <Alert severity="error" sx={{ mb: 2.5 }}>{errorMessage}</Alert>}
@@ -85,7 +79,7 @@ export const LoginPage = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <EmailIcon sx={{ color: '#64748b' }} />
+                      <EmailIcon sx={{ color: '#92400e' }} />
                     </InputAdornment>
                   ),
                 },
@@ -106,7 +100,7 @@ export const LoginPage = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LockIcon sx={{ color: '#64748b' }} />
+                      <LockIcon sx={{ color: '#92400e' }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -128,7 +122,7 @@ export const LoginPage = () => {
                 mt: 3,
                 mb: 1,
                 py: 1.3,
-                bgcolor: '#0b2545',
+                bgcolor: '#78350f',
                 '&:hover': { bgcolor: '#134074' },
                 fontWeight: 600,
               }}

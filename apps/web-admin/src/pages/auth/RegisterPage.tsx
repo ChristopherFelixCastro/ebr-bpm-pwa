@@ -32,7 +32,6 @@ export const RegisterPage: React.FC = () => {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [roleCode, setRoleCode] = useState<'COMPANY_ADMIN' | 'DELEGATE'>('COMPANY_ADMIN')
-  const [companyName, setCompanyName] = useState('')
   const [authFile, setAuthFile] = useState<File | null>(null)
 
   const [loading, setLoading] = useState(false)
@@ -84,6 +83,7 @@ export const RegisterPage: React.FC = () => {
         phone: phone.trim() || undefined,
         password,
         roleCode,
+        authorizationLetter: authFile,
       })
 
       showSuccess('Solicitud de registro enviada con éxito')
@@ -105,7 +105,7 @@ export const RegisterPage: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#F8FAFC',
+          backgroundColor: '#fffbeb',
           p: 2,
         }}
       >
@@ -116,7 +116,7 @@ export const RegisterPage: React.FC = () => {
             p: 4,
             textAlign: 'center',
             borderRadius: 3,
-            border: '1px solid #E2E8F0',
+            border: '1px solid #fde68a',
           }}
         >
           <Box
@@ -134,21 +134,20 @@ export const RegisterPage: React.FC = () => {
           >
             <CheckCircleIcon sx={{ fontSize: 42 }} />
           </Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#0F172A', mb: 1 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: '#451a03', mb: 1 }}>
             Registro en Proceso de Validación
           </Typography>
-          <Typography variant="body1" sx={{ color: '#475569', mb: 3 }}>
-            Su solicitud de cuenta con rol <strong>{roleCode === 'COMPANY_ADMIN' ? 'Administrador de Empresa' : 'Delegado de Empresa'}</strong> ha sido registrada con estado{' '}
-            <strong style={{ color: '#D97706' }}>PENDIENTE_VALIDACION</strong>.
+          <Typography variant="body1" sx={{ color: '#92400e', mb: 3 }}>
+            Su solicitud de cuenta con rol <strong>{roleCode === 'COMPANY_ADMIN' ? 'Administrador de Empresa' : 'Delegado de Empresa'}</strong> ha quedado pendiente de validación.
           </Typography>
-          <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC', textAlign: 'left' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A', mb: 0.5 }}>
+          <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#fffbeb', textAlign: 'left' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#451a03', mb: 0.5 }}>
               Pasos siguientes:
             </Typography>
-            <Typography variant="body2" sx={{ color: '#475569' }}>
-              1. Un Administrador Central evaluará su Carta de Autorización y asignará su alcance empresarial.
+            <Typography variant="body2" sx={{ color: '#92400e' }}>
+              1. La administración revisará su carta e identificará y vinculará la empresa.
               <br />
-              2. Una vez aprobada la validación en el Core, podrá acceder con sus credenciales institucionales.
+              2. Una vez aprobada la cuenta, podrá acceder con sus credenciales institucionales.
             </Typography>
           </Paper>
 
@@ -156,7 +155,7 @@ export const RegisterPage: React.FC = () => {
             variant="contained"
             color="primary"
             onClick={() => navigate('/login')}
-            sx={{ px: 4, py: 1.2, bgcolor: '#1E3A8A' }}
+            sx={{ px: 4, py: 1.2, bgcolor: '#78350f' }}
           >
             Volver a Iniciar Sesión
           </Button>
@@ -169,7 +168,7 @@ export const RegisterPage: React.FC = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        backgroundColor: '#F8FAFC',
+        backgroundColor: '#fffbeb',
         py: 4,
         px: 2,
         display: 'flex',
@@ -181,14 +180,14 @@ export const RegisterPage: React.FC = () => {
           maxWidth: 720,
           width: '100%',
           borderRadius: 3,
-          border: '1px solid #E2E8F0',
+          border: '1px solid #fde68a',
           boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
         }}
       >
         <Box
           sx={{
             p: 3,
-            bgcolor: '#1E3A8A',
+            bgcolor: '#78350f',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
@@ -200,8 +199,8 @@ export const RegisterPage: React.FC = () => {
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#FFFFFF' }}>
               Registro de Usuario y Empresa
             </Typography>
-            <Typography variant="caption" sx={{ color: '#BFDBFE' }}>
-              Portal Web EBR/BPM - Módulo de Identidad
+            <Typography variant="caption" sx={{ color: '#fde68a' }}>
+              Portal Web SIRA Tech - Módulo de Identidad
             </Typography>
           </Box>
         </Box>
@@ -214,7 +213,7 @@ export const RegisterPage: React.FC = () => {
           )}
 
           <Box component="form" onSubmit={handleSubmit} noValidate>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A', mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#451a03', mb: 2 }}>
               1. Datos Personales del Solicitante
             </Typography>
 
@@ -268,18 +267,18 @@ export const RegisterPage: React.FC = () => {
                   placeholder="Mínimo 12 caracteres"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  helperText="Mínimo 12 caracteres (política Core EBR/BPM)"
+                  helperText="Mínimo 12 caracteres"
                   required
                 />
               </Grid>
             </Grid>
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A', mb: 2 }}>
-              2. Rol y Empresa Representada
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#451a03', mb: 2 }}>
+              2. Tipo de Cuenta Solicitada
             </Typography>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
                   Rol Solicitado *
                 </Typography>
@@ -294,37 +293,27 @@ export const RegisterPage: React.FC = () => {
                 </TextField>
               </Grid>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  Razón Social de la Empresa *
-                </Typography>
-                <TextField
-                  fullWidth
-                  placeholder="Ej. Industrias Lácteas Dominicanas, S.R.L."
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  helperText="Se asociará durante la validación del Administrador"
-                />
-              </Grid>
             </Grid>
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A', mb: 1 }}>
+            <Alert severity="info" sx={{ mb: 3 }}>No necesita escribir datos de la empresa. La administración la identificará mediante la carta y la seleccionará durante la revisión de su cuenta.</Alert>
+
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#451a03', mb: 1 }}>
               3. Carta de Autorización Obligatoria
             </Typography>
-            <Typography variant="body2" sx={{ color: '#475569', mb: 2 }}>
+            <Typography variant="body2" sx={{ color: '#92400e', mb: 2 }}>
               Debe adjuntar la Carta de Designación o Poder Notariado firmado por el Representante Legal que acredita su facultad para radicar trámites BPM en nombre de la empresa.
             </Typography>
 
-            <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 2, bgcolor: '#F8FAFC' }}>
+            <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 2, bgcolor: '#fffbeb' }}>
               {authFile ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <InsertDriveFileIcon sx={{ color: '#1E3A8A', fontSize: 32 }} />
+                    <InsertDriveFileIcon sx={{ color: '#78350f', fontSize: 32 }} />
                     <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#451a03' }}>
                         {authFile.name}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#64748B' }}>
+                      <Typography variant="caption" sx={{ color: '#92400e' }}>
                         {(authFile.size / 1024).toFixed(1)} KB · Documento cargado
                       </Typography>
                     </Box>
@@ -339,7 +328,7 @@ export const RegisterPage: React.FC = () => {
                     component="label"
                     variant="outlined"
                     startIcon={<CloudUploadIcon />}
-                    sx={{ textTransform: 'none', borderRadius: 2, borderColor: '#CBD5E1', color: '#1E3A8A' }}
+                    sx={{ textTransform: 'none', borderRadius: 2, borderColor: '#d97706', color: '#78350f' }}
                   >
                     Seleccionar Carta de Autorización (PDF, JPG, PNG)
                     <input
@@ -349,7 +338,7 @@ export const RegisterPage: React.FC = () => {
                       onChange={handleFileChange}
                     />
                   </Button>
-                  <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#64748B' }}>
+                  <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#92400e' }}>
                     Máximo 5 MB por archivo.
                   </Typography>
                 </Box>
@@ -373,9 +362,9 @@ export const RegisterPage: React.FC = () => {
                 sx={{
                   px: 4,
                   py: 1.2,
-                  bgcolor: '#1E3A8A',
+                  bgcolor: '#78350f',
                   textTransform: 'none',
-                  '&:hover': { bgcolor: '#1E40AF' },
+                  '&:hover': { bgcolor: '#78350f' },
                 }}
               >
                 {loading ? 'Procesando...' : 'Enviar Solicitud de Registro'}

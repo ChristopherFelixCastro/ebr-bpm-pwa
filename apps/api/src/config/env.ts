@@ -32,6 +32,13 @@ const schema = z.object({
   LOCAL_PRIVATE_STORAGE_ENABLED: booleanFromEnvironment.optional(),
   PDF_CHROMIUM_EXECUTABLE_PATH: optionalEnvironmentValue(z.string().min(1)),
   OFFLINE_PERMIT_PRIVATE_KEY_BASE64: optionalEnvironmentValue(z.string().min(1)),
+  MAIL_MODE: z.enum(['disabled', 'local', 'smtp']).default('disabled'),
+  MAIL_SMTP_HOST: optionalEnvironmentValue(z.string().min(1)),
+  MAIL_SMTP_PORT: z.coerce.number().int().positive().default(1025),
+  MAIL_SMTP_USER: optionalEnvironmentValue(z.string().min(1)),
+  MAIL_SMTP_PASSWORD: optionalEnvironmentValue(z.string().min(1)),
+  MAIL_FROM: optionalEnvironmentValue(z.string().min(3)),
+  APP_PUBLIC_URL: optionalEnvironmentValue(z.string().url()),
 }).superRefine((value, context) => {
   if (value.NODE_ENV === 'production' && !value.JWT_ACCESS_SECRET) {
     context.addIssue({
@@ -57,9 +64,22 @@ const schema = z.object({
   if (value.LOCAL_PRIVATE_STORAGE_ENABLED && storageValues.some(Boolean)) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['LOCAL_PRIVATE_STORAGE_ENABLED'], message: 'El almacenamiento local no se combina con Supabase Storage.' });
   }
+  if (value.MAIL_MODE !== 'disabled' && (!value.MAIL_SMTP_HOST || !value.MAIL_FROM || !value.APP_PUBLIC_URL)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['MAIL_MODE'], message: 'Correo requiere host SMTP, remitente y URL del portal.' });
+  }
+  if (value.MAIL_MODE !== 'disabled' && !value.JWT_ACCESS_SECRET) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['JWT_ACCESS_SECRET'], message: 'Correo requiere la clave del Core para proteger enlaces pendientes.' });
+  }
+  if (value.MAIL_MODE === 'local' && (value.NODE_ENV !== 'development' || !['127.0.0.1', 'localhost'].includes(value.MAIL_SMTP_HOST ?? ''))) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['MAIL_MODE'], message: 'Mailpit local solo se permite en desarrollo y loopback.' });
+  }
+  if (value.MAIL_MODE === 'smtp' && (!value.APP_PUBLIC_URL?.startsWith('https://') || !value.MAIL_SMTP_USER || !value.MAIL_SMTP_PASSWORD)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['MAIL_MODE'], message: 'SMTP externo requiere HTTPS y credenciales.' });
+  }
 });
 
-const parsed = schema.parse(process.env);
+// Tests never deliver mail, even when the developer's ignored .env points to Mailpit.
+const parsed = schema.parse(process.env.NODE_ENV === 'test' ? { ...process.env, MAIL_MODE: 'disabled' } : process.env);
 export const env = {
   ...parsed,
   OPENAPI_DOCS_ENABLED: parsed.OPENAPI_DOCS_ENABLED ?? parsed.NODE_ENV !== 'production',

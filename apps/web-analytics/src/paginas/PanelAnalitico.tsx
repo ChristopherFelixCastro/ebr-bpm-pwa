@@ -20,10 +20,10 @@ export function PanelAnalitico() {
   if (error) return <ErrorVista mensaje={error} />; if (!summary) return <Cargando mensaje="Preparando el panel analítico…" />;
   const totalRisk = Math.max(1, Object.values(summary.byRisk).reduce((total, count) => total + count, 0));
   return <Box sx={{ display: 'grid', gap: 3 }}>
-    <Box><Typography variant="h1">Panel analítico</Typography><Typography color="text.secondary">Resumen calculado desde inspecciones, revisiones, informes y cierres del Core.</Typography></Box>
+    <Box><Typography variant="h1">Panel analítico</Typography><Typography color="text.secondary">Resumen de inspecciones, revisiones, informes y expedientes cerrados.</Typography></Box>
     {!canOperate && <Alert severity="info">Su sesión ADMIN es de consulta. Las acciones operativas están disponibles para COORDINATOR y UNIVERSAL.</Alert>}
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', xl: 'repeat(4, 1fr)' }, gap: 2 }}>
-      <TarjetaMetrica etiqueta="Listas o pendientes de revisión" valor={summary.readyForReview + summary.pendingReview} detalle="Envíos reales del Core" icono={<FactCheckRoundedIcon />} />
+      <TarjetaMetrica etiqueta="Listas o pendientes de revisión" valor={summary.readyForReview + summary.pendingReview} detalle="Inspecciones enviadas" icono={<FactCheckRoundedIcon />} />
       <TarjetaMetrica etiqueta="Devueltas" valor={summary.returnedForCorrection} detalle="Esperan corrección del evaluador" icono={<AssignmentReturnRoundedIcon />} />
       <TarjetaMetrica etiqueta="Informes oficiales" valor={summary.officialReports} detalle="PDF oficiales en Storage privado" icono={<DescriptionRoundedIcon />} />
       <TarjetaMetrica etiqueta="Expedientes cerrados" valor={summary.closed} detalle="Cierres atómicos registrados" icono={<InventoryRoundedIcon />} />

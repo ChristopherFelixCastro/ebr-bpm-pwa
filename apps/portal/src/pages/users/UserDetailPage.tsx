@@ -20,7 +20,7 @@ import { ReauthenticationCancelledError, useSession } from '../../session/Sessio
 type EditForm = { fullName: string; phone: string; roleCode: CoreRole; company: { id: string; legalName: string } | null }
 type Decision = 'approve' | 'reject' | 'deactivate'
 const decisions: Record<Decision, { title: string; message: string; confirm: string; done: string; variant: 'success' | 'danger' | 'warning' }> = {
-  approve: { title: 'Aprobar cuenta', message: 'La cuenta podrá iniciar sesión con su rol. Core comprobará la carta válida y solicitará confirmar su identidad.', confirm: 'Aprobar', done: 'Cuenta aprobada.', variant: 'success' },
+  approve: { title: 'Aprobar cuenta', message: 'La cuenta podrá iniciar sesión con el rol y la empresa asignados. Se comprobará que tenga una carta válida y se le pedirá confirmar su contraseña.', confirm: 'Aprobar', done: 'Cuenta aprobada.', variant: 'success' },
   reject: { title: 'Rechazar cuenta', message: 'La solicitud de cuenta quedará rechazada y se revocarán sus sesiones. Se solicitará confirmar su identidad.', confirm: 'Rechazar', done: 'Cuenta rechazada.', variant: 'danger' },
   deactivate: { title: 'Desactivar cuenta', message: 'La cuenta no podrá iniciar sesión y se revocarán sus sesiones. Se solicitará confirmar su identidad.', confirm: 'Desactivar', done: 'Cuenta desactivada.', variant: 'warning' },
 }
@@ -119,6 +119,7 @@ export function UserDetailPage() {
     </Box>
     {stale && <Alert severity="warning" action={<Button onClick={() => void load(true)}>Recargar para comparar</Button>}>La cuenta o su carta cambió en el servidor. Sus valores siguen en el formulario; recargue y revise antes de volver a guardar.</Alert>}
     {self && <Alert severity="info">Está viendo su propia cuenta: no puede aprobarla, rechazarla, desactivarla ni revisar su carta.</Alert>}
+    {awaitingApproval(account.status) && companyRoles.includes(account.roleCode) && <Alert severity="info">Para validar esta cuenta empresarial: revise la carta, identifique en ella la empresa y la autorización del solicitante, seleccione esa empresa en «Datos de la cuenta» y guarde. Después marque la carta como válida y apruebe la cuenta. Si la empresa no se puede identificar con certeza, mantenga la cuenta pendiente.</Alert>}
 
     <Card><CardContent><Typography variant="h6" sx={{ mb: 2 }}>Datos de la cuenta</Typography>
       <Stack spacing={2} sx={{ maxWidth: 640 }}>
@@ -129,14 +130,14 @@ export function UserDetailPage() {
           helperText={form.roleCode !== account.roleCode ? 'Cambiar el rol revoca las sesiones activas de la cuenta.' : undefined}>
           {roleOptions.map((code) => <MenuItem key={code} value={code}>{roleLabels[code]}</MenuItem>)}
         </TextField>
-        {companyRoles.includes(form.roleCode) && <CompanyPicker required value={form.company} onChange={(company) => setForm({ ...form, company })} />}
+        {companyRoles.includes(form.roleCode) && <><CompanyPicker required value={form.company} onChange={(company) => setForm({ ...form, company })} /><Typography variant="body2" color="text.secondary">Seleccione una empresa activa solo después de comprobar su identidad y la autorización en la carta. La persona solicitante no elige la empresa en el registro público.</Typography></>}
         <Box><Button variant="contained" disabled={busy} onClick={save}>Guardar cambios</Button></Box>
       </Stack>
     </CardContent></Card>
 
     <Card><CardContent><Typography variant="h6" sx={{ mb: 1 }}>Estado de la cuenta</Typography>
-      {awaitingApproval(account.status) && account.authorizationLetterStatus !== 'VALID' && <Alert severity="info" sx={{ mb: 2 }}>La aprobación estará disponible cuando Core confirme una carta de autorización válida.</Alert>}
-      {awaitingApproval(account.status) && needsCompany && <Alert severity="warning" sx={{ mb: 2 }}>Asigne la empresa de la cuenta empresarial antes de aprobarla.</Alert>}
+      {awaitingApproval(account.status) && account.authorizationLetterStatus !== 'VALID' && <Alert severity="info" sx={{ mb: 2 }}>La aprobación estará disponible cuando la carta de autorización sea válida.</Alert>}
+      {awaitingApproval(account.status) && needsCompany && <Alert severity="warning" sx={{ mb: 2 }}>Falta vincular la empresa. Busque y seleccione la empresa en «Datos de la cuenta» y guarde los cambios antes de aprobar.</Alert>}
       <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
         {awaitingApproval(account.status) && <Button variant="contained" color="success" disabled={busy || !canApprove} onClick={() => setDecision('approve')}>{account.status === 'INACTIVE' ? 'Reactivar' : 'Aprobar'}</Button>}
         {canReject && <Button variant="outlined" color="error" disabled={busy} onClick={() => setDecision('reject')}>Rechazar</Button>}

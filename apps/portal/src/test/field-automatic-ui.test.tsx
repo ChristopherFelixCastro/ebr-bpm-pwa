@@ -48,7 +48,7 @@ it('abre una inspección ya enviada en solo lectura sin solicitar permiso offlin
   }) as never)
   vi.mocked(inspectStoredFieldState).mockRejectedValue(new OfflinePackageMissingError())
   renderInspection()
-  expect(await screen.findByText(/Vista de solo lectura obtenida de Core/)).toBeInTheDocument()
+  expect(await screen.findByText('Inspección enviada correctamente.')).toBeInTheDocument()
   expect(downloadFieldPackage).not.toHaveBeenCalled()
 })
 

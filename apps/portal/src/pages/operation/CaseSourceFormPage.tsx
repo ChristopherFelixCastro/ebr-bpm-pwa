@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Alert, Box, Button, Card, CardContent, CircularProgress, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { operationApi, type CaseOrigin, type OperationalCase } from '../../api/operation'
+import { companiesApi, establishmentsApi, type Company, type Establishment } from '../../api/resources'
 import { isStaleVersion, routeForError, supportMessage } from '../../api/presentation'
 import { canEditSource } from '../../access/operationRules'
 import { useNotification } from '../../components/NoticeProvider'
@@ -25,6 +26,12 @@ export function CaseSourceFormPage({ origin }: { origin: Exclude<CaseOrigin, 'CO
   const [loading, setLoading] = useState(Boolean(id))
   const [saving, setSaving] = useState(false)
   const [stale, setStale] = useState(false)
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [establishments, setEstablishments] = useState<Establishment[]>([])
+  const [companySearch, setCompanySearch] = useState('')
+  const [establishmentSearch, setEstablishmentSearch] = useState('')
+  const [searchingCompanies, setSearchingCompanies] = useState(false)
+  const [searchingEstablishments, setSearchingEstablishments] = useState(false)
   const invalidComplainant = origin === 'COMPLAINT' && !id && form.named && (form.preferredContactMethod === 'PHONE' && !form.phone.trim() || form.preferredContactMethod === 'EMAIL' && !form.email.trim())
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((current) => ({ ...current, [key]: value }))
   const load = async () => {
@@ -35,6 +42,36 @@ export function CaseSourceFormPage({ origin }: { origin: Exclude<CaseOrigin, 'CO
     finally { setLoading(false) }
   }
   useEffect(() => { void load() }, [id, origin]) // La recarga explícita tras 409 conserva el formulario hasta que se solicite.
+  const searchCompanies = async (search = '') => {
+    setSearchingCompanies(true)
+    try {
+      const found = (await companiesApi.list({ page: 1, limit: 100, status: 'ACTIVE', ...(search.trim() ? { search: search.trim() } : {}) })).data
+      setCompanies((current) => {
+        const selected = current.find((company) => company.id === form.companyId)
+        return selected && !found.some((company) => company.id === selected.id) ? [selected, ...found] : found
+      })
+    } catch (error) { showError(supportMessage(error, 'No fue posible buscar empresas.')) }
+    finally { setSearchingCompanies(false) }
+  }
+  const searchEstablishments = async (companyId: string, search = '') => {
+    if (!companyId) return setEstablishments([])
+    setSearchingEstablishments(true)
+    try {
+      const found = (await establishmentsApi.list({ page: 1, limit: 100, status: 'ACTIVE', companyId, ...(search.trim() ? { search: search.trim() } : {}) })).data
+      setEstablishments((current) => {
+        const selected = current.find((establishment) => establishment.id === form.establishmentId && establishment.companyId === companyId)
+        return selected && !found.some((establishment) => establishment.id === selected.id) ? [selected, ...found] : found
+      })
+    } catch (error) { showError(supportMessage(error, 'No fue posible buscar establecimientos.')) }
+    finally { setSearchingEstablishments(false) }
+  }
+  useEffect(() => { if (!id) void searchCompanies() }, [id])
+  const selectCompany = (companyId: string) => {
+    setForm((current) => ({ ...current, companyId, establishmentId: '' }))
+    setEstablishmentSearch('')
+    setEstablishments([])
+    if (companyId) void searchEstablishments(companyId)
+  }
   const save = async () => {
     if (saving || (id && (!item || !canEditSource(user, item)))) return
     setSaving(true)
@@ -61,7 +98,12 @@ export function CaseSourceFormPage({ origin }: { origin: Exclude<CaseOrigin, 'CO
   return <Stack spacing={2}><Box><Button onClick={() => navigate(id ? `/operacion/casos/${id}` : '/operacion/casos')}>Volver</Button><Typography variant="h5" sx={{ fontWeight: 800 }}>{id ? 'Editar' : 'Crear'} {originNames[origin].toLowerCase()}</Typography></Box>
     {stale && <Alert severity="warning" action={<Button onClick={() => void load()}>Descartar cambios y recargar</Button>}>La versión cambió. El formulario se conserva hasta que decida recargar.</Alert>}
     <Card><CardContent><Stack spacing={2}>
-      {!id && <><Typography variant="subtitle2">Organización opcional</Typography><TextField label="ID de empresa" value={form.companyId} onChange={(event) => set('companyId', event.target.value)} helperText="Deje vacío si el caso no corresponde a una empresa." /><TextField label="ID de establecimiento" value={form.establishmentId} onChange={(event) => set('establishmentId', event.target.value)} disabled={!form.companyId.trim()} /></>}
+      {!id && <><Typography variant="subtitle2">Organización opcional</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}><TextField fullWidth label="Buscar empresa por nombre o RNC" value={companySearch} onChange={(event) => setCompanySearch(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void searchCompanies(companySearch) } }} /><Button onClick={() => void searchCompanies(companySearch)} disabled={searchingCompanies}>{searchingCompanies ? 'Buscando…' : 'Buscar'}</Button></Stack>
+        <TextField select label="Empresa" value={form.companyId} onChange={(event) => selectCompany(event.target.value)} helperText="Seleccione una empresa si la alerta o el caso corresponde a una. También puede dejarlo sin empresa."><MenuItem value="">Sin empresa identificada</MenuItem>{companies.map((company) => <MenuItem key={company.id} value={company.id}>{company.tradeName || company.legalName}{company.tradeName && company.tradeName !== company.legalName ? ` · ${company.legalName}` : ''}</MenuItem>)}</TextField>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}><TextField fullWidth label="Buscar establecimiento por nombre" value={establishmentSearch} onChange={(event) => setEstablishmentSearch(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void searchEstablishments(form.companyId, establishmentSearch) } }} disabled={!form.companyId} /><Button onClick={() => void searchEstablishments(form.companyId, establishmentSearch)} disabled={!form.companyId || searchingEstablishments}>{searchingEstablishments ? 'Buscando…' : 'Buscar'}</Button></Stack>
+        <TextField select label="Establecimiento" value={form.establishmentId} onChange={(event) => set('establishmentId', event.target.value)} disabled={!form.companyId} helperText="Opcional; solo se muestran establecimientos activos de la empresa seleccionada."><MenuItem value="">Sin establecimiento identificado</MenuItem>{establishments.map((establishment) => <MenuItem key={establishment.id} value={establishment.id}>{establishment.name}</MenuItem>)}</TextField>
+      </>}
       <TextField label={origin === 'INSTITUTIONAL_PROGRAM' ? 'Referencia del programa' : origin === 'HEALTH_ALERT' ? 'Número oficial de alerta' : 'Tipo de denuncia'} value={form.reference} onChange={(event) => set('reference', event.target.value)} required={origin !== 'INSTITUTIONAL_PROGRAM'} />
       <TextField label={origin === 'INSTITUTIONAL_PROGRAM' ? 'Fecha planificada' : origin === 'HEALTH_ALERT' ? 'Fecha de alerta' : 'Fecha y hora de recepción'} type={origin === 'COMPLAINT' ? 'datetime-local' : 'date'} value={form.date} onChange={(event) => set('date', event.target.value)} slotProps={{ inputLabel: { shrink: true } }} required={origin !== 'INSTITUTIONAL_PROGRAM'} />
       {origin === 'HEALTH_ALERT' && <TextField label="Producto afectado" value={form.product} onChange={(event) => set('product', event.target.value)} required />}

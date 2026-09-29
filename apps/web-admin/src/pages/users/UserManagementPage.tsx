@@ -206,13 +206,13 @@ export const UserManagementPage: React.FC = () => {
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-            <AdminPanelSettingsIcon sx={{ color: '#1E3A8A', fontSize: 32 }} />
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#0F172A' }}>
+            <AdminPanelSettingsIcon sx={{ color: '#78350f', fontSize: 32 }} />
+            <Typography variant="h5" sx={{ fontWeight: 700, color: '#451a03' }}>
               Gestión y Aprobación de Usuarios
             </Typography>
           </Box>
-          <Typography variant="body2" sx={{ color: '#475569' }}>
-            Valide el acceso corporativo, administre estados del sistema EBR/BPM y asigne roles autorizados.
+          <Typography variant="body2" sx={{ color: '#92400e' }}>
+            Valide el acceso corporativo, administre estados del sistema SIRA Tech y asigne roles autorizados.
           </Typography>
         </Box>
         <Button
@@ -222,14 +222,14 @@ export const UserManagementPage: React.FC = () => {
             loadCompanies()
             setCreateDialogOpen(true)
           }}
-          sx={{ bgcolor: '#1E3A8A', '&:hover': { bgcolor: '#172554' } }}
+          sx={{ bgcolor: '#78350f', '&:hover': { bgcolor: '#451a03' } }}
         >
           Nuevo Usuario
         </Button>
       </Box>
 
       {/* Tabs and search bar */}
-      <Card sx={{ mb: 3, borderRadius: 2, border: '1px solid #E2E8F0' }}>
+      <Card sx={{ mb: 3, borderRadius: 2, border: '1px solid #fde68a' }}>
         <Box
           sx={{
             p: 2,
@@ -238,7 +238,7 @@ export const UserManagementPage: React.FC = () => {
             justifyContent: 'space-between',
             alignItems: { sm: 'center' },
             gap: 2,
-            borderBottom: '1px solid #E2E8F0',
+            borderBottom: '1px solid #fde68a',
           }}
         >
           <Tabs
@@ -257,7 +257,7 @@ export const UserManagementPage: React.FC = () => {
                     <Chip
                       label={pendingUsers.length}
                       size="small"
-                      sx={{ bgcolor: '#FEF3C7', color: '#D97706', fontWeight: 700, height: 20 }}
+                      sx={{ bgcolor: '#FEF3C7', color: '#92400e', fontWeight: 700, height: 20 }}
                     />
                   )}
                 </Box>
@@ -276,7 +276,7 @@ export const UserManagementPage: React.FC = () => {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: '#94A3B8' }} />
+                    <SearchIcon sx={{ color: '#92400e' }} />
                   </InputAdornment>
                 ),
               },
@@ -300,8 +300,8 @@ export const UserManagementPage: React.FC = () => {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <CircularProgress size={32} sx={{ color: '#1E3A8A' }} />
-                    <Typography variant="body2" sx={{ color: '#64748B', mt: 1 }}>
+                    <CircularProgress size={32} sx={{ color: '#78350f' }} />
+                    <Typography variant="body2" sx={{ color: '#92400e', mt: 1 }}>
                       Cargando registros de usuarios...
                     </Typography>
                   </TableCell>
@@ -309,10 +309,10 @@ export const UserManagementPage: React.FC = () => {
               ) : displayedUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <Typography variant="subtitle1" sx={{ color: '#0F172A', fontWeight: 600 }}>
+                    <Typography variant="subtitle1" sx={{ color: '#451a03', fontWeight: 600 }}>
                       No se encontraron usuarios
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#64748B' }}>
+                    <Typography variant="body2" sx={{ color: '#92400e' }}>
                       {tabValue === 0
                         ? 'No hay usuarios pendientes de validación en este momento.'
                         : 'No hay usuarios que coincidan con la búsqueda.'}
@@ -329,8 +329,8 @@ export const UserManagementPage: React.FC = () => {
                             width: 36,
                             height: 36,
                             borderRadius: '50%',
-                            bgcolor: '#EFF6FF',
-                            color: '#1E3A8A',
+                            bgcolor: '#fffbeb',
+                            color: '#78350f',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -341,10 +341,10 @@ export const UserManagementPage: React.FC = () => {
                           {user.fullName.substring(0, 2).toUpperCase()}
                         </Box>
                         <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#451a03' }}>
                             {user.fullName}
                           </Typography>
-                          <Typography variant="caption" sx={{ color: '#475569', display: 'block' }}>
+                          <Typography variant="caption" sx={{ color: '#92400e', display: 'block' }}>
                             {user.email}
                           </Typography>
                         </Box>
@@ -352,11 +352,11 @@ export const UserManagementPage: React.FC = () => {
                     </TableCell>
 
                     <TableCell>
-                      <Typography variant="body2" sx={{ color: '#0F172A', fontWeight: 500 }}>
+                      <Typography variant="body2" sx={{ color: '#451a03', fontWeight: 500 }}>
                         {user.companyName || 'Administración Central'}
                       </Typography>
                       {user.phone && (
-                        <Typography variant="caption" sx={{ color: '#475569' }}>
+                        <Typography variant="caption" sx={{ color: '#92400e' }}>
                           Tel: {user.phone}
                         </Typography>
                       )}
@@ -368,8 +368,8 @@ export const UserManagementPage: React.FC = () => {
                         size="small"
                         sx={{
                           fontWeight: 600,
-                          bgcolor: ['ADMIN', 'UNIVERSAL'].includes(user.roleCode) ? '#EFF6FF' : '#F1F5F9',
-                          color: ['ADMIN', 'UNIVERSAL'].includes(user.roleCode) ? '#1E3A8A' : '#334155',
+                          bgcolor: ['ADMIN', 'UNIVERSAL'].includes(user.roleCode) ? '#fffbeb' : '#fffbeb',
+                          color: ['ADMIN', 'UNIVERSAL'].includes(user.roleCode) ? '#78350f' : '#451a03',
                         }}
                       />
                     </TableCell>
@@ -430,7 +430,7 @@ export const UserManagementPage: React.FC = () => {
                           <BlockIcon fontSize="small" />
                         </IconButton>
                       ) : (
-                        <Typography variant="caption" sx={{ color: '#94A3B8' }}>
+                        <Typography variant="caption" sx={{ color: '#92400e' }}>
                           Sin acciones
                         </Typography>
                       )}
@@ -564,7 +564,7 @@ export const UserManagementPage: React.FC = () => {
             onClick={handleCreateUser}
             variant="contained"
             disabled={actionLoading || !createForm.fullName || !createForm.email || !createForm.password || (['COMPANY_ADMIN', 'DELEGATE'].includes(createForm.roleCode) && !createForm.companyId)}
-            sx={{ bgcolor: '#1E3A8A', '&:hover': { bgcolor: '#172554' } }}
+            sx={{ bgcolor: '#78350f', '&:hover': { bgcolor: '#451a03' } }}
           >
             {actionLoading ? 'Creando...' : 'Crear Usuario'}
           </Button>

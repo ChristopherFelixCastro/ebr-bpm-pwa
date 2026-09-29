@@ -61,11 +61,11 @@ export const CompanyListPage = () => {
 
   return <Box>
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 3 }}>
-      <Box><Typography variant="h5" sx={{ fontWeight: 800, display: 'flex', gap: 1, alignItems: 'center' }}><BusinessIcon color="primary" />Empresas</Typography><Typography color="text.secondary">Catálogo real del Core, limitado por el alcance de la sesión.</Typography></Box>
+      <Box><Typography variant="h5" sx={{ fontWeight: 800, display: 'flex', gap: 1, alignItems: 'center' }}><BusinessIcon color="primary" />Empresas</Typography><Typography color="text.secondary">Consulte las empresas a las que tiene acceso.</Typography></Box>
       {canCreate && <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>Crear empresa</Button>}
     </Box>
-    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ p: 2, borderBottom: '1px solid #E2E8F0' }}>
+    <Card sx={{ border: '1px solid #fde68a', borderRadius: 2 }}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ p: 2, borderBottom: '1px solid #fde68a' }}>
         <TextField fullWidth size="small" label="Buscar por nombre o RNC" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { setPage(0); setSearch(searchInput.trim()) } }} />
         <TextField select size="small" label="Estado" value={status} onChange={(event) => { setPage(0); setStatus(event.target.value as typeof status) }} sx={{ minWidth: 180 }}><MenuItem value="ALL">Todos</MenuItem><MenuItem value="ACTIVE">Activas</MenuItem><MenuItem value="INACTIVE">Inactivas</MenuItem></TextField>
         <Button variant="outlined" onClick={() => { setPage(0); setSearch(searchInput.trim()) }}>Buscar</Button>

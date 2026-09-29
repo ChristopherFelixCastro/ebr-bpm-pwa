@@ -38,7 +38,7 @@ const text = (values: FormValues, key: string) => String(values[key] ?? '').trim
 const factorFields: FieldSpec[] = [
   { key: 'code', label: 'Factor oficial', kind: 'select', options: factorOptions },
   { key: 'name', label: 'Nombre', required: true },
-  { key: 'weight', label: 'Peso', kind: 'number', required: true, helper: 'Core valida que los seis pesos sumen 1.' },
+  { key: 'weight', label: 'Peso', kind: 'number', required: true, helper: 'Los pesos de los seis factores deben sumar 1.' },
   { key: 'sortOrder', label: 'Orden', kind: 'number', required: true },
 ]
 const optionFields: FieldSpec[] = [
@@ -57,7 +57,7 @@ const categoryFields: FieldSpec[] = [
 ]
 const subcategoryFields: FieldSpec[] = [
   { key: 'name', label: 'Subcategoría', kind: 'multiline', required: true },
-  { key: 'microbiologicalRisk', label: 'Riesgo microbiológico', kind: 'select', options: riskOptions, helper: 'Core exige indicar riesgo y puntaje juntos, o ninguno.' },
+  { key: 'microbiologicalRisk', label: 'Riesgo microbiológico', kind: 'select', options: riskOptions, helper: 'Indique el riesgo y el puntaje juntos, o deje ambos vacíos.' },
   { key: 'riskScore', label: 'Puntaje de riesgo', kind: 'select', options: riskScoreOptions },
   { key: 'sortOrder', label: 'Orden', kind: 'number', required: true },
   { key: 'sourceFile', label: 'Archivo de origen' },
@@ -130,10 +130,10 @@ function RiskStructure({ context }: { context: VersionContext<RiskPreview, RiskR
   </Box>
 
   return <Stack spacing={3}>
-    <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent>
-      {header('Factores de riesgo', `${preview.factors.length} de 6 factores oficiales registrados. Core valida factores, pesos y la escala de cuatro opciones.`, () => factorDialog(null), 'Agregar factor')}
+    <Card sx={{ border: '1px solid #fde68a' }}><CardContent>
+      {header('Factores de riesgo', `${preview.factors.length} de 6 factores requeridos. Revise los pesos y la escala de cuatro opciones antes de publicar.`, () => factorDialog(null), 'Agregar factor')}
       {preview.factors.length === 0 ? <Alert severity="info">La versión no contiene factores.</Alert> : <Stack spacing={2}>
-        {preview.factors.map((factor) => <Box key={factor.id} sx={{ border: '1px solid #E2E8F0', borderRadius: 1, p: 1.5 }} aria-label={`Factor ${factorLabels[factor.code] ?? factor.name}`}>
+        {preview.factors.map((factor) => <Box key={factor.id} sx={{ border: '1px solid #fde68a', borderRadius: 1, p: 1.5 }} aria-label={`Factor ${factorLabels[factor.code] ?? factor.name}`}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Typography sx={{ fontWeight: 700 }}>{factorLabels[factor.code] ?? factor.code}</Typography>
             <Typography color="text.secondary">{factor.name}</Typography>
@@ -150,10 +150,10 @@ function RiskStructure({ context }: { context: VersionContext<RiskPreview, RiskR
       </Stack>}
     </CardContent></Card>
 
-    <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent>
+    <Card sx={{ border: '1px solid #fde68a' }}><CardContent>
       {header('Productos alimenticios', 'Categorías y subcategorías de la matriz microbiológica.', () => categoryDialog(null), 'Agregar categoría')}
       {preview.foodCategories.length === 0 ? <Alert severity="info">La versión no contiene categorías de alimentos.</Alert> : <Stack spacing={2}>
-        {preview.foodCategories.map((category) => <Box key={category.id} sx={{ border: '1px solid #E2E8F0', borderRadius: 1, p: 1.5 }}>
+        {preview.foodCategories.map((category) => <Box key={category.id} sx={{ border: '1px solid #fde68a', borderRadius: 1, p: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Typography sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{category.code}</Typography>
             <Typography sx={{ fontWeight: 700 }}>{category.name}</Typography>
@@ -169,7 +169,7 @@ function RiskStructure({ context }: { context: VersionContext<RiskPreview, RiskR
       </Stack>}
     </CardContent></Card>
 
-    <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent>
+    <Card sx={{ border: '1px solid #fde68a' }}><CardContent>
       {header('Rangos de frecuencia', 'Asignan la frecuencia de inspección según el puntaje de riesgo calculado por Core.', () => rangeDialog(null), 'Agregar rango')}
       {preview.frequencyRanges.length === 0 ? <Alert severity="info">La versión no contiene rangos de frecuencia.</Alert> : <TableContainer><Table size="small"><TableHead><TableRow><TableCell>Etiqueta</TableCell><TableCell>Rango de puntaje</TableCell><TableCell>Frecuencia</TableCell>{editable && <TableCell align="right">Acciones</TableCell>}</TableRow></TableHead><TableBody>
         {preview.frequencyRanges.map((range) => <TableRow key={range.id}><TableCell>{range.label}</TableCell><TableCell>{rangeText(range)}</TableCell><TableCell>{frequencyLabels[range.frequency] ?? range.frequency}</TableCell>{editable && <TableCell align="right">{actions(`rango ${range.label}`, () => rangeDialog(range), () => remove('Eliminar rango', `el rango ${range.label}`, () => riskRulesApi.deleteRange(setId, versionId, range.id, range.version)))}</TableCell>}</TableRow>)}

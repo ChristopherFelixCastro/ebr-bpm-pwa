@@ -7,6 +7,7 @@ import AddIcon from '@mui/icons-material/Add'
 import SearchIcon from '@mui/icons-material/Search'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import { contactsApi, type Contact, type ContactLink, type ContactRelation } from '../api/resources'
+import { relationshipLabels } from '../api/relationshipLabels'
 import { routeForError, supportMessage } from '../api/presentation'
 import { useAuth } from '../context/AuthContext'
 import { useNotification } from '../context/NotificationContext'
@@ -99,7 +100,7 @@ export const ContactRelationsPanel = ({ entity, entityId, canEdit }: { entity: E
   }
 
   return (
-    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
+    <Card sx={{ border: '1px solid #fde68a', borderRadius: 2 }}>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>Contactos relacionados</Typography>
@@ -108,7 +109,7 @@ export const ContactRelationsPanel = ({ entity, entityId, canEdit }: { entity: E
         {relations.length === 0 ? <Alert severity="info">No existen relaciones de contacto registradas.</Alert> : (
           <Stack spacing={1.5}>
             {relations.map((relation) => (
-              <Box key={relation.id} sx={{ p: 2, border: '1px solid #E2E8F0', borderRadius: 2, bgcolor: relation.effectiveTo ? '#F8FAFC' : '#FFFFFF' }}>
+              <Box key={relation.id} sx={{ p: 2, border: '1px solid #fde68a', borderRadius: 2, bgcolor: relation.effectiveTo ? '#fffbeb' : '#FFFFFF' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
                   <Box>
                     <Typography sx={{ fontWeight: 700 }}>{relation.contact.fullName}</Typography>
@@ -116,7 +117,7 @@ export const ContactRelationsPanel = ({ entity, entityId, canEdit }: { entity: E
                     <Typography variant="caption" color="text.secondary">Documento: {fullDocument?.id === relation.contact.id ? (fullDocument.value || 'No registrado') : relation.contact.identityDocumentMasked || 'No registrado'}</Typography>
                   </Box>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Chip size="small" label={relation.relationshipType} />
+                    <Chip size="small" label={relationshipLabels[relation.relationshipType]} />
                     {relation.isPrimary && <Chip size="small" color="primary" label="Primario" />}
                     <Chip size="small" color={relation.effectiveTo ? 'default' : 'success'} label={relation.effectiveTo ? `Finalizada ${relation.effectiveTo}` : 'Vigente'} />
                   </Stack>
@@ -151,13 +152,13 @@ export const ContactRelationsPanel = ({ entity, entityId, canEdit }: { entity: E
             {selected && isGlobal && <Alert severity="success">Se reutilizará el contacto seleccionado.</Alert>}
             {(!selected || !isGlobal) && <>
               <TextField label="Nombre completo" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
-              <TextField label="Documento de identidad" value={identityDocument} onChange={(event) => setIdentityDocument(event.target.value)} required helperText="El Core normaliza este valor antes de reutilizar un contacto." />
+              <TextField label="Documento de identidad" value={identityDocument} onChange={(event) => setIdentityDocument(event.target.value)} required helperText="Use el mismo documento para identificar al contacto en otros registros." />
               <TextField label="Teléfono" value={phone} onChange={(event) => setPhone(event.target.value)} />
               <TextField label="Correo" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
             </>}
-            <TextField select label="Tipo de relación" value={relationshipType} onChange={(event) => setRelationshipType(event.target.value as typeof relationshipType)}>{relationshipTypes.map((value) => <MenuItem key={value} value={value}>{value}</MenuItem>)}</TextField>
+            <TextField select label="Tipo de relación" value={relationshipType} onChange={(event) => setRelationshipType(event.target.value as typeof relationshipType)}>{relationshipTypes.map((value) => <MenuItem key={value} value={value}>{relationshipLabels[value]}</MenuItem>)}</TextField>
             <TextField type="date" label="Vigente desde" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-            <FormControlLabel control={<Checkbox checked={isPrimary} onChange={(event) => setIsPrimary(event.target.checked)} />} label="Contacto primario" />
+            <FormControlLabel control={<Checkbox checked={isPrimary} onChange={(event) => setIsPrimary(event.target.checked)} />} label="Contacto principal" />
           </Stack>
         </DialogContent>
         <DialogActions><Button onClick={() => setOpen(false)}>Cancelar</Button><Button variant="contained" onClick={() => void link()}>Vincular</Button></DialogActions>

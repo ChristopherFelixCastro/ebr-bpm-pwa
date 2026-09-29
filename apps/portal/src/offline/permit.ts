@@ -32,5 +32,5 @@ export async function verifyPermit(permit: SignedPermit, pkg: unknown, userId: s
     valid = await crypto.subtle.verify('Ed25519', key, fromBase64(permit.signature), new TextEncoder().encode(canonical(claims)))
   } catch { /* Firma malformada o clave incorrecta. */ }
   if (!valid || await sha256Hex(canonical(pkg)) !== claims.packageHash) throw new Error('El paquete o su permiso fue alterado.')
-  if (!allowExpired && (now < issued - 5 * 60_000 || now >= expiry)) throw new Error('El permiso local venció o el reloj requiere validación con Core.')
+  if (!allowExpired && (now < issued - 5 * 60_000 || now >= expiry)) throw new Error('El permiso para trabajar sin conexión venció o la fecha y hora del dispositivo requieren validación.')
 }

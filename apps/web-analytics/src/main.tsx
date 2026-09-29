@@ -6,5 +6,6 @@ import App from './App';
 import { AuthProvider } from './contexto/Autenticacion';
 import { tema } from './tema';
 import './styles.css';
+import './sira-brand.css';
 
 createRoot(document.getElementById('root')!).render(<StrictMode><ThemeProvider theme={tema}><CssBaseline /><BrowserRouter><AuthProvider><App /></AuthProvider></BrowserRouter></ThemeProvider></StrictMode>);

@@ -197,34 +197,35 @@ describe('F users RBAC and account authorization letter (database)', () => {
   it('public registration with a letter stays pending and creates no session', async () => {
     const email = `register.letter.${suffix}@example.test`;
     const response = await request(app).post('/v1/auth/register').set('Origin', origin)
-      .field('fullName', 'Registro Con Carta').field('email', email).field('password', 'LongPassword123!').field('roleCode', 'COMPANY_ADMIN').field('companyId', actors.companyId)
+      .field('fullName', 'Registro Con Carta').field('email', email).field('password', 'LongPassword123!').field('roleCode', 'COMPANY_ADMIN')
       .attach('authorizationLetter', pdf, { filename: 'carta.pdf', contentType: 'application/pdf' });
     expect(response.status).toBe(201);
     expect(response.body.data).toMatchObject({ status: 'PENDING_VALIDATION', authorizationLetterStatus: 'PENDING' });
+    expect(response.body.data.companyId).toBeNull();
     expect(response.body.data.accessToken).toBeUndefined();
     expect(response.headers['set-cookie']).toBeUndefined();
     const letters = (await query<{ uploadedBy: string; status: string }>('SELECT uploaded_by_user_id AS "uploadedBy",status::text FROM user_authorization_documents WHERE user_id=$1', [response.body.data.id])).rows;
     expect(letters).toEqual([{ uploadedBy: response.body.data.id, status: 'PENDING' }]);
+    expect((await query('SELECT 1 FROM user_company_memberships WHERE user_id=$1', [response.body.data.id])).rowCount).toBe(0);
 
     const missing = await request(app).post('/v1/auth/register').set('Origin', origin)
-      .field('fullName', 'Sin Carta').field('email', `register.missing.${suffix}@example.test`).field('password', 'LongPassword123!').field('roleCode', 'DELEGATE').field('companyId', actors.companyId);
+      .field('fullName', 'Sin Carta').field('email', `register.missing.${suffix}@example.test`).field('password', 'LongPassword123!').field('roleCode', 'DELEGATE');
     expect(missing.body.error.code).toBe('AUTHORIZATION_LETTER_REQUIRED');
 
     storage.failUpload = true;
     const unavailable = await request(app).post('/v1/auth/register').set('Origin', origin)
-      .field('fullName', 'Storage Caido').field('email', `register.storage.${suffix}@example.test`).field('password', 'LongPassword123!').field('roleCode', 'DELEGATE').field('companyId', actors.companyId)
+      .field('fullName', 'Storage Caido').field('email', `register.storage.${suffix}@example.test`).field('password', 'LongPassword123!').field('roleCode', 'DELEGATE')
       .attach('authorizationLetter', pdf, { filename: 'carta.pdf', contentType: 'application/pdf' });
     expect(unavailable.status).toBe(503);
     expect((await query('SELECT 1 FROM users WHERE email_normalized=$1', [`register.storage.${suffix}@example.test`])).rowCount).toBe(0);
   });
 
-  it('legacy JSON registration stays pending and cannot be approved without a letter', async () => {
+  it('legacy JSON registration is rejected before creating an account', async () => {
     const response = await request(app).post('/v1/auth/register').set('Origin', origin)
-      .send({ fullName: 'Registro Json', email: `register.json.${suffix}@example.test`, password: 'LongPassword123!', roleCode: 'DELEGATE', companyId: actors.companyId });
-    expect(response.status).toBe(201);
-    expect(response.body.data).toMatchObject({ status: 'PENDING_VALIDATION', authorizationLetterStatus: null });
-    const approve = await request(app).post(`/v1/users/${response.body.data.id}/approve`).set('Authorization', await asAdmin()).send({ version: response.body.data.version });
-    expect(approve.body.error.code).toBe('AUTHORIZATION_LETTER_REQUIRED');
+      .send({ fullName: 'Registro Json', email: `register.json.${suffix}@example.test`, password: 'LongPassword123!', roleCode: 'DELEGATE' });
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('AUTHORIZATION_LETTER_REQUIRED');
+    expect((await query('SELECT 1 FROM users WHERE email_normalized=$1', [`register.json.${suffix}@example.test`])).rowCount).toBe(0);
   });
 
   it('the persistence guard blocks an approval that bypasses the route', async () => {

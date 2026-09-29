@@ -70,7 +70,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         } catch { /* Permanecer desconectado y reintentar al abrir de nuevo. */ }
         return null
       }
-      if (!navigator.onLine || !await coreAvailable()) return null
+      // La comprobación de salud puede agotar su tiempo aunque la cookie siga vigente.
+      // La renovación es la fuente de verdad para restaurar la sesión.
+      if (!navigator.onLine) return null
       return core.restoreSession()
     })()
     void boot.current.then((restored) => {
@@ -100,7 +102,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const enrollmentEpoch = sessionEpoch.current
         try { await enrollOfflineIdentity(authenticated, nextPassword) }
         catch { if (enrollmentEpoch === sessionEpoch.current) setOfflineEnrollmentError(true) }
-        if (enrollmentEpoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante el acceso al vault.') }
+        if (enrollmentEpoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante el acceso a los datos guardados.') }
       }
       return authenticated
     },
@@ -115,7 +117,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     lockOffline: () => { lockOfflineVault(); setOfflineUser(null) },
     unlockOffline: async (userId, nextPassword) => {
       const epoch = sessionEpoch.current
-      if (await coreAvailable()) throw new Error('Use el inicio de sesión normal cuando Core esté disponible.')
+      if (await coreAvailable()) throw new Error('Use el inicio de sesión normal cuando tenga conexión.')
       const identity = await unlockOfflineIdentity(userId, nextPassword)
       if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión cambió durante el acceso local.') }
       setOfflineUser(identity)
@@ -127,11 +129,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (epoch !== sessionEpoch.current || authenticated.id !== user.id) throw new Error('La sesión cambió durante la validación.')
       try { await enrollOfflineIdentity(authenticated, nextPassword) }
       catch {
-        if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante el acceso al vault.') }
+        if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante el acceso a los datos guardados.') }
         setOfflineEnrollmentError(true)
-        throw new Error('El vault usa una contraseña anterior. Recupérelo en Mi cuenta sin borrar sus pendientes.')
+        throw new Error('Los datos guardados en este dispositivo usan una contraseña anterior. Actualice el acceso en Mi cuenta sin borrar sus pendientes.')
       }
-      if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante el acceso al vault.') }
+      if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante el acceso a los datos guardados.') }
       setOfflineEnrollmentError(false)
       setUser(authenticated)
     },
@@ -141,7 +143,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const authenticated = await core.reauthenticate(currentPassword)
       if (epoch !== sessionEpoch.current || authenticated.id !== user.id) throw new Error('La sesión cambió durante la recuperación.')
       await rekeyOfflineIdentity(authenticated, oldPassword, currentPassword)
-      if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante la recuperación del vault.') }
+      if (epoch !== sessionEpoch.current) { lockOfflineVault(); throw new Error('La sesión terminó durante la recuperación de los datos guardados.') }
       setOfflineEnrollmentError(false)
       setUser(authenticated)
     },

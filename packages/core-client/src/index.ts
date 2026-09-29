@@ -8,7 +8,7 @@ export type AnalyticsLifecycleStatus = InspectionStatus | 'READY_FOR_REVIEW' | R
 export interface CoreMeta { correlationId: string; page?: number; limit?: number; total?: number }
 export interface CoreEnvelope<T> { data: T; meta: CoreMeta }
 export interface CoreErrorPayload { error: { code: string; message: string; details?: unknown }; meta?: Partial<CoreMeta> }
-export interface CoreUser { id: string; fullName: string; roleCode: CoreRole; status: string; companyId: string | null; authTime: number }
+export interface CoreUser { id: string; fullName: string; email?: string; phone?: string | null; roleCode: CoreRole; status: string; companyId: string | null; companyName?: string | null; authTime: number }
 
 export interface CoreInspection {
   id: string; caseId: string; assignmentId: string; evaluatorUserId: string; status: InspectionStatus;
@@ -42,6 +42,8 @@ export interface CoreReview {
 
 export interface CoreReport {
   id: string; inspectionId: string; reviewId: string; calculationId: string; status: ReportStatus;
+  renderVariant?: 'LEGACY' | 'SIRA_V2';
+  reportContentVersion?: number;
   fileName: string; mimeType: 'application/pdf'; sizeBytes: number; verificationId: string;
   generatedByUserId: string; generatedAt: string; officialAt: string | null; officialByUserId: string | null;
   version: number; createdAt: string; updatedAt: string;

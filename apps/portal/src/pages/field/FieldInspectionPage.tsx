@@ -1,13 +1,14 @@
 import { displayLabel } from '../../api/displayLabels'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Box, Button, Card, CardContent, Checkbox, Chip, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material'
+import { Alert, Autocomplete, Box, Button, Card, CardContent, Checkbox, Chip, FormControlLabel, LinearProgress, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { useSession } from '../../session/SessionContext'
 import { core } from '../../api/core'
 import { CoreApiError, type CoreInspection, type CoreReport } from '@ebr-bpm/core-client'
 import { supportMessage } from '../../api/presentation'
 import { OfflinePackageMissingError } from '../../offline/vault'
 import { orderBpmItems } from '../../field/bpmOrder'
+import { captureProgress, matchesKeywords, responseDisplay } from '../../field/formPresentation'
 import { criticalityLabels } from '../configuration/labels'
 import { acknowledgeRenewalConflict, addEvidence, addFood, compareRenewalConflict, confirmFieldRenewal, downloadFieldPackage, finalizeLocal, inspectStoredFieldState, previewFieldRenewal, rebaseConflict, removePendingEvidence, reviewFieldConflict, saveLocation, saveResponse, selectFactor, syncFieldState, type BpmValue, type FieldRenewalPreview, type FieldState, type StoredFieldState } from '../../field/model'
 
@@ -35,6 +36,12 @@ export function FieldInspectionPage() {
   const [conflictReview, setConflictReview] = useState<{ operationId: string; version: number; status: string; current: unknown; local: unknown } | null>(null)
   const [officialReport, setOfficialReport] = useState<CoreReport | null>(null)
   const orderedItems = useMemo(() => state ? orderBpmItems(state.signedPackage.bpmTemplate.items) : [], [state])
+  const foodOptions = state?.signedPackage.riskRule.foodCatalog.flatMap((category) => category.subcategories.map((sub) => ({ ...sub, categoryName: category.name }))) ?? []
+  const responseByItem = new Map(state?.responses.map((response) => [response.bpmItemId, response.responseValue] as const) ?? [])
+  const evidenceOptions = orderedItems.map(({ item }) => item).filter((item) => item.itemKind === 'CRITERION' && item.isEvaluable)
+    .map((item) => ({ ...item, result: responseDisplay[responseByItem.get(item.id) ?? 'UNANSWERED'] }))
+    .sort((a, b) => a.result.order - b.result.order)
+  const progress = state ? captureProgress(state) : null
   const reload = useCallback(async () => {
     if (!actor || !id) return
     setState(null); setSealed(null); setRenewalPreview(null); setConflictReview(null); setOfficialReport(null)
@@ -48,10 +55,10 @@ export function FieldInspectionPage() {
           if (fresh.assignmentId !== stored.state.inspection.assignmentId || fresh.version !== stored.state.inspection.version ||
             (fresh.status !== stored.state.inspection.status && !['DRAFT', 'IN_PROGRESS'].includes(fresh.status))) {
             setCoreChanged(true)
-            setError('Core cambió el estado, la asignación o la versión. Los datos locales permanecen cifrados; compare los cambios antes de continuar.')
+            setError('Cambió el estado, la asignación o la versión de la inspección. Los datos locales permanecen cifrados; compare los cambios antes de continuar.')
           }
         } catch (failure) {
-          if (failure instanceof CoreApiError && (failure.status === 403 || failure.status === 404)) { setServerDenied(true); setState(null); setError('Core denegó el acceso a esta inspección.'); return }
+          if (failure instanceof CoreApiError && (failure.status === 403 || failure.status === 404)) { setServerDenied(true); setState(null); setError('No tiene acceso a esta inspección.'); return }
         }
       }
       setState(stored.state)
@@ -73,7 +80,7 @@ export function FieldInspectionPage() {
           setReadOnly(true); setCoreChanged(false); setServerDenied(false); setError('')
           return
         } catch (failure) {
-          if (failure instanceof CoreApiError && (failure.status === 403 || failure.status === 404)) { setServerDenied(true); setState(null); setError('Core denegó el acceso a esta inspección.'); return }
+          if (failure instanceof CoreApiError && (failure.status === 403 || failure.status === 404)) { setServerDenied(true); setState(null); setError('No tiene acceso a esta inspección.'); return }
           if (caught instanceof OfflinePackageMissingError) { setError(supportMessage(failure, 'No fue posible preparar la inspección.')); return }
         }
       }
@@ -126,7 +133,7 @@ export function FieldInspectionPage() {
     if (!user) return
     setBusy(true); setError(''); setRenewalPreview(null)
     try { setRenewalPreview(await previewFieldRenewal(user.id, id)) }
-    catch (caught) { setError(caught instanceof Error ? caught.message : 'No se pudo comparar con Core.') }
+    catch (caught) { setError(caught instanceof Error ? caught.message : 'No se pudieron comparar los cambios.') }
     finally { setBusy(false) }
   }
   const openOfficialReport = async () => {
@@ -147,32 +154,51 @@ export function FieldInspectionPage() {
   return <Stack spacing={2} sx={{ maxWidth: 1100, m: 'auto', p: offlineUser ? 3 : 0 }}>
     <Button component={Link} to={offlineUser ? '/campo/paquetes' : '/campo/asignadas'} sx={{ alignSelf: 'start' }}>Volver a mis inspecciones</Button>
     <Typography variant="h5" sx={{ fontWeight: 800 }}>Inspección de campo</Typography>
-    {error && <Alert severity="warning">{error}</Alert>}
-    {sealed && <Alert severity="warning">El permiso local venció o requiere validar el reloj con Core. La firma y la integridad fueron verificadas; el contenido permanece cifrado y oculto. {sealed.hasPending ? `Hay ${sealed.pendingCount} operaciones pendientes.` : 'No hay operaciones pendientes.'} Reconéctese para comparar y renovar.</Alert>}
-    {user && (sealed || coreChanged) && <Button disabled={busy} onClick={() => void compareAndRenew()}>Comparar con Core</Button>}
+    {(error || (state && permitCurrent)) && <Box sx={{ position: 'sticky', top: offlineUser ? 0 : { xs: 56, sm: 64 }, zIndex: (theme) => theme.zIndex.appBar - 1, bgcolor: 'background.default', borderRadius: 2, py: 1, maxHeight: '55vh', overflowY: 'auto', boxShadow: '0 5px 14px rgba(69,26,3,.12)' }}>
+      <Stack spacing={1}>
+        {error && <Alert severity="warning" role="alert">{error}</Alert>}
+        {state && permitCurrent && <>
+          {state.localFinalized && state.inspection.status !== 'SUBMITTED' && <Alert severity="warning">Inspección finalizada y guardada en este dispositivo. {online ? 'El envío está pendiente o en curso.' : 'Se enviará automáticamente cuando vuelva la conexión.'}</Alert>}
+          {state.inspection.status === 'SUBMITTED' && <Alert severity="success" role="status">Inspección enviada correctamente.</Alert>}
+          {progress && <Card><CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+            <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+              <Typography component="h2" variant="subtitle1" sx={{ fontWeight: 800 }}>Avance de captura</Typography>
+              <Typography sx={{ fontWeight: 800 }}>{progress.percent} %</Typography>
+            </Stack>
+            <LinearProgress variant="determinate" value={progress.percent} aria-label="Avance de captura de la inspección" sx={{ height: 8, borderRadius: 5, mb: 1 }} />
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5, mb: 0.5 }}>
+              <Chip size="small" label={`Criterios BPM: ${progress.criteria} de ${progress.criteriaTotal}`} color={progress.criteria === progress.criteriaTotal ? 'success' : 'default'} />
+              <Chip size="small" label={`Factores de riesgo: ${progress.factors} de ${progress.factorsTotal}`} color={progress.factors === progress.factorsTotal ? 'success' : 'default'} />
+              <Chip size="small" label={`Producto aplicable: ${progress.hasProduct ? 'agregado' : 'pendiente'}`} color={progress.hasProduct ? 'success' : 'default'} />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">{state.inspection.status === 'SUBMITTED' ? 'Envío confirmado por el sistema.' : state.localFinalized ? 'Captura completa; el envío está pendiente o en curso.' : `Siguiente: ${progress.next}.`}</Typography>
+          </CardContent></Card>}
+        </>}
+      </Stack>
+    </Box>}
+    {sealed && <Alert severity="warning">El permiso local venció o requiere validar la fecha y hora. La firma y la integridad fueron verificadas; el contenido permanece cifrado y oculto. {sealed.hasPending ? `Hay ${sealed.pendingCount} operaciones pendientes.` : 'No hay operaciones pendientes.'} Reconéctese para comparar y renovar.</Alert>}
+    {user && (sealed || coreChanged) && <Button disabled={busy} onClick={() => void compareAndRenew()}>Comparar cambios</Button>}
     {renewalPreview && <Card><CardContent><Typography variant="h6">Comparación previa a la renovación</Typography>
-      <Typography>Versión local {renewalPreview.localVersion}; versión Core {renewalPreview.coreVersion}; {renewalPreview.pendingCount} operaciones pendientes. Estado Core: {displayLabel(renewalPreview.coreStatus)}.</Typography>
+      <Typography>Versión local {renewalPreview.localVersion}; versión registrada {renewalPreview.coreVersion}; {renewalPreview.pendingCount} operaciones pendientes. Estado: {displayLabel(renewalPreview.coreStatus)}.</Typography>
       {(renewalPreview.assignmentChanged || renewalPreview.definitionsChanged || !['DRAFT', 'IN_PROGRESS'].includes(renewalPreview.coreStatus))
         ? <Alert severity="warning">La asignación, las definiciones o el estado cambiaron. Los pendientes se conservan; se requiere revisión antes de renovar.</Alert>
         : <><Typography>La renovación conserva la cola y los binarios. Si cambió la versión, abrirá una comparación detallada y bloqueará el envío hasta su confirmación.</Typography>
           <Button disabled={busy} onClick={() => void action(() => confirmFieldRenewal(user!.id, id, renewalPreview), () => { setRenewalPreview(null); setCoreChanged(false) })}>Renovar y abrir revisión</Button></>}
     </CardContent></Card>}
-    {!state && !sealed && user && !serverDenied && <Card><CardContent><Typography>Para abrir el trabajo guardado en este dispositivo, desbloquéelo con su contraseña actual. Si es la primera vez que abre esta inspección, el portal la preparará automáticamente cuando Core esté disponible.</Typography>
+    {!state && !sealed && user && !serverDenied && <Card><CardContent><Typography>Para abrir el trabajo guardado en este dispositivo, desbloquéelo con su contraseña actual. Si es la primera vez que abre esta inspección, el portal la preparará automáticamente cuando tenga conexión.</Typography>
       <TextField label="Contraseña" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
       <Button disabled={!password} onClick={() => void unlockVaultOnline(password).then(() => { setPassword(''); void reload() }).catch((caught: Error) => setError(caught.message))}>Desbloquear</Button>
     </CardContent></Card>}
     {state && permitCurrent && <>
-      {readOnly && <Alert severity="info">Vista de solo lectura obtenida de Core. Esta inspección ya no admite captura de campo.</Alert>}
+      {readOnly && <Alert severity="info">Vista de solo lectura. Esta inspección ya no admite captura de campo.</Alert>}
       {state.renewalConflict && <Card><CardContent><Typography variant="h6">Conflicto de versión tras renovar</Typography>
-        <Typography>Versión anterior {state.renewalConflict.localVersion}; versión Core {state.renewalConflict.coreVersion}. Ningún cambio local se aplicó en Core. Revise cada diferencia antes de habilitar el reintento.</Typography>
+        <Typography>Versión anterior {state.renewalConflict.localVersion}; versión registrada {state.renewalConflict.coreVersion}. Ningún cambio local se aplicó al registro. Revise cada diferencia antes de habilitar el reintento.</Typography>
         {compareRenewalConflict(state).map((entry) => <Box key={entry.operationId} sx={{ my: 2 }}><Typography>{displayLabel(entry.type)} · {displayLabel(entry.status)}</Typography>
           <Typography variant="body2">Cambio local: {JSON.stringify(entry.local)}</Typography>
-          <Typography variant="body2">Valor Core al renovar: {JSON.stringify(entry.current)}</Typography></Box>)}
-        <Button disabled={busy} onClick={() => void action(() => acknowledgeRenewalConflict(actor.id, id))}>Aceptar valores Core sin pendientes y habilitar reintento</Button>
+          <Typography variant="body2">Valor registrado al actualizar: {JSON.stringify(entry.current)}</Typography></Box>)}
+        <Button disabled={busy} onClick={() => void action(() => acknowledgeRenewalConflict(actor.id, id))}>Aceptar valores registrados y volver a intentar</Button>
       </CardContent></Card>}
-      <Alert severity="info">Inspección de {state.inspection.establishmentName ?? state.inspection.caseId}. Estado Core: {displayLabel(state.inspection.status)}; versión {state.inspection.version}. {state.permit && <>Disponible sin conexión hasta {new Date(state.permit.claims.expiresAt).toLocaleString('es-DO')}. La revocación de acceso se comprueba al reconectar.</>}</Alert>
-      {state.localFinalized && state.inspection.status !== 'SUBMITTED' && <Alert severity="warning">Inspección finalizada y guardada en este dispositivo. {online ? 'El envío a Core está pendiente o en curso.' : 'Se enviará automáticamente cuando vuelva la conexión.'}</Alert>}
-      {state.inspection.status === 'SUBMITTED' && <Alert severity="success">Envío confirmado por Core.</Alert>}
+      <Alert severity="info">Inspección de {state.inspection.establishmentName ?? state.inspection.caseId}. Estado: {displayLabel(state.inspection.status)}; versión {state.inspection.version}. {state.permit && <>Disponible sin conexión hasta {new Date(state.permit.claims.expiresAt).toLocaleString('es-DO')}. La revocación de acceso se comprueba al reconectar.</>}</Alert>
       {user?.roleCode === 'EVALUATOR' && state.inspection.status === 'SUBMITTED' && officialReport && navigator.onLine &&
         <Button disabled={busy} onClick={() => void openOfficialReport()}>Abrir informe oficial</Button>}
       <Card><CardContent><Typography variant="h6">Respuestas BPM</Typography>
@@ -188,7 +214,7 @@ export function FieldInspectionPage() {
           {item.itemKind === 'CRITERION' && item.isEvaluable && <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mt: 1 }}>
             <TextField select size="small" label="Respuesta" value={state.responses.find((response) => response.bpmItemId === item.id)?.responseValue ?? ''} disabled={!editing || busy}
               onChange={(event) => { const value = event.target.value as BpmValue; void action(() => saveResponse(actor.id, id, item.id, value, state.responses.find((response) => response.bpmItemId === item.id)?.observations ?? '')) }} sx={{ minWidth: 120 }}>
-              {['C', 'CP', 'IT', 'NA'].map((value) => <MenuItem key={value} value={value}>{value}</MenuItem>)}
+              {(['C', 'CP', 'IT', 'NA'] as const).map((value) => <MenuItem key={value} value={value}>{responseDisplay[value].label}</MenuItem>)}
             </TextField>
             <TextField size="small" label="Observaciones" defaultValue={state.responses.find((response) => response.bpmItemId === item.id)?.observations ?? ''} disabled={!editing || busy}
               onBlur={(event) => { const current = state.responses.find((response) => response.bpmItemId === item.id); if (current && current.observations !== event.target.value) void action(() => saveResponse(actor.id, id, item.id, current.responseValue, event.target.value)) }} sx={{ flex: 1 }} />
@@ -204,19 +230,40 @@ export function FieldInspectionPage() {
       </CardContent></Card>
       <Card><CardContent><Typography variant="h6">Productos de riesgo</Typography>
         <Typography variant="body2">Los productos NA se conservan, pero no cuentan para el cálculo.</Typography>
-        {editing && <Stack direction="row" spacing={1} sx={{ my: 1 }}><TextField select label="Producto" size="small" value={foodId} onChange={(event) => setFoodId(event.target.value)} sx={{ minWidth: 300 }}>
-          {state.signedPackage.riskRule.foodCatalog.flatMap((category) => category.subcategories.map((sub) => <MenuItem key={sub.id} value={sub.id}>{category.name}: {sub.name} {sub.riskScore === null ? '(NA)' : ''}</MenuItem>))}
-        </TextField><Button disabled={!foodId || busy} onClick={() => void action(() => addFood(actor.id, id, foodId))}>Agregar</Button></Stack>}
+        {editing && <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ my: 1, alignItems: { sm: 'flex-start' } }}>
+          <Autocomplete size="small" options={foodOptions} value={foodOptions.find((option) => option.id === foodId) ?? null}
+            onChange={(_, option) => setFoodId(option?.id ?? '')}
+            getOptionLabel={(option) => `${option.categoryName}: ${option.name}${option.riskScore === null ? ' (No aplica)' : ''}`}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            filterOptions={(options, { inputValue }) => options.filter((option) => matchesKeywords(`${option.categoryName} ${option.name}`, inputValue))}
+            noOptionsText="No se encontraron productos" sx={{ width: { xs: '100%', sm: 460 }, maxWidth: '100%' }}
+            renderInput={(params) => <TextField {...params} label="Buscar producto" helperText="Escriba palabras del producto o su categoría." />} />
+          <Button disabled={!foodId || busy} onClick={() => void action(() => addFood(actor.id, id, foodId), () => setFoodId(''))}>Agregar</Button>
+        </Stack>}
         {state.foodSnapshots.map((entry) => <Typography key={entry.foodRiskSubcategoryId}>{state.signedPackage.riskRule.foodCatalog.flatMap((category) => category.subcategories).find((sub) => sub.id === entry.foodRiskSubcategoryId)?.name ?? entry.foodRiskSubcategoryId}</Typography>)}
       </CardContent></Card>
       <Card><CardContent><Typography variant="h6">Evidencias privadas</Typography><Typography variant="body2">Hasta diez activas, máximo 5 MB por archivo.</Typography>
-        {editing && <><TextField select size="small" label="Criterio relacionado (opcional)" value={evidenceItemId} onChange={(event) => setEvidenceItemId(event.target.value)} sx={{ my: 1, minWidth: 260 }}>
-          <MenuItem value="">General</MenuItem>{orderedItems.map(({ item }) => item).filter((item) => item.itemKind === 'CRITERION').map((item) => <MenuItem key={item.id} value={item.id}>{item.displayCode} {item.title}</MenuItem>)}
-        </TextField>
+        {editing && <><Autocomplete size="small" options={evidenceOptions} value={evidenceOptions.find((option) => option.id === evidenceItemId) ?? null}
+          onChange={(_, option) => setEvidenceItemId(option?.id ?? '')}
+          getOptionLabel={(option) => `${option.displayCode ?? ''} ${option.title}`.trim()}
+          groupBy={(option) => option.result.label}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          filterOptions={(options, { inputValue }) => options.filter((option) => matchesKeywords(`${option.displayCode ?? ''} ${option.title} ${option.result.label}`, inputValue))}
+          renderOption={(props, option) => <Box component="li" {...props} key={option.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip size="small" color={option.result.color} label={option.result.label} />
+            <Typography variant="body2">{option.displayCode} {option.title}</Typography>
+          </Box>}
+          noOptionsText="No se encontraron criterios" sx={{ my: 1, maxWidth: 700 }}
+          renderInput={(params) => <TextField {...params} label="Criterio relacionado (opcional)" helperText="Busque por código, descripción o resultado. Sin seleccionar un criterio, la evidencia será general." />} />
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
+          <Chip size="small" label={evidenceItemId ? `Vinculación: ${evidenceOptions.find((option) => option.id === evidenceItemId)?.result.label ?? 'Criterio'}` : 'Vinculación: General'}
+            color={evidenceOptions.find((option) => option.id === evidenceItemId)?.result.color ?? 'default'} />
+          {evidenceItemId && <Button size="small" onClick={() => setEvidenceItemId('')}>Usar como evidencia general</Button>}
+        </Stack>
         <input aria-label="Agregar evidencia" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,video/mp4,video/webm" disabled={!editing || busy}
           onChange={(event) => { const file = event.target.files?.[0]; if (file) void action(() => addEvidence(actor.id, id, file, evidenceItemId || null)); event.target.value = '' }} />
         </>}
-        {state.signedPackage.evidence.filter((entry) => !entry.deletedAt && entry.status !== 'ARCHIVED').map((entry) => <Typography key={entry.id}>{entry.fileName} · {displayLabel(entry.status)} (Core)</Typography>)}
+        {state.signedPackage.evidence.filter((entry) => !entry.deletedAt && entry.status !== 'ARCHIVED').map((entry) => <Typography key={entry.id}>{entry.fileName} · {displayLabel(entry.status)}</Typography>)}
         {state.evidence.map((entry) => <Box key={entry.id}><Typography component="span">{entry.fileName} · {displayLabel(entry.status)} {entry.lastError ?? ''}</Typography>
           {editing && entry.status === 'PENDING' && state.queue.find((op) => op.operationId === entry.operationId)?.attempts === 0 &&
             <Button size="small" disabled={busy} onClick={() => void action(() => removePendingEvidence(actor.id, id, entry.id))}>Quitar</Button>}
@@ -231,12 +278,12 @@ export function FieldInspectionPage() {
       </CardContent></Card>
       <Card><CardContent><Typography variant="h6">Envío</Typography>
         <Typography>Operaciones: {queue.filter((item) => item.status !== 'APPLIED' && item.status !== 'RESOLVED').length} pendientes; {queue.filter((item) => item.status === 'CONFLICT').length} conflictos; {queue.filter((item) => item.status === 'REJECTED').length} rechazos; {queue.filter((item) => item.status === 'APPLIED').length} confirmadas.</Typography>
-        {syncing && <Alert severity="info" sx={{ mt: 1 }}>Enviando cambios a Core automáticamente…</Alert>}
-        {!online && queue.some((item) => item.status === 'PENDING') && <Alert severity="info" sx={{ mt: 1 }}>Los cambios están cifrados en este dispositivo. Se enviarán cuando vuelva la conexión y exista una sesión válida en Core.</Alert>}
-        {online && !user && queue.some((item) => item.status === 'PENDING') && <Alert severity="info" sx={{ mt: 1 }}>La conexión volvió. Inicie sesión con Core para autorizar el envío de los cambios guardados.</Alert>}
+        {syncing && <Alert severity="info" sx={{ mt: 1 }}>Enviando cambios automáticamente…</Alert>}
+        {!online && queue.some((item) => item.status === 'PENDING') && <Alert severity="info" sx={{ mt: 1 }}>Los cambios están cifrados en este dispositivo. Se enviarán cuando vuelva la conexión y haya iniciado sesión.</Alert>}
+        {online && !user && queue.some((item) => item.status === 'PENDING') && <Alert severity="info" sx={{ mt: 1 }}>La conexión volvió. Inicie sesión para autorizar el envío de los cambios guardados.</Alert>}
         {queue.filter((item) => item.status !== 'APPLIED' && item.status !== 'RESOLVED').map((item) => <Box key={item.operationId} sx={{ my: 1 }}><Typography variant="body2">{displayLabel(item.type)}: {displayLabel(item.status)} {item.lastError ?? ''}</Typography>
-          {item.status === 'CONFLICT' && user && <><Button disabled={busy} onClick={() => void reviewFieldConflict(user.id, id, item.operationId).then((review) => setConflictReview({ operationId: item.operationId, ...review })).catch((caught: Error) => setError(caught.message))}>Comparar con Core</Button>
-            {conflictReview?.operationId === item.operationId && <Box sx={{ p: 1, bgcolor: '#F1F5F9' }}><Typography variant="body2">Core: {displayLabel(conflictReview.status)}, versión {conflictReview.version}. Valor actual: {JSON.stringify(conflictReview.current)}</Typography><Typography variant="body2">Cambio local: {JSON.stringify(conflictReview.local)}</Typography><Button disabled={busy} onClick={() => void action(() => rebaseConflict(user.id, id, item.operationId), () => setConflictReview(null))}>Reintentar mi cambio</Button></Box>}</>}
+          {item.status === 'CONFLICT' && user && <><Button disabled={busy} onClick={() => void reviewFieldConflict(user.id, id, item.operationId).then((review) => setConflictReview({ operationId: item.operationId, ...review })).catch((caught: Error) => setError(caught.message))}>Comparar cambios</Button>
+            {conflictReview?.operationId === item.operationId && <Box sx={{ p: 1, bgcolor: '#fffbeb' }}><Typography variant="body2">Estado registrado: {displayLabel(conflictReview.status)}, versión {conflictReview.version}. Valor actual: {JSON.stringify(conflictReview.current)}</Typography><Typography variant="body2">Cambio local: {JSON.stringify(conflictReview.local)}</Typography><Button disabled={busy} onClick={() => void action(() => rebaseConflict(user.id, id, item.operationId), () => setConflictReview(null))}>Reintentar mi cambio</Button></Box>}</>}
         </Box>)}
         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
           {editing && <Button disabled={busy || syncing} variant="contained" onClick={() => void action(() => finalizeLocal(actor.id, id))}>Finalizar inspección</Button>}

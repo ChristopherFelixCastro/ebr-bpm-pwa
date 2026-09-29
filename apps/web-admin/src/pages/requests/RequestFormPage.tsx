@@ -75,7 +75,7 @@ export const RequestFormPage = () => {
   return <Stack spacing={3}>
     <Box><Button startIcon={<ArrowBackIcon />} onClick={() => navigate(id ? `/requests/${id}` : '/requests')}>Volver</Button><Typography variant="h5" sx={{ fontWeight: 800 }}>{id ? 'Editar borrador' : 'Nueva solicitud BPM'}</Typography><Typography color="text.secondary">La solicitud se crea inicialmente en estado DRAFT.</Typography></Box>
     {stale && <Alert severity="warning" action={<Button onClick={() => void load()}>Recargar recurso</Button>}>La versión cambió en el servidor. Los datos escritos permanecen en el formulario.</Alert>}
-    <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent><Stack spacing={2}>
+    <Card sx={{ border: '1px solid #fde68a' }}><CardContent><Stack spacing={2}>
       {isGlobal && <TextField select label="Empresa" required value={companyId} onChange={(event) => void reloadEstablishments(event.target.value)}>{companies.map((company) => <MenuItem key={company.id} value={company.id}>{company.legalName}</MenuItem>)}</TextField>}
       <TextField select label="Establecimiento" required value={establishmentId} onChange={(event) => setEstablishmentId(event.target.value)} disabled={!companyId && isGlobal}>{establishments.map((establishment) => <MenuItem key={establishment.id} value={establishment.id}>{establishment.name}</MenuItem>)}</TextField>
       <TextField label="Tipo de solicitud" required value={requestType} onChange={(event) => setRequestType(event.target.value)} />

@@ -17,9 +17,11 @@ export const riskManifestSchema = z.object({
   schemaVersion: z.literal(1), importType: z.literal('RISK'),
   catalog: target.omit({ description: true }), riskRuleSet: target.omit({ description: true }),
   matrix: source, rules: source,
+  matrixScoreScale: z.enum(['NORMALIZED_1_2_3','SOURCE_2_4_8']).optional(),
   factorOptionColumn: z.string().regex(/^[A-Z]{1,3}$/).default('AO'),
   factorOptionRanges: z.array(range).length(6),
   standaloneCategoryLeaves: z.array(z.object({ sourceRow:z.number().int().positive(), expectedCategory:z.string().trim().min(1), subcategory:z.string().trim().min(1), expectedRisk:z.enum(['BAJO','MEDIO','ALTO','NA']), expectedScore:z.number().nullable() }).strict()).default([]),
+  excludedMatrixRows: z.array(z.object({ sourceRow:z.number().int().positive(), expectedCategory:z.string().trim().min(1), expectedSubcategory:z.string().trim().min(1), expectedRisk:z.enum(['BAJO','MEDIO','ALTO','NA']), expectedScore:z.number().nullable() }).strict()).optional(),
   additionalFactorOptions: z.array(z.object({ factorCode:z.enum(['VOLUME','HACCP','BPM','INABIE','REJECTIONS','SAMPLING']), label:z.string().trim().min(1), score:z.union([z.literal(1),z.literal(1.67),z.literal(2.33),z.literal(3)]), code:z.enum(['LOW','MEDIUM_LOW','MEDIUM_HIGH','HIGH']) }).strict()).default([]),
 }).strict();
 export type BpmManifest = z.infer<typeof bpmManifestSchema>;

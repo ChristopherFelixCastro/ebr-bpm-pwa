@@ -252,7 +252,7 @@ function ComplaintsPage() {
             sx={{
               fontSize: '2rem',
               fontWeight: 700,
-              color: '#172033',
+              color: '#451a03',
               m: 0,
             }}
           >
@@ -262,7 +262,7 @@ function ComplaintsPage() {
           <Box
             component="p"
             sx={{
-              color: '#637083',
+              color: '#92400e',
               mt: 0.5,
               mb: 0,
             }}
@@ -295,7 +295,7 @@ function ComplaintsPage() {
           mt: 3,
           p: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -315,7 +315,7 @@ function ComplaintsPage() {
           sx={{
             mt: 0,
             mb: 3,
-            color: '#637083',
+            color: '#92400e',
           }}
         >
           Al registrar la denuncia se
@@ -483,7 +483,7 @@ function ComplaintsPage() {
           mt: 3,
           p: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -511,7 +511,7 @@ function ComplaintsPage() {
             <Box
               sx={{
                 mt: 0.5,
-                color: '#637083',
+                color: '#92400e',
                 fontSize: '0.9rem',
               }}
             >
@@ -596,7 +596,7 @@ function ComplaintsPage() {
                         sx={{
                           mt: 0.5,
                           color:
-                            '#637083',
+                            '#92400e',
                           fontSize:
                             '0.9rem',
                         }}
@@ -610,7 +610,7 @@ function ComplaintsPage() {
                         sx={{
                           mt: 0.3,
                           color:
-                            '#637083',
+                            '#92400e',
                           fontSize:
                             '0.9rem',
                         }}
@@ -625,7 +625,7 @@ function ComplaintsPage() {
                           sx={{
                             mt: 1,
                             color:
-                              '#637083',
+                              '#92400e',
                             fontSize:
                               '0.9rem',
                           }}
@@ -640,7 +640,7 @@ function ComplaintsPage() {
                         sx={{
                           mt: 1,
                           color:
-                            '#8a94a3',
+                            '#92400e',
                           fontSize:
                             '0.8rem',
                         }}

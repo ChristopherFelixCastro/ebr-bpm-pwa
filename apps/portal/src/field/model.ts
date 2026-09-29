@@ -67,7 +67,7 @@ export async function downloadFieldPackage(userId: string, id: string): Promise<
     if (prior.inspection.version !== response.package.inspection.version ||
       prior.signedPackage.bpmTemplate.versionId !== response.package.bpmTemplate.versionId ||
       prior.signedPackage.riskRule.versionId !== response.package.riskRule.versionId)
-      throw new Error('Core cambió esta inspección. Los pendientes se conservan; abra la inspección para comparar y renovar.')
+      throw new Error('Esta inspección fue modificada. Los pendientes se conservan; abra la inspección para comparar y renovar.')
     prior.signedPackage = response.package; prior.permit = response.permit
     await saveOfflinePackage(userId, id, prior)
     return prior
@@ -88,7 +88,7 @@ const renewalPreview = (prior: FieldState, fresh: WorkPackage): FieldRenewalPrev
     prior.signedPackage.riskRule.versionId !== fresh.riskRule.versionId,
 })
 export async function previewFieldRenewal(userId: string, id: string): Promise<FieldRenewalPreview> {
-  if (!navigator.onLine || !core.authenticated) throw new Error('Conéctese e inicie sesión para comparar con Core.')
+  if (!navigator.onLine || !core.authenticated) throw new Error('Conéctese e inicie sesión para comparar los cambios.')
   const prior = await readStoredFieldState(userId, id)
   const fresh = await fetchAuthorizedPackage(userId, id)
   return renewalPreview(prior, fresh.package)
@@ -98,7 +98,7 @@ export async function confirmFieldRenewal(userId: string, id: string, preview: F
   const prior = await readStoredFieldState(userId, id)
   const fresh = await fetchAuthorizedPackage(userId, id)
   const current = renewalPreview(prior, fresh.package)
-  if (JSON.stringify(current) !== JSON.stringify(preview)) throw new Error('Core cambió desde la comparación. Compare de nuevo antes de renovar.')
+  if (JSON.stringify(current) !== JSON.stringify(preview)) throw new Error('La inspección cambió desde la comparación. Compare de nuevo antes de renovar.')
   if (current.assignmentChanged || current.definitionsChanged || !['DRAFT', 'IN_PROGRESS'].includes(current.coreStatus))
     throw new Error('La asignación, definición o estado cambió. Los pendientes permanecen cifrados; requiere revisión antes de renovar.')
   if (pending(prior)) {
@@ -253,13 +253,13 @@ export function syncFieldState(userId: string, id: string): Promise<FieldState> 
 async function syncFieldStateOnce(userId: string, id: string): Promise<FieldState> {
   if (!navigator.onLine || !core.authenticated) throw new Error('Conéctese e inicie sesión para sincronizar.')
   const state = await openFieldState(userId, id)
-  if (state.renewalConflict) throw new Error('Compare la versión de Core y confirme la revisión antes de sincronizar.')
+  if (state.renewalConflict) throw new Error('Compare la versión registrada y confirme la revisión antes de enviar los cambios.')
   const base = `/v1/inspections/${path(id)}`
   const recoverTransition = async (expectedStatus: CoreInspection['status'], prior: CoreInspection): Promise<CoreInspection> => {
     const fresh = (await core.request<CoreInspection>(base, { cache: 'no-store' })).data
     if (fresh.status !== expectedStatus || fresh.assignmentId !== prior.assignmentId ||
       fresh.version !== prior.version + 1 || fresh.contentRevision !== prior.contentRevision)
-      throw new Error('Core cambió la inspección. Conserve los pendientes y revise el conflicto.')
+      throw new Error('La inspección fue modificada. Conserve los pendientes y revise el conflicto.')
     return fresh
   }
   for (const op of state.queue) {
@@ -333,7 +333,7 @@ async function syncFieldStateOnce(userId: string, id: string): Promise<FieldStat
 }
 
 export async function rebaseConflict(userId: string, id: string, operationId: string): Promise<FieldState> {
-  if (!navigator.onLine || !core.authenticated) throw new Error('Conéctese con Core para revisar el conflicto.')
+  if (!navigator.onLine || !core.authenticated) throw new Error('Conéctese e inicie sesión para revisar el conflicto.')
   const state = await openFieldState(userId, id)
   const index = state.queue.findIndex((entry) => entry.operationId === operationId && entry.status === 'CONFLICT')
   if (index < 0) throw new Error('No hay un conflicto pendiente para esta operación.')

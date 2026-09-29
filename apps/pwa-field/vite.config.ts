@@ -16,11 +16,11 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "EBR/BPM - Inspección de Campo",
-        short_name: "EBR/BPM",
+        name: "SIRA Tech - Inspección de Campo",
+        short_name: "SIRA Tech",
         description: "PWA de inspección BPM offline",
-        theme_color: "#1e2327",
-        background_color: "#ffffff",
+        theme_color: "#78350f",
+        background_color: "#fffbeb",
         display: "standalone",
         icons: [
           {

@@ -1,6 +1,12 @@
+import { useState } from 'react'
 import {
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Chip,
   Divider,
   List,
@@ -72,10 +78,13 @@ const menuItems = [
 function CoordinatorLayout() {
   const { currentUser, logout } = useAuth()
   const navigate = useNavigate()
+  const [confirmLogout, setConfirmLogout] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const handleLogout = async () => {
-    await logout()
-    navigate('/login', { replace: true })
+    setLoggingOut(true)
+    try { await logout(); navigate('/login', { replace: true }) }
+    finally { setLoggingOut(false); setConfirmLogout(false) }
   }
 
   return (
@@ -83,7 +92,7 @@ function CoordinatorLayout() {
       sx={{
         display: 'flex',
         minHeight: '100vh',
-        bgcolor: '#f4f6f8',
+        bgcolor: '#fffbeb',
       }}
     >
       <Box
@@ -91,7 +100,7 @@ function CoordinatorLayout() {
         sx={{
           width: drawerWidth,
           minHeight: '100vh',
-          bgcolor: '#0b2545',
+          bgcolor: '#78350f',
           color: 'white',
           flexShrink: 0,
           display: 'flex',
@@ -99,6 +108,7 @@ function CoordinatorLayout() {
         }}
       >
         <Box sx={{ px: 3, py: 3 }}>
+          <Box component="img" src="/sira-imagotipo.jpeg" alt="SIRA Tech" sx={{ width: '100%', height: 82, objectFit: 'cover', borderRadius: 2, bgcolor: '#fffbeb', mb: 1 }} />
           <Box
             component="h1"
             sx={{
@@ -107,7 +117,7 @@ function CoordinatorLayout() {
               m: 0,
             }}
           >
-            EBR/BPM
+            SIRA Tech
           </Box>
 
           <Box
@@ -198,7 +208,7 @@ function CoordinatorLayout() {
                   height: 18,
                   fontSize: '0.65rem',
                   bgcolor: 'rgba(255,255,255,0.15)',
-                  color: '#bfdbfe',
+              color: '#fde68a',
                   mt: 0.5,
                 }}
               />
@@ -208,7 +218,7 @@ function CoordinatorLayout() {
             fullWidth
             variant="outlined"
             size="small"
-            onClick={handleLogout}
+            onClick={() => setConfirmLogout(true)}
             startIcon={<LogoutIcon sx={{ fontSize: 16 }} />}
             sx={{
               color: 'rgba(255,255,255,0.85)',
@@ -236,6 +246,11 @@ function CoordinatorLayout() {
       >
         <Outlet />
       </Box>
+      <Dialog open={confirmLogout} onClose={() => { if (!loggingOut) setConfirmLogout(false) }} aria-labelledby="confirmar-cierre-coordinador">
+        <DialogTitle id="confirmar-cierre-coordinador">¿Está seguro de cerrar sesión?</DialogTitle>
+        <DialogContent><DialogContentText>Para volver a acceder tendrá que iniciar sesión de nuevo.</DialogContentText></DialogContent>
+        <DialogActions><Button disabled={loggingOut} onClick={() => setConfirmLogout(false)}>Cancelar</Button><Button variant="contained" disabled={loggingOut} onClick={() => void handleLogout()}>{loggingOut ? 'Cerrando…' : 'Cerrar sesión'}</Button></DialogActions>
+      </Dialog>
     </Box>
   )
 }

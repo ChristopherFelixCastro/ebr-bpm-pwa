@@ -1,9 +1,9 @@
 import type { components } from './generated/schema'
-import { apiClient, clearAccessToken, restoreAccessToken, setAccessToken, unwrap } from './http'
+import { apiClient, clearAccessToken, parseResponse, restoreAccessToken, setAccessToken, unwrap } from './http'
 
 export type CurrentUser = components['schemas']['CurrentUser']
 export type RoleCode = CurrentUser['roleCode']
-export type RegisterRequest = components['schemas']['RegisterRequest']
+export type RegisterRequest = { fullName: string; email: string; phone?: string; password: string; roleCode: 'COMPANY_ADMIN' | 'DELEGATE'; authorizationLetter: File }
 export type User = components['schemas']['User']
 
 const currentUser = async () => unwrap<CurrentUser>(await apiClient.GET('/v1/auth/me'))
@@ -21,7 +21,15 @@ export const authApi = {
   },
 
   async register(body: RegisterRequest): Promise<User> {
-    return unwrap<User>(await apiClient.POST('/v1/auth/register', { body }))
+    const form = new FormData()
+    form.set('fullName', body.fullName)
+    form.set('email', body.email)
+    if (body.phone) form.set('phone', body.phone)
+    form.set('password', body.password)
+    form.set('roleCode', body.roleCode)
+    form.set('authorizationLetter', body.authorizationLetter)
+    const base = (import.meta.env.VITE_API_BASE_URL || globalThis.location?.origin || 'http://localhost').replace(/\/$/, '')
+    return parseResponse<User>(await globalThis.fetch(`${base}/v1/auth/register`, { method: 'POST', body: form, credentials: 'include' }))
   },
 
   async forgotPassword(email: string): Promise<{ requested: boolean }> {

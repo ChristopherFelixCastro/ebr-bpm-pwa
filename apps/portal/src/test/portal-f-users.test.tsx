@@ -57,7 +57,7 @@ it('pagina en Core con el total del servidor y no ofrece el rol UNIVERSAL a ADMI
 it('mantiene la aprobación deshabilitada hasta que Core confirme una carta válida', async () => {
   handler = (path) => path === '/v1/users/user-1' ? envelope(target()) : path === '/v1/users/user-1/authorization-letters' ? envelope([letter()]) : envelope([])
   openAs('ADMIN', '/configuracion/usuarios/user-1')
-  expect(await screen.findByText('La aprobación estará disponible cuando Core confirme una carta de autorización válida.')).toBeInTheDocument()
+  expect(await screen.findByText('La aprobación estará disponible cuando la carta de autorización sea válida.')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Aprobar' })).toBeDisabled()
   expect(screen.getByRole('button', { name: 'Marcar como válida' })).toBeEnabled()
   expect(screen.getAllByText('Pendiente de revisión').length).toBeGreaterThan(0)

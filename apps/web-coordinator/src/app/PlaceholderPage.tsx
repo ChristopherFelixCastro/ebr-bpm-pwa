@@ -16,7 +16,7 @@ function PlaceholderPage({
         sx={{
           fontSize: '2rem',
           fontWeight: 700,
-          color: '#172033',
+          color: '#451a03',
           mt: 0,
           mb: 1,
         }}
@@ -27,7 +27,7 @@ function PlaceholderPage({
       <Box
         component="p"
         sx={{
-          color: '#637083',
+          color: '#92400e',
           mt: 0,
           mb: 4,
         }}
@@ -39,7 +39,7 @@ function PlaceholderPage({
         elevation={0}
         sx={{
           p: 4,
-          border: '1px solid #d9e2ec',
+          border: '1px solid #fde68a',
           borderRadius: 3,
           bgcolor: '#ffffff',
         }}

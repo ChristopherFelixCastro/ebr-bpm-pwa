@@ -19,7 +19,7 @@ export const catalogArea: AreaConfig<Catalog, CatalogPreview> = {
   singular: 'catálogo',
   path: '/configuracion/catalogos',
   icon: <ListAltIcon color="primary" />,
-  description: 'Catálogos versionados de Core: consulta de versiones, vista previa, validación y publicación.',
+  description: 'Consulte las versiones de los catálogos, revíselas, valídelas y publíquelas.',
   api: catalogsApi as AreaConfig<Catalog, CatalogPreview>['api'],
   createFields: { description: true, hierarchy: true },
   countLabel: (version) => `${version.itemCount ?? 0} elementos`,
@@ -60,14 +60,14 @@ function CatalogMetadataCard({ catalog, onSaved, onReload }: { catalog: Catalog;
     setStale(false)
   }
 
-  return <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent><Stack spacing={2}>
+  return <Card sx={{ border: '1px solid #fde68a' }}><CardContent><Stack spacing={2}>
     <Typography variant="h6" sx={{ fontWeight: 700 }}>Datos del catálogo</Typography>
     {stale && <StaleAlert onReload={() => void reload()} subject="El catálogo" />}
     <TextField label="Nombre del catálogo" disabled={!canWrite} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
     <TextField label="Descripción" multiline minRows={2} disabled={!canWrite} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
     <FormControlLabel control={<Switch disabled={!canWrite} checked={form.supportsHierarchy} onChange={(event) => setForm({ ...form, supportsHierarchy: event.target.checked })} />} label="Admite jerarquía" />
     {canWrite && <>
-      <Typography variant="body2" color="text.secondary">Core solo permite cambiar nombre y descripción antes de la primera publicación, y la jerarquía antes de crear versiones.</Typography>
+      <Typography variant="body2" color="text.secondary">Puede cambiar el nombre y la descripción antes de la primera publicación, y la jerarquía antes de crear versiones.</Typography>
       <Box><Button variant="contained" startIcon={<SaveIcon />} disabled={saving} onClick={() => void save()}>Guardar datos</Button></Box>
     </>}
   </Stack></CardContent></Card>
@@ -124,7 +124,7 @@ function CatalogEntries({ context }: { context: VersionContext<CatalogPreview, C
     submit: (values) => run(() => catalogsApi.moveEntry(resourceId, versionId, entry.id, { version: entry.version, parentId: String(values.parentId) || null, sortOrder: Number(values.sortOrder) }), 'Elemento movido.'),
   })
 
-  return <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent>
+  return <Card sx={{ border: '1px solid #fde68a' }}><CardContent>
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
       <Typography variant="h6" sx={{ fontWeight: 700 }}>Elementos del catálogo</Typography>
       {editable && <Button startIcon={<AddIcon />} variant="outlined" onClick={() => create(null)}>Agregar elemento</Button>}
@@ -138,7 +138,7 @@ function CatalogEntries({ context }: { context: VersionContext<CatalogPreview, C
         <Button size="small" onClick={() => edit(item)}>Editar</Button>
         {resource.supportsHierarchy && item.entryType === 'NODE' && <Button size="small" onClick={() => create(item)}>Agregar hijo</Button>}
         <Button size="small" onClick={() => move(item)}>Mover</Button>
-        <Button size="small" color="error" onClick={() => editor.remove({ title: 'Eliminar elemento', message: `Se eliminará ${item.name} del borrador. Core rechaza eliminar un elemento con hijos.`, success: 'Elemento eliminado.', action: () => catalogsApi.deleteEntry(resourceId, versionId, item.id, item.version) })}>Eliminar</Button>
+        <Button size="small" color="error" onClick={() => editor.remove({ title: 'Eliminar elemento', message: `Se eliminará ${item.name} del borrador. Primero elimine los elementos que contiene.`, success: 'Elemento eliminado.', action: () => catalogsApi.deleteEntry(resourceId, versionId, item.id, item.version) })}>Eliminar</Button>
       </Box>}
     </Box>} />}
     {editor.dialogs}

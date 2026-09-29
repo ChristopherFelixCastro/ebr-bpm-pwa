@@ -32,7 +32,7 @@ const criticality = (value: string | boolean) => (String(value) || null) as Crit
 
 function GuidanceList({ item, editable, onEdit, onRemove }: { item: BpmItem; editable: boolean; onEdit: (guidance: BpmGuidance) => void; onRemove: (guidance: BpmGuidance) => void }) {
   if (!item.guidanceItems.length) return null
-  return <Box sx={{ ml: 2, mt: 0.5, p: 1.5, bgcolor: '#F8FAFC', borderRadius: 1, border: '1px solid #E2E8F0' }} aria-label={`Instrucciones de ${item.title}`}>
+  return <Box sx={{ ml: 2, mt: 0.5, p: 1.5, bgcolor: '#fffbeb', borderRadius: 1, border: '1px solid #fde68a' }} aria-label={`Instrucciones de ${item.title}`}>
     <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><InfoOutlinedIcon fontSize="inherit" />Instrucciones para el evaluador (orientan la evaluación; no son preguntas)</Typography>
     <Stack component="ol" spacing={0.5} sx={{ m: 0, pl: 2.5 }}>
       {item.guidanceItems.map((guidance) => <Box component="li" key={guidance.id}>
@@ -125,12 +125,12 @@ function BpmItems({ context }: { context: VersionContext<BpmPreview, BpmTemplate
     submit: (values) => run(() => bpmTemplatesApi.updateGuidance(resourceId, versionId, item.id, guidance.id, { version: guidance.version, text: String(values.text).trim(), criticality: criticality(values.criticality), sortOrder: Number(values.sortOrder), sourceReference: textOrNull(String(values.sourceReference)) }), 'Instrucción actualizada.'),
   })
 
-  return <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent>
+  return <Card sx={{ border: '1px solid #fde68a' }}><CardContent>
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 1 }}>
       <Typography variant="h6" sx={{ fontWeight: 700 }}>Estructura de la plantilla</Typography>
       {editable && <Button startIcon={<AddIcon />} variant="outlined" onClick={() => create(null)}>Agregar sección</Button>}
     </Box>
-    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Sección → Subsección → Grupo → Criterio, en el orden de Core (por padre y luego orden). Solo los criterios se evalúan.</Typography>
+    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Sección → Subsección → Grupo → Criterio, en el orden de la plantilla. Solo los criterios se evalúan.</Typography>
     {tree.length === 0 ? <Alert severity="info">La versión no contiene elementos.</Alert> : <TreeView nodes={tree} label="Estructura BPM" render={({ item }) => <Box sx={{ py: 0.5 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <Chip size="small" color={kindColors[item.itemKind]} variant={item.itemKind === 'CRITERION' ? 'outlined' : 'filled'} label={itemKindLabels[item.itemKind]} />
@@ -142,7 +142,7 @@ function BpmItems({ context }: { context: VersionContext<BpmPreview, BpmTemplate
           {item.itemKind !== 'CRITERION' && <Button size="small" onClick={() => create(item)}>Agregar hijo</Button>}
           {item.itemKind === 'CRITERION' && <Button size="small" onClick={() => addGuidance(item)}>Agregar instrucción</Button>}
           <Button size="small" onClick={() => move(item)}>Mover</Button>
-          <Button size="small" color="error" onClick={() => editor.remove({ title: 'Eliminar elemento', message: `Se eliminará "${item.title}" del borrador. Core decide si puede eliminarse.`, success: 'Elemento eliminado.', action: () => bpmTemplatesApi.deleteItem(resourceId, versionId, item.id, item.version) })}>Eliminar</Button>
+          <Button size="small" color="error" onClick={() => editor.remove({ title: 'Eliminar elemento', message: `Se eliminará "${item.title}" del borrador. La eliminación requiere que el elemento no tenga dependencias.`, success: 'Elemento eliminado.', action: () => bpmTemplatesApi.deleteItem(resourceId, versionId, item.id, item.version) })}>Eliminar</Button>
         </Box>}
       </Box>
       {item.description && <Typography variant="body2" color="text.secondary">{item.description}</Typography>}

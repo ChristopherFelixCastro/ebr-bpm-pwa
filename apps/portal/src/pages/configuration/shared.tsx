@@ -52,7 +52,7 @@ export function ValidationPanel({ result, title = 'Resultado de validación de C
   }
   return <Alert severity={result.valid ? (result.warnings.length ? 'warning' : 'success') : 'error'} aria-label={title}>
     <AlertTitle>{title}</AlertTitle>
-    {result.valid ? 'La versión cumple las reglas de Core.' : `Core encontró ${result.errors.length} error(es).`}
+    {result.valid ? 'La versión cumple los requisitos de publicación.' : `Se encontraron ${result.errors.length} errores en la versión.`}
     {result.warnings.length > 0 && ` Advertencias: ${result.warnings.length}.`}
     {(result.errors.length > 0 || result.warnings.length > 0) && <List dense disablePadding>
       {result.errors.map((item, index) => issue(item, `e${index}`))}
@@ -63,7 +63,7 @@ export function ValidationPanel({ result, title = 'Resultado de validación de C
 
 export function TreeView<T>({ nodes, label, render }: { nodes: TreeNode<T>[]; label: string; render: (node: TreeNode<T>) => ReactNode }) {
   const branch = (list: TreeNode<T>[], root: boolean): ReactNode => <Box component="ul" role={root ? 'tree' : 'group'} aria-label={root ? label : undefined}
-    sx={{ listStyle: 'none', m: 0, pl: root ? 0 : 3, borderLeft: root ? 'none' : '1px dashed #CBD5E1' }}>
+    sx={{ listStyle: 'none', m: 0, pl: root ? 0 : 3, borderLeft: root ? 'none' : '1px dashed #d97706' }}>
     {list.map((node) => <Box component="li" key={(node.item as { id: string }).id} role="treeitem" aria-level={node.depth} aria-expanded={node.children.length ? true : undefined} sx={{ my: 0.5 }}>
       {render(node)}
       {node.children.length > 0 && branch(node.children, false)}
@@ -145,7 +145,7 @@ export function ResourceListPage<R extends BaseDefinition, P extends PreviewBase
       {canWrite && <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>Crear {area.singular}</Button>}
     </Box>
     {!canWrite && <Alert severity="info" sx={{ mb: 2 }}>Consulta de solo lectura: puede revisar versiones, vista previa y validación.</Alert>}
-    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
+    <Card sx={{ border: '1px solid #fde68a', borderRadius: 2 }}>
       <TableContainer><Table><TableHead><TableRow><TableCell>Código</TableCell><TableCell>Nombre</TableCell><TableCell>Versiones</TableCell>{area.defaultScope && <TableCell>Predeterminada</TableCell>}</TableRow></TableHead>
         <TableBody>{loading ? <TableRow><TableCell colSpan={4} align="center" sx={{ py: 6 }}><CircularProgress /></TableCell></TableRow>
           : items.length === 0 ? <TableRow><TableCell colSpan={4} align="center" sx={{ py: 6 }}>No hay registros.</TableCell></TableRow>
@@ -158,7 +158,7 @@ export function ResourceListPage<R extends BaseDefinition, P extends PreviewBase
       </Table></TableContainer>
     </Card>
     {canWrite && <FormDialog open={open} title={`Crear ${area.singular}`} onClose={() => setOpen(false)} onSubmit={() => void create()} saving={saving} submitLabel="Crear">
-      <TextField label="Código" required value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} helperText="Core lo normaliza a mayúsculas." />
+      <TextField label="Código" required value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} helperText="El código se guardará en mayúsculas." />
       <TextField label="Nombre" required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
       {area.createFields.description && <TextField label="Descripción" multiline minRows={2} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />}
       {area.createFields.hierarchy && <FormControlLabel control={<Switch checked={form.supportsHierarchy} onChange={(event) => setForm({ ...form, supportsHierarchy: event.target.checked })} />} label="Admite jerarquía" />}
@@ -227,17 +227,17 @@ export function ResourceDetailPage<R extends BaseDefinition, P extends PreviewBa
     </Box>
     {stale && <StaleAlert onReload={() => void load()} subject={`El registro de ${area.singular}`} />}
     {metadata?.(resource, setResource, load)}
-    {area.defaultScope && <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent>
+    {area.defaultScope && <Card sx={{ border: '1px solid #fde68a' }}><CardContent>
       <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Configuración predeterminada</Typography>
-      <Alert severity="info" sx={{ mb: canWrite && !resource.isDefault ? 2 : 0 }}>{defaultNote} Core exige una versión publicada vigente y reautenticación reciente.</Alert>
+      <Alert severity="info" sx={{ mb: canWrite && !resource.isDefault ? 2 : 0 }}>{defaultNote} Se requiere una versión publicada y vigente. Es posible que deba confirmar su contraseña.</Alert>
       {canWrite && !resource.isDefault && <Button variant="outlined" startIcon={<StarIcon />} disabled={busy} onClick={() => setDefaultOpen(true)}>Designar predeterminada</Button>}
     </CardContent></Card>}
-    <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent>
+    <Card sx={{ border: '1px solid #fde68a' }}><CardContent>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 1 }}>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>Versiones e historial</Typography>
         {canWrite && <Button startIcon={<AddIcon />} variant="contained" disabled={busy} onClick={() => void createVersion()}>Nueva versión vacía</Button>}
       </Box>
-      {canWrite && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Las versiones publicadas o retiradas son inmutables: clone una versión para proponer cambios. Core admite un solo borrador a la vez.</Typography>}
+      {canWrite && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Las versiones publicadas o retiradas son inmutables: clone una versión para proponer cambios. Solo puede haber un borrador a la vez.</Typography>}
       <TableContainer><Table size="small"><TableHead><TableRow>
         <TableCell>Versión</TableCell><TableCell>Estado</TableCell><TableCell>Vigente desde</TableCell><TableCell>Vigente hasta</TableCell><TableCell>Publicada</TableCell><TableCell>Retirada</TableCell><TableCell>Contenido</TableCell><TableCell>Nota</TableCell><TableCell align="right">Acciones</TableCell>
       </TableRow></TableHead><TableBody>
@@ -258,7 +258,7 @@ export function ResourceDetailPage<R extends BaseDefinition, P extends PreviewBa
           </TableRow>)}
       </TableBody></Table></TableContainer>
     </CardContent></Card>
-    {canWrite && area.defaultScope && <ConfirmDialog open={defaultOpen} title="Designar predeterminada" message={`${defaultNote} Se solicitará reautenticación si Core la exige.`} confirmText="Designar" loading={busy} onClose={() => setDefaultOpen(false)} onConfirm={() => void setDefault()} />}
+    {canWrite && area.defaultScope && <ConfirmDialog open={defaultOpen} title="Designar predeterminada" message={`${defaultNote} Es posible que deba confirmar su contraseña.`} confirmText="Designar" loading={busy} onClose={() => setDefaultOpen(false)} onConfirm={() => void setDefault()} />}
   </Stack>
 }
 
@@ -322,10 +322,10 @@ export function VersionPage<R extends BaseDefinition, P extends PreviewBase>({ a
     const ok = await run(async () => {
       try { await area.api.publish(id, versionId, body) }
       catch (error) {
-        if (error instanceof CoreApiError && error.code === 'PUBLICATION_INVALID' && error.details) setValidation({ result: error.details as ValidationResult, source: 'Core rechazó la publicación' })
+        if (error instanceof CoreApiError && error.code === 'PUBLICATION_INVALID' && error.details) setValidation({ result: error.details as ValidationResult, source: 'Publicación no válida' })
         throw error
       }
-    }, 'Versión publicada.', 'Core no publicó la versión.')
+    }, 'Versión publicada.', 'No se pudo publicar la versión.')
     setBusy(false)
     if (ok) setPublishOpen(false)
   }
@@ -333,7 +333,7 @@ export function VersionPage<R extends BaseDefinition, P extends PreviewBase>({ a
     if (!preview) return
     setBusy(true)
     const expected = preview.version.version
-    const ok = await run(() => area.api.retire(id, versionId, expected), 'Versión retirada.', 'Core no retiró la versión.')
+    const ok = await run(() => area.api.retire(id, versionId, expected), 'Versión retirada.', 'No se pudo retirar la versión.')
     setBusy(false)
     if (ok) setRetireOpen(false)
   }
@@ -366,11 +366,11 @@ export function VersionPage<R extends BaseDefinition, P extends PreviewBase>({ a
     <ValidationPanel result={shown.result} title={shown.source} describe={describe?.(preview)} />
     {children({ resource, resourceId: id, versionId, preview, editable, stale, run, reload: load })}
     {canWrite && <FormDialog open={publishOpen} title={`Publicar versión ${current.versionNumber}`} onClose={() => setPublishOpen(false)} onSubmit={() => void publish()} saving={busy} submitLabel="Publicar">
-      <Alert severity="info">Core valida la versión al publicar y exige reautenticación reciente. Las inspecciones ya creadas conservan su versión.</Alert>
+      <Alert severity="info">Antes de publicar, se validará la versión y es posible que deba confirmar su contraseña. Las inspecciones ya creadas conservan su versión.</Alert>
       <TextField label="Vigente desde (hora de República Dominicana)" type="datetime-local" required value={publishForm.effectiveFrom} onChange={(event) => setPublishForm({ ...publishForm, effectiveFrom: event.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
       <TextField label="Nota de publicación" multiline minRows={2} value={publishForm.publicationNote} onChange={(event) => setPublishForm({ ...publishForm, publicationNote: event.target.value })} />
     </FormDialog>}
-    {canWrite && <ConfirmDialog open={retireOpen} title={`Retirar versión ${current.versionNumber}`} message="La versión dejará de estar vigente. Core exige otra versión publicada vigente y reautenticación reciente; las inspecciones existentes no cambian." confirmText="Retirar" variant="danger" loading={busy} onClose={() => setRetireOpen(false)} onConfirm={() => void retire()} />}
+    {canWrite && <ConfirmDialog open={retireOpen} title={`Retirar versión ${current.versionNumber}`} message="La versión dejará de estar vigente. Debe existir otra versión publicada y vigente. Es posible que deba confirmar su contraseña. Las inspecciones existentes no cambian." confirmText="Retirar" variant="danger" loading={busy} onClose={() => setRetireOpen(false)} onConfirm={() => void retire()} />}
   </Stack>
 }
 

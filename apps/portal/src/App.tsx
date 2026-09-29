@@ -6,6 +6,7 @@ import { SessionProvider, useSession } from './session/SessionContext'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { HomePage } from './pages/HomePage'
 import { AccountPage } from './pages/AccountPage'
 import { OfflineAccessPage, OfflinePackagesPage } from './pages/OfflinePages'
@@ -25,6 +26,7 @@ import { CaseDetailPage } from './pages/operation/CaseDetailPage'
 import { CaseSourceFormPage } from './pages/operation/CaseSourceFormPage'
 import { OperationHistoryPage } from './pages/operation/OperationHistoryPage'
 import { FieldAssignmentsPage } from './pages/field/FieldAssignmentsPage'
+import { EvaluatorCalendarPage } from './pages/field/EvaluatorCalendarPage'
 import { FieldInspectionPage } from './pages/field/FieldInspectionPage'
 import { EvaluationListPage } from './pages/evaluations/EvaluationListPage'
 import { EvaluationDetailPage } from './pages/evaluations/EvaluationDetailPage'
@@ -86,7 +88,7 @@ function ProtectedDestination() {
   if (!capability) return <StatusPage title="Página no encontrada" description="La dirección no corresponde a una página del portal." />
   if (!hasCapability(user, capability)) return <StatusPage title="Acceso denegado" description="Su cuenta no tiene permiso para abrir esta sección." />
   if (capability.ready) return <StatusPage title="Página no encontrada" description="La dirección no corresponde a una página disponible." />
-  return <StatusPage title="Función pendiente de migración" description="Esta pantalla aún no está disponible en el portal único." />
+  return <StatusPage title="Función no disponible" description="Esta sección aún no está disponible." />
 }
 
 function OnlineRoutes() {
@@ -96,9 +98,11 @@ function OnlineRoutes() {
     <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
     <Route path="/registro" element={<PublicRoute><RegisterPage /></PublicRoute>} />
     <Route path="/recuperar-clave" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+    <Route path="/restablecer-clave" element={<ResetPasswordPage />} />
     <Route path="/acceso-sin-conexion" element={<OfflineAccessPage />} />
     <Route path="/campo/paquetes" element={<OfflinePackagesPage />} />
     <Route path="/campo/asignadas" element={<PrivateRoute><CapabilityPage id="field"><FieldAssignmentsPage /></CapabilityPage></PrivateRoute>} />
+    <Route path="/campo/calendario" element={<PrivateRoute><CapabilityPage id="field-calendar"><EvaluatorCalendarPage /></CapabilityPage></PrivateRoute>} />
     <Route path="/campo/inspecciones/:id" element={<FieldRoute><FieldInspectionPage /></FieldRoute>} />
     <Route path="/campo/correcciones" element={<PrivateRoute><CapabilityPage id="corrections"><CorrectionsInboxPage /></CapabilityPage></PrivateRoute>} />
     <Route path="/campo/correcciones/:id" element={<PrivateRoute><CapabilityPage id="corrections"><CorrectionPage /></CapabilityPage></PrivateRoute>} />

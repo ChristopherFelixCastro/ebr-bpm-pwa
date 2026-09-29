@@ -48,7 +48,7 @@ export function FieldAssignmentsPage() {
     {error && <Alert severity="error">{error}</Alert>}
     {!vaultReady && <Card><CardContent><Typography variant="h6">Desbloquear trabajo local</Typography>
       <Typography variant="body2" sx={{ mb: 1 }}>Tras recargar, confirme su contraseña para abrir el trabajo guardado en este dispositivo. Si cambió, recupere primero los datos en Mi cuenta.</Typography>
-      <input aria-label="Contraseña del vault" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+      <input aria-label="Contraseña de la cuenta" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
       <Button disabled={!password} onClick={() => void unlockVaultOnline(password).then(() => { setPassword(''); void load() }).catch((caught: Error) => setError(caught.message))}>Desbloquear</Button>
     </CardContent></Card>}
     <Card><CardContent><Typography variant="h6">Inspecciones existentes</Typography>

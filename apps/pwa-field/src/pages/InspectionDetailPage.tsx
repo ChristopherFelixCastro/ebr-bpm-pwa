@@ -115,6 +115,6 @@ export default function InspectionDetailPage() {
     <EvidenceUploader inspectionId={inspection.id} bpmItemId={null} finalized={!editable} />
     <LocationCapture inspectionId={inspection.id} finalized={!editable} />
     {editable ? <button type="button" onClick={() => void finalize()}>Finalizar localmente y preparar envío</button>
-      : <p>Los cambios locales se conservan hasta que el Core confirme el envío.</p>}
+      : <p>Los cambios guardados en este dispositivo se conservarán hasta que se confirme el envío.</p>}
   </main>;
 }

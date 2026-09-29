@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
-  AppBar, Avatar, Box, Chip, Divider, Drawer, IconButton, List, ListItem,
+  AppBar, Avatar, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, Drawer, IconButton, List, ListItem,
   ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography,
 } from '@mui/material'
 import DashboardIcon from '@mui/icons-material/Dashboard'
@@ -9,7 +9,6 @@ import BusinessIcon from '@mui/icons-material/Business'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import LogoutIcon from '@mui/icons-material/Logout'
 import MenuIcon from '@mui/icons-material/Menu'
-import ShieldIcon from '@mui/icons-material/Shield'
 import PeopleIcon from '@mui/icons-material/People'
 import { useAuth } from '../context/AuthContext'
 import { useNotification } from '../context/NotificationContext'
@@ -18,6 +17,8 @@ const DRAWER_WIDTH = 260
 
 export const AppShell = ({ children }: { children: ReactNode }) => {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [confirmLogout, setConfirmLogout] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const { currentUser, logout } = useAuth()
   const { showError, showSuccess } = useNotification()
   const navigate = useNavigate()
@@ -26,25 +27,25 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   const canManageUsers = ['ADMIN', 'UNIVERSAL'].includes(currentUser?.roleCode ?? '')
 
   const handleLogout = async () => {
+    setLoggingOut(true)
     try {
       await logout()
       showSuccess('Sesión cerrada correctamente')
     } catch {
       showError('La sesión local se cerró, aunque el servidor no respondió.')
     } finally {
+      setConfirmLogout(false)
+      setLoggingOut(false)
       navigate('/login', { replace: true })
     }
   }
 
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#1E3A8A', color: '#FFFFFF' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#78350f', color: '#FFFFFF' }}>
       <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box sx={{ width: 42, height: 42, borderRadius: 2, bgcolor: 'rgba(255,255,255,.15)', display: 'grid', placeItems: 'center', border: '1px solid rgba(255,255,255,.25)' }}>
-          <ShieldIcon sx={{ color: '#FFFFFF' }} />
-        </Box>
-        <Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#FFFFFF' }}>SISTEMA EBR / BPM</Typography>
-          <Typography variant="caption" sx={{ color: '#93C5FD' }}>Portal Web Administrativo</Typography>
+        <Box sx={{ width: '100%' }}>
+          <Box component="img" src="/sira-imagotipo.jpeg" alt="SIRA Tech" sx={{ width: '100%', height: 82, objectFit: 'cover', borderRadius: 2, bgcolor: '#fffbeb' }} />
+          <Typography variant="caption" sx={{ color: '#fde68a', display: 'block', mt: 1 }}>Portal Web Administrativo</Typography>
         </Box>
       </Box>
       <Divider sx={{ borderColor: 'rgba(255,255,255,.15)' }} />
@@ -82,15 +83,15 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       <Divider sx={{ borderColor: 'rgba(255,255,255,.15)' }} />
       <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,.15)' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-          <Avatar sx={{ bgcolor: '#3B82F6', fontWeight: 700 }}>
+          <Avatar sx={{ bgcolor: '#b45309', fontWeight: 700 }}>
             {currentUser?.fullName.slice(0, 2).toUpperCase() ?? 'US'}
           </Avatar>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="body2" noWrap sx={{ color: '#FFFFFF', fontWeight: 600 }}>{currentUser?.fullName}</Typography>
-            <Chip label={currentUser?.roleCode} size="small" sx={{ mt: .5, height: 20, bgcolor: '#DBEAFE', color: '#1E3A8A', fontWeight: 700, fontSize: '.65rem' }} />
+            <Chip label={currentUser?.roleCode} size="small" sx={{ mt: .5, height: 20, bgcolor: '#fef3c7', color: '#78350f', fontWeight: 700, fontSize: '.65rem' }} />
           </Box>
         </Box>
-        <ListItemButton onClick={() => void handleLogout()} sx={{ borderRadius: 1.5, bgcolor: 'rgba(239,68,68,.15)', border: '1px solid rgba(239,68,68,.3)' }}>
+        <ListItemButton onClick={() => setConfirmLogout(true)} sx={{ borderRadius: 1.5, bgcolor: 'rgba(239,68,68,.15)', border: '1px solid rgba(239,68,68,.3)' }}>
           <LogoutIcon sx={{ fontSize: 18, color: '#FCA5A5', mr: 1 }} />
           <Typography variant="caption" sx={{ color: '#FFFFFF', fontWeight: 600 }}>Cerrar sesión</Typography>
         </ListItemButton>
@@ -99,13 +100,13 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   )
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#F8FAFC' }}>
-      <AppBar position="fixed" sx={{ width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, ml: { md: `${DRAWER_WIDTH}px` }, bgcolor: '#1E3A8A' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#fffbeb' }}>
+      <AppBar position="fixed" sx={{ width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, ml: { md: `${DRAWER_WIDTH}px` }, bgcolor: '#78350f' }}>
         <Toolbar>
           <IconButton color="inherit" onClick={() => setMobileOpen(true)} sx={{ display: { md: 'none' }, mr: 1 }}><MenuIcon /></IconButton>
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>Portal de Identidad, Empresas y Solicitudes</Typography>
-            <Typography variant="caption" sx={{ color: '#BFDBFE' }}>Sesión conectada al Core EBR/BPM</Typography>
+            <Typography variant="caption" sx={{ color: '#fde68a' }}>Sesión iniciada</Typography>
           </Box>
         </Toolbar>
       </AppBar>
@@ -116,6 +117,11 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 3, md: 4 }, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, mt: '64px' }}>
         {children}
       </Box>
+      <Dialog open={confirmLogout} onClose={() => { if (!loggingOut) setConfirmLogout(false) }} aria-labelledby="confirmar-cierre-admin">
+        <DialogTitle id="confirmar-cierre-admin">¿Está seguro de cerrar sesión?</DialogTitle>
+        <DialogContent><DialogContentText>Para volver a acceder tendrá que iniciar sesión de nuevo.</DialogContentText></DialogContent>
+        <DialogActions><Button disabled={loggingOut} onClick={() => setConfirmLogout(false)}>Cancelar</Button><Button variant="contained" disabled={loggingOut} onClick={() => void handleLogout()}>{loggingOut ? 'Cerrando…' : 'Cerrar sesión'}</Button></DialogActions>
+      </Dialog>
     </Box>
   )
 }

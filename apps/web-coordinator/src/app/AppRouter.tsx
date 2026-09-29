@@ -29,8 +29,8 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (isLoading) {
     return (
-      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#f4f6f8' }}>
-        <CircularProgress sx={{ color: '#0b2545' }} />
+      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#fffbeb' }}>
+        <CircularProgress sx={{ color: '#78350f' }} />
       </Box>
     )
   }
@@ -41,7 +41,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (!coordinatorAllowedRoles.includes(currentUser.roleCode)) {
     return (
-      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#f4f6f8', p: 3 }}>
+      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#fffbeb', p: 3 }}>
         <Box sx={{ textAlign: 'center', maxWidth: 400 }}>
           <h2>403 - Acceso Denegado</h2>
           <p>Su rol no tiene autorización para acceder al Portal de Coordinación.</p>
@@ -58,8 +58,8 @@ const PublicRoute = ({ children }: { children: ReactNode }) => {
 
   if (isLoading) {
     return (
-      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#f4f6f8' }}>
-        <CircularProgress sx={{ color: '#0b2545' }} />
+      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#fffbeb' }}>
+        <CircularProgress sx={{ color: '#78350f' }} />
       </Box>
     )
   }

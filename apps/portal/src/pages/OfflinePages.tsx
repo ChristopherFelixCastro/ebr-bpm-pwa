@@ -24,7 +24,7 @@ export function OfflineAccessPage() {
     <Card sx={{ width: '100%', maxWidth: 520 }}><CardContent sx={{ p: 4 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>Trabajo de campo sin conexión</Typography>
       <Typography sx={{ mb: 2 }}>Las inspecciones que abrió previamente con conexión están guardadas y cifradas en este navegador. Desbloquéelas con la contraseña de su cuenta. El acceso sin conexión requiere un permiso vigente.</Typography>
-      {navigator.onLine && <Alert severity="info" sx={{ mb: 2 }}>Si Core está disponible, inicie sesión normalmente para validar su cuenta.</Alert>}
+      {navigator.onLine && <Alert severity="info" sx={{ mb: 2 }}>Si tiene conexión, inicie sesión normalmente para validar su cuenta.</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {identities.length ? <Box component="form" onSubmit={submit}>
         <TextField select fullWidth label="Cuenta de campo" value={userId} onChange={(event) => setUserId(event.target.value)} sx={{ mb: 2 }}>

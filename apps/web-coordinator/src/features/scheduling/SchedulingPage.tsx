@@ -923,7 +923,7 @@ function SchedulingPage() {
           sx={{
             fontSize: '2rem',
             fontWeight: 700,
-            color: '#172033',
+            color: '#451a03',
             mt: 0,
             mb: 1,
           }}
@@ -934,7 +934,7 @@ function SchedulingPage() {
         <Box
           component="p"
           sx={{
-            color: '#637083',
+            color: '#92400e',
             mt: 0,
             mb: 3,
           }}
@@ -961,7 +961,7 @@ function SchedulingPage() {
           sx={{
             p: 3,
             border:
-              '1px solid #d9e2ec',
+              '1px solid #fde68a',
             borderRadius: 3,
           }}
         >
@@ -981,7 +981,7 @@ function SchedulingPage() {
             sx={{
               mt: 0,
               mb: 3,
-              color: '#637083',
+              color: '#92400e',
             }}
           >
             Selecciona el caso, técnico,
@@ -1072,7 +1072,7 @@ function SchedulingPage() {
                   mt: 3,
                   p: 3,
                   borderRadius: 3,
-                  bgcolor: '#fafcff',
+                  bgcolor: '#fffbeb',
                 }}
               >
                 <Box
@@ -1172,7 +1172,7 @@ function SchedulingPage() {
                   sx={{
                     mt: 3,
                     p: 2.5,
-                    bgcolor: '#fafcff',
+                    bgcolor: '#fffbeb',
                     borderRadius: 2,
                   }}
                 >
@@ -1192,7 +1192,7 @@ function SchedulingPage() {
 
                   <Box
                     sx={{
-                      color: '#637083',
+                      color: '#92400e',
                       fontSize: '0.9rem',
                     }}
                   >
@@ -1355,7 +1355,7 @@ function SchedulingPage() {
             mt: 3,
             p: 3,
             border:
-              '1px solid #d9e2ec',
+              '1px solid #fde68a',
             borderRadius: 3,
           }}
         >
@@ -1439,7 +1439,7 @@ function SchedulingPage() {
                           <Box
                             sx={{
                               color:
-                                '#637083',
+                                '#92400e',
                               fontSize:
                                 '0.9rem',
                             }}
@@ -1452,7 +1452,7 @@ function SchedulingPage() {
                           <Box
                             sx={{
                               color:
-                                '#637083',
+                                '#92400e',
                               fontSize:
                                 '0.9rem',
                               mt: 0.5,
@@ -1581,7 +1581,7 @@ function SchedulingPage() {
               mt: 3,
               p: 3,
               border:
-                '1px solid #d9e2ec',
+                '1px solid #fde68a',
               borderRadius: 3,
             }}
           >
@@ -1609,7 +1609,7 @@ function SchedulingPage() {
 
                 <Box
                   sx={{
-                    color: '#637083',
+                    color: '#92400e',
                     mt: 0.5,
                   }}
                 >
@@ -1712,7 +1712,7 @@ function SchedulingPage() {
                         <Box
                           sx={{
                             mt: 0.7,
-                            color: '#637083',
+                            color: '#92400e',
                           }}
                         >
                           Motivo:{' '}
@@ -1737,7 +1737,7 @@ function SchedulingPage() {
                       <Box
                         sx={{
                           mt: 1,
-                          color: '#637083',
+                          color: '#92400e',
                           fontSize:
                             '0.85rem',
                         }}

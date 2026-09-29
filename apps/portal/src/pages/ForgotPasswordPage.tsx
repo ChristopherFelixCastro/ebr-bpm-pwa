@@ -20,16 +20,16 @@ export function ForgotPasswordPage() {
     } catch { setError('No fue posible registrar la petición.') }
     finally { setBusy(false) }
   }
-  return <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#F8FAFC', p: 2 }}>
+  return <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#fffbeb', p: 2 }}>
     <Card sx={{ maxWidth: 480, width: '100%' }}>
-      <Box sx={{ p: 3, bgcolor: '#1E3A8A', color: 'white', textAlign: 'center' }}><LockResetIcon sx={{ fontSize: 40 }} /><Typography variant="h6" sx={{ color: 'white' }}>Recuperación de contraseña</Typography></Box>
+      <Box sx={{ p: 3, bgcolor: '#78350f', color: 'white', textAlign: 'center' }}><LockResetIcon sx={{ fontSize: 40 }} /><Typography variant="h6" sx={{ color: 'white' }}>Recuperación de contraseña</Typography></Box>
       <CardContent sx={{ p: 4 }}>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {submitted ? <Alert severity="info" sx={{ mb: 2 }}>La petición quedó registrada. El Core todavía no envía instrucciones ni permite restablecer la contraseña desde un enlace. Contacte al administrador central para continuar.</Alert>
+        {submitted ? <Alert severity="info" sx={{ mb: 2 }}>Si existe una cuenta activa con ese correo, recibirás un enlace para cambiar la contraseña. Revisa también la carpeta de correo no deseado.</Alert>
           : <Box component="form" onSubmit={submit}>
-              <Typography sx={{ mb: 2 }}>Registre una petición de recuperación. Esta función todavía no envía correos de restablecimiento.</Typography>
+              <Typography sx={{ mb: 2 }}>Indica el correo de tu cuenta. Si está activa, recibirás un enlace válido durante 30 minutos.</Typography>
               <TextField fullWidth label="Correo electrónico" type="email" value={email} onChange={(event) => setEmail(event.target.value)} sx={{ mb: 2 }} />
-              <Button type="submit" fullWidth variant="contained" disabled={busy}>{busy ? 'Registrando…' : 'Registrar petición'}</Button>
+              <Button type="submit" fullWidth variant="contained" disabled={busy}>{busy ? 'Enviando…' : 'Enviar enlace'}</Button>
             </Box>}
         <Button onClick={() => navigate('/login')} sx={{ mt: 2 }}>Volver al inicio de sesión</Button>
       </CardContent>

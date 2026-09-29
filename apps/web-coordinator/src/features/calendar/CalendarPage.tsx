@@ -503,7 +503,7 @@ function CalendarPage() {
             <Box
               sx={{
                 mt: 0.3,
-                color: '#637083',
+                color: '#92400e',
                 fontSize: compact
                   ? '0.72rem'
                   : '0.82rem',
@@ -523,7 +523,7 @@ function CalendarPage() {
                 sx={{
                   mt: 0.5,
                   color:
-                    '#637083',
+                    '#92400e',
                   fontSize:
                     '0.82rem',
                 }}
@@ -574,7 +574,7 @@ function CalendarPage() {
       elevation={0}
       sx={{
         border:
-          '1px solid #d9e2ec',
+          '1px solid #fde68a',
         borderRadius: 3,
         overflow: 'hidden',
       }}
@@ -584,9 +584,9 @@ function CalendarPage() {
           display: 'grid',
           gridTemplateColumns:
             'repeat(7, 1fr)',
-          bgcolor: '#f7f9fc',
+          bgcolor: '#fffbeb',
           borderBottom:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
         }}
       >
         {[
@@ -604,7 +604,7 @@ function CalendarPage() {
               p: 1.5,
               textAlign: 'center',
               fontWeight: 700,
-              color: '#637083',
+              color: '#92400e',
               fontSize: '0.85rem',
             }}
           >
@@ -651,9 +651,9 @@ function CalendarPage() {
                   minHeight: 145,
                   p: 1,
                   borderRight:
-                    '1px solid #e6ecf2',
+                    '1px solid #fde68a',
                   borderBottom:
-                    '1px solid #e6ecf2',
+                    '1px solid #fde68a',
                   bgcolor:
                     isCurrentMonth
                       ? 'white'
@@ -684,7 +684,7 @@ function CalendarPage() {
                       isToday
                         ? 'white'
                         : isCurrentMonth
-                          ? '#172033'
+                          ? '#451a03'
                           : '#a5afbd',
                   }}
                 >
@@ -782,11 +782,11 @@ function CalendarPage() {
               border:
                 isToday
                   ? '2px solid'
-                  : '1px solid #d9e2ec',
+                  : '1px solid #fde68a',
               borderColor:
                 isToday
                   ? 'primary.main'
-                  : '#d9e2ec',
+                  : '#fde68a',
               borderRadius: 3,
             }}
           >
@@ -800,7 +800,7 @@ function CalendarPage() {
               <Box
                 sx={{
                   color:
-                    '#637083',
+                    '#92400e',
                   fontSize:
                     '0.8rem',
                   textTransform:
@@ -871,7 +871,7 @@ function CalendarPage() {
       sx={{
         p: 3,
         border:
-          '1px solid #d9e2ec',
+          '1px solid #fde68a',
         borderRadius: 3,
       }}
     >
@@ -890,7 +890,7 @@ function CalendarPage() {
 
       <Box
         sx={{
-          color: '#637083',
+          color: '#92400e',
           mb: 3,
         }}
       >
@@ -969,7 +969,7 @@ function CalendarPage() {
             sx={{
               fontSize: '2rem',
               fontWeight: 700,
-              color: '#172033',
+              color: '#451a03',
               m: 0,
             }}
           >
@@ -979,7 +979,7 @@ function CalendarPage() {
           <Box
             component="p"
             sx={{
-              color: '#637083',
+              color: '#92400e',
               mt: 0.5,
               mb: 0,
             }}
@@ -1009,7 +1009,7 @@ function CalendarPage() {
           p: 2,
           mb: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -1179,7 +1179,7 @@ function CalendarPage() {
                   <Box
                     sx={{
                       color:
-                        '#637083',
+                        '#92400e',
                       mt: 0.5,
                     }}
                   >
@@ -1233,7 +1233,7 @@ function CalendarPage() {
                     <Box
                       sx={{
                         color:
-                          '#637083',
+                          '#92400e',
                       }}
                     >
                       {formatDateTime(
@@ -1267,7 +1267,7 @@ function CalendarPage() {
                     <Box
                       sx={{
                         color:
-                          '#637083',
+                          '#92400e',
                       }}
                     >
                       {selectedInspection.assignedEvaluatorId
@@ -1300,7 +1300,7 @@ function CalendarPage() {
                     <Box
                       sx={{
                         color:
-                          '#637083',
+                          '#92400e',
                       }}
                     >
                       {
@@ -1330,7 +1330,7 @@ function CalendarPage() {
                     <Box
                       sx={{
                         color:
-                          '#637083',
+                          '#92400e',
                       }}
                     >
                       {
@@ -1360,7 +1360,7 @@ function CalendarPage() {
                     <Box
                       sx={{
                         color:
-                          '#637083',
+                          '#92400e',
                       }}
                     >
                       {
@@ -1406,7 +1406,7 @@ function CalendarPage() {
               <Box
                 sx={{
                   mt: 2,
-                  color: '#8a94a3',
+                  color: '#92400e',
                   fontSize:
                     '0.8rem',
                 }}

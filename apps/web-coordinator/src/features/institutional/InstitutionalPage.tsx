@@ -254,7 +254,7 @@ function InstitutionalPage() {
               m: 0,
               fontSize: '2rem',
               fontWeight: 700,
-              color: '#172033',
+              color: '#451a03',
             }}
           >
             Programación institucional
@@ -265,7 +265,7 @@ function InstitutionalPage() {
             sx={{
               mt: 0.5,
               mb: 0,
-              color: '#637083',
+              color: '#92400e',
             }}
           >
             Registra evaluaciones
@@ -296,7 +296,7 @@ function InstitutionalPage() {
           mt: 3,
           p: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -315,7 +315,7 @@ function InstitutionalPage() {
           sx={{
             mt: 0.7,
             mb: 3,
-            color: '#637083',
+            color: '#92400e',
           }}
         >
           Este registro generará un caso
@@ -483,7 +483,7 @@ function InstitutionalPage() {
           mt: 3,
           p: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -501,7 +501,7 @@ function InstitutionalPage() {
           sx={{
             mt: 0.5,
             mb: 2,
-            color: '#637083',
+            color: '#92400e',
           }}
         >
           {institutionalCases.length}{' '}
@@ -585,7 +585,7 @@ function InstitutionalPage() {
                         sx={{
                           mt: 0.5,
                           color:
-                            '#637083',
+                            '#92400e',
                           fontSize:
                             '0.9rem',
                         }}
@@ -599,7 +599,7 @@ function InstitutionalPage() {
                         sx={{
                           mt: 0.3,
                           color:
-                            '#637083',
+                            '#92400e',
                           fontSize:
                             '0.9rem',
                         }}
@@ -614,7 +614,7 @@ function InstitutionalPage() {
                           sx={{
                             mt: 1,
                             color:
-                              '#637083',
+                              '#92400e',
                             fontSize:
                               '0.9rem',
                           }}
@@ -629,7 +629,7 @@ function InstitutionalPage() {
                         sx={{
                           mt: 1,
                           color:
-                            '#8a94a3',
+                            '#92400e',
                           fontSize:
                             '0.8rem',
                         }}

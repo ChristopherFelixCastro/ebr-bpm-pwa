@@ -12,6 +12,7 @@ import type { PoolClient } from 'pg';
 import { query, withTransaction } from '../../db/client.js';
 import { env } from '../../config/env.js';
 import { insertLetter, issueLetterDownload, LetterError, letterById, letterHistory, reviewLetter, storeLetter } from './authorization-letters.js';
+import { enqueueAlert } from '../../core/mail/mail.service.js';
 
 // Matriz F: ADMIN administra cuentas no universales; UNIVERSAL administra todas.
 // ADMIN no descubre cuentas UNIVERSAL: quedan fuera de resultados, totales y consultas por ID (404).
@@ -59,6 +60,10 @@ const auditDenial = async (req: Request) => {
 // Letters are attached and reviewed while an account awaits approval or reactivation.
 const awaitingApproval = new Set(['PENDING_VALIDATION', 'INACTIVE']);
 const apiError = (apiCode: string) => Object.assign(new Error(apiCode), { apiCode });
+async function assertActiveCompany(client: PoolClient, companyId: string) {
+  const company = (await client.query<{ status: string }>('SELECT status::text FROM companies WHERE id=$1 FOR SHARE', [companyId])).rows[0];
+  if (!company || company.status !== 'ACTIVE') throw apiError('COMPANY_UNAVAILABLE');
+}
 
 const projection = `SELECT u.id,u.full_name AS "fullName",u.email,u.phone,u.status::text,u.version,r.code AS "roleCode",
   m.company_id AS "companyId",c.legal_name AS "companyName",u.created_at AS "createdAt",u.updated_at AS "updatedAt",
@@ -88,6 +93,7 @@ async function respondError(req: Request, res: Response, error: any) {
     case 'REAUTH': await auditDenial(req); return failure(req, res, 401, 'REAUTHENTICATION_REQUIRED', 'Se requiere autenticación reciente.');
     case 'STALE': case 'STALE_VERSION': return failure(req, res, 409, 'STALE_VERSION', 'El registro fue modificado por otra operación.');
     case 'SCOPE': return failure(req, res, 400, 'VALIDATION_ERROR', 'La empresa debe corresponder al tipo de rol.');
+    case 'COMPANY_UNAVAILABLE': return failure(req, res, 409, 'COMPANY_UNAVAILABLE', 'Seleccione una empresa activa antes de continuar.');
     case 'INVALID_STATE': return failure(req, res, 409, 'INVALID_STATE', 'La operación no está disponible en el estado actual.');
     case 'LETTER_REQUIRED': return failure(req, res, 409, 'AUTHORIZATION_LETTER_REQUIRED', 'La cuenta requiere una carta de autorización válida.');
     case 'VALIDATION_ERROR': return failure(req, res, 400, 'VALIDATION_ERROR', 'Archivo inválido.');
@@ -127,7 +133,7 @@ router.post('/', async (req, res) => {
       if (!role.rows[0]) throw apiError('SCOPE');
       const passwordHash = await hashPassword(parsed.data.password);
       const user = await client.query<{ id: string }>(`INSERT INTO users(role_id,full_name,email,phone,password_hash,status) VALUES($1,$2,$3,$4,$5,'PENDING_VALIDATION') RETURNING id`, [role.rows[0].id, parsed.data.fullName, parsed.data.email.toLowerCase(), parsed.data.phone ?? null, passwordHash]);
-      if (parsed.data.companyId) await client.query('INSERT INTO user_company_memberships(user_id,company_id) VALUES($1,$2)', [user.rows[0].id, parsed.data.companyId]);
+      if (parsed.data.companyId) { await assertActiveCompany(client, parsed.data.companyId); await client.query('INSERT INTO user_company_memberships(user_id,company_id) VALUES($1,$2)', [user.rows[0].id, parsed.data.companyId]); }
       await writeDomainAudit({ action: 'USER_CREATED', actorUserId: req.auth!.userId, correlationId: req.context.correlationId, entityType: 'USER', entityId: user.rows[0].id, metadata: { roleCode: parsed.data.roleCode }, client });
       return user.rows[0].id;
     });
@@ -159,6 +165,7 @@ router.patch('/:id', async (req, res) => {
       const updated = await client.query(`UPDATE users SET full_name=COALESCE($1,full_name),phone=CASE WHEN $2 THEN $3 ELSE phone END,role_id=$4 WHERE id=$5 AND version=$6 RETURNING id`, [parsed.data.fullName ?? null, parsed.data.phone !== undefined, parsed.data.phone ?? null, role.rows[0].id, req.params.id, parsed.data.version]);
       if (!updated.rowCount) throw apiError('STALE');
       if (companyId !== current.companyId) {
+        if (companyId) await assertActiveCompany(client, companyId);
         await client.query('UPDATE user_company_memberships SET effective_to=current_date WHERE user_id=$1 AND effective_to IS NULL', [req.params.id]);
         if (companyId) await client.query('INSERT INTO user_company_memberships(user_id,company_id) VALUES($1,$2)', [req.params.id, companyId]);
       }
@@ -188,11 +195,16 @@ async function changeStatus(req: Request, res: Response, status: keyof typeof tr
       if (status === 'APPROVED') {
         const letter = await client.query("SELECT 1 FROM user_authorization_documents WHERE user_id=$1 AND status='VALID' FOR SHARE", [req.params.id]);
         if (!letter.rowCount) throw apiError('LETTER_REQUIRED');
+        if (companyRoles.has(target.roleCode)) {
+          if (!target.companyId) throw apiError('SCOPE');
+          await assertActiveCompany(client, target.companyId);
+        }
       }
       const result = await client.query('UPDATE users SET status=$1 WHERE id=$2 AND version=$3 RETURNING id', [status, req.params.id, parsed.data.version]);
       if (!result.rowCount) throw apiError('STALE');
       if (status !== 'APPROVED') await client.query('UPDATE refresh_tokens SET revoked_at=COALESCE(revoked_at,now()) WHERE user_id=$1', [req.params.id]);
       await writeDomainAudit({ action: transitions[status].action, actorUserId: req.auth!.userId, correlationId: req.context.correlationId, entityType: 'USER', entityId: String(req.params.id), metadata: { status, previousStatus: target.status }, client });
+      if (status === 'APPROVED') await enqueueAlert(client, 'USER_APPROVED', String(req.params.id), `${req.params.id}:${parsed.data.version}`, '/login');
     });
     const result = await query(`${projection} WHERE u.id=$1`, [req.params.id]);
     return success(res, result.rows[0]);

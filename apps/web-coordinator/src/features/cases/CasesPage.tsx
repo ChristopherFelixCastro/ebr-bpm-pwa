@@ -364,7 +364,7 @@ function CasesPage() {
         sx={{
           fontSize: '2rem',
           fontWeight: 700,
-          color: '#172033',
+          color: '#451a03',
           mt: 0,
           mb: 1,
         }}
@@ -375,7 +375,7 @@ function CasesPage() {
       <Box
         component="p"
         sx={{
-          color: '#637083',
+          color: '#92400e',
           mt: 0,
           mb: 3,
         }}
@@ -403,7 +403,7 @@ function CasesPage() {
           p: 2.5,
           mb: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -653,7 +653,7 @@ function CasesPage() {
         elevation={0}
         sx={{
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -727,7 +727,7 @@ function CasesPage() {
                         sx={{
                           mt: 0.4,
                           color:
-                            '#637083',
+                            '#92400e',
                           fontSize:
                             '0.78rem',
                         }}
@@ -764,7 +764,7 @@ function CasesPage() {
                         fontSize:
                           '0.85rem',
                         color:
-                          '#637083',
+                          '#92400e',
                       }}
                     >
                       {

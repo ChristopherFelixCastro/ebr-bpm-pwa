@@ -63,11 +63,16 @@ async function createApprovedInspection(){
   const coordinator=actor(fixture.coordinatorId,'COORDINATOR');
   const review=await service.openReview(inspectionId,coordinator,correlationId);
   await service.approveReview(inspectionId,review.id,'Approved regression fixture',coordinator,correlationId);
+  await service.saveReportContent(inspectionId,{version:0,executiveSummary:'Resumen de inspección aprobado.',additionalFindings:'',recommendations:'Atender los criterios incumplidos.'},coordinator,correlationId);
   return inspectionId;
 }
 
 describe('review, official report and closure service with PostgreSQL',()=>{
-  beforeAll(async()=>{fixture=await setup()});
+  beforeAll(async()=>{
+    const database=(await query<{name:string}>('SELECT current_database() AS name')).rows[0].name;
+    if(!/_test$/.test(database))throw new Error(`This integration test creates persistent fixtures and requires a database ending in _test; got ${database}`);
+    fixture=await setup();
+  });
   beforeEach(()=>{vi.clearAllMocks();const pdf=Buffer.from('%PDF-1.7\ncontrolled\n%%EOF');dependencies.render.mockResolvedValue(pdf);dependencies.read.mockResolvedValue(pdf);dependencies.upload.mockResolvedValue({storagePath:'private'});dependencies.remove.mockResolvedValue(undefined);dependencies.sign.mockResolvedValue({signedUrl:'https://signed.test/report',expiresInSeconds:60})});
 
   it('pagina solo las devoluciones del evaluador asignado',async()=>{
@@ -187,6 +192,21 @@ describe('review, official report and closure service with PostgreSQL',()=>{
     expect(dependencies.remove).not.toHaveBeenCalled();
   });
 
+  it('requires a new draft when report content changes and officializes the reviewed snapshot',async()=>{
+    const inspectionId=await createApprovedInspection();
+    const coordinator=actor(fixture.coordinatorId,'COORDINATOR');
+    const draft=await service.generateReport(inspectionId,randomUUID(),coordinator,correlationId);
+    const content=await service.reportContent(inspectionId,coordinator);
+    await service.saveReportContent(inspectionId,{version:content.version,executiveSummary:'Resumen actualizado',additionalFindings:'Hallazgo posterior',recommendations:'Nueva recomendación'},coordinator,correlationId);
+    await expect(service.officialize(inspectionId,draft.id,coordinator,correlationId)).rejects.toMatchObject({code:'STALE_VERSION'});
+    const regenerated=await service.generateReport(inspectionId,randomUUID(),coordinator,correlationId);
+    const snapshot=(await query<{reportSnapshot:{narrative:{executiveSummary:string}}}>('SELECT report_snapshot AS "reportSnapshot" FROM inspection_reports WHERE id=$1',[regenerated.id])).rows[0].reportSnapshot;
+    expect(snapshot.narrative.executiveSummary).toBe('Resumen actualizado');
+    const official=await service.officialize(inspectionId,regenerated.id,coordinator,correlationId);
+    expect(official.status).toBe('OFFICIAL');
+    expect(dependencies.render.mock.calls.at(-1)?.[0]).toContain('Resumen actualizado');
+  });
+
   it('executes correction, recalculation, PDF idempotency, officialization and closure',async()=>{
     const coordinator=actor(fixture.coordinatorId,'COORDINATOR');
     const evaluator=actor(fixture.evaluatorId,'EVALUATOR');
@@ -198,6 +218,11 @@ describe('review, official report and closure service with PostgreSQL',()=>{
     expect(resubmitted.calculationId).toMatch(/[0-9a-f-]{36}/);
     const approved=await service.approveReview(fixture.inspectionId,opened.id,'Ready',coordinator,correlationId);
     expect(approved.status).toBe('APPROVED');
+    await service.saveReportContent(fixture.inspectionId,{version:0,executiveSummary:'Resumen de prueba',additionalFindings:'',recommendations:'Corregir los hallazgos'},coordinator,correlationId);
+    const evidence=await query<{storagePath:string;sizeBytes:number}>('SELECT storage_path AS "storagePath",size_bytes::int AS "sizeBytes" FROM inspection_evidence WHERE inspection_id=$1',[fixture.inspectionId]);
+    const evidenceSizes=new Map(evidence.rows.map(row=>[row.storagePath,row.sizeBytes]));
+    const pdfBytes=Buffer.from('%PDF-1.7\ncontrolled\n%%EOF');
+    dependencies.read.mockImplementation(async(path:string)=>evidenceSizes.has(path)?Buffer.alloc(evidenceSizes.get(path)!):pdfBytes);
 
     const operationId=randomUUID();
     const first=await service.generateReport(fixture.inspectionId,operationId,coordinator,correlationId);
@@ -207,6 +232,11 @@ describe('review, official report and closure service with PostgreSQL',()=>{
     expect(regenerated.id).not.toBe(first.id);expect(dependencies.remove).toHaveBeenCalledWith(expect.stringMatching(/^official-report\//));
     const official=await service.officialize(fixture.inspectionId,regenerated.id,coordinator,correlationId);
     expect(official.status).toBe('OFFICIAL');
+    expect(dependencies.render).toHaveBeenCalledTimes(3);
+    expect(dependencies.render.mock.calls[0][0]).toContain('class="watermark"');
+    expect(dependencies.render.mock.calls[1][0]).toContain('class="watermark"');
+    expect(dependencies.render.mock.calls[2][0]).not.toContain('class="watermark"');
+    expect(dependencies.upload).toHaveBeenCalledTimes(3);
     expect(await service.download(fixture.inspectionId,regenerated.id,evaluator,correlationId)).toEqual({signedUrl:'https://signed.test/report',expiresInSeconds:60});
     const closed=await service.closeInspection(fixture.inspectionId,regenerated.id,'Completed',coordinator,correlationId);
     const same=await service.closeInspection(fixture.inspectionId,regenerated.id,'Completed',coordinator,correlationId);
@@ -214,7 +244,7 @@ describe('review, official report and closure service with PostgreSQL',()=>{
     await expect(service.closeInspection(fixture.inspectionId,regenerated.id,'Different',coordinator,correlationId)).rejects.toMatchObject({code:'23505'});
     dependencies.remove.mockClear();
     await expect(service.generateReport(fixture.inspectionId,randomUUID(),coordinator,correlationId)).rejects.toBeTruthy();
-    expect(dependencies.upload).toHaveBeenCalledTimes(3);expect(dependencies.remove).toHaveBeenCalledTimes(1);
+    expect(dependencies.upload).toHaveBeenCalledTimes(4);expect(dependencies.remove).toHaveBeenCalledTimes(1);
     const persisted=await query<any>('SELECT size_bytes::int size,content_sha256 hash FROM inspection_reports WHERE id=$1',[regenerated.id]);
     const pdf=Buffer.from('%PDF-1.7\ncontrolled\n%%EOF');expect(persisted.rows[0].size).toBe(pdf.length);expect(persisted.rows[0].hash).toBe((await import('node:crypto')).createHash('sha256').update(pdf).digest('hex'));
     const serialized=JSON.stringify(await service.reports(fixture.inspectionId,evaluator));

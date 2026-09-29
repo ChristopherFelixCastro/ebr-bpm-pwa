@@ -512,7 +512,7 @@ function CaseDetailPage() {
           component="h1"
           sx={{
             fontSize: '2rem',
-            color: '#172033',
+            color: '#451a03',
             m: 0,
           }}
         >
@@ -547,7 +547,7 @@ function CaseDetailPage() {
       <Box
         component="p"
         sx={{
-          color: '#637083',
+          color: '#92400e',
           mt: 0,
           mb: 3,
         }}
@@ -574,7 +574,7 @@ function CaseDetailPage() {
         sx={{
           p: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -615,7 +615,7 @@ function CaseDetailPage() {
 
             <Box
               sx={{
-                color: '#637083',
+                color: '#92400e',
               }}
             >
               {
@@ -670,7 +670,7 @@ function CaseDetailPage() {
 
             <Box
               sx={{
-                color: '#637083',
+                color: '#92400e',
               }}
             >
               {
@@ -693,7 +693,7 @@ function CaseDetailPage() {
 
             <Box
               sx={{
-                color: '#637083',
+                color: '#92400e',
               }}
             >
               {
@@ -716,7 +716,7 @@ function CaseDetailPage() {
 
             <Box
               sx={{
-                color: '#637083',
+                color: '#92400e',
               }}
             >
               {
@@ -739,7 +739,7 @@ function CaseDetailPage() {
 
             <Box
               sx={{
-                color: '#637083',
+                color: '#92400e',
               }}
             >
               {caseData.referenceCode ||
@@ -761,7 +761,7 @@ function CaseDetailPage() {
 
             <Box
               sx={{
-                color: '#637083',
+                color: '#92400e',
               }}
             >
               {formatDateTime(
@@ -784,7 +784,7 @@ function CaseDetailPage() {
 
             <Box
               sx={{
-                color: '#637083',
+                color: '#92400e',
               }}
             >
               {formatDateTime(
@@ -812,7 +812,7 @@ function CaseDetailPage() {
 
         <Box
           sx={{
-            color: '#637083',
+            color: '#92400e',
             whiteSpace:
               'pre-wrap',
           }}
@@ -828,7 +828,7 @@ function CaseDetailPage() {
           p: 3,
           mt: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -849,7 +849,7 @@ function CaseDetailPage() {
           sx={{
             mt: 0,
             mb: 3,
-            color: '#637083',
+            color: '#92400e',
           }}
         >
           Toda decisión requiere una
@@ -958,7 +958,7 @@ function CaseDetailPage() {
           p: 3,
           mt: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -979,7 +979,7 @@ function CaseDetailPage() {
           sx={{
             mt: 0,
             mb: 3,
-            color: '#637083',
+            color: '#92400e',
           }}
         >
           Estado operativo actual del
@@ -1018,7 +1018,7 @@ function CaseDetailPage() {
                 <Box
                   sx={{
                     color:
-                      '#637083',
+                      '#92400e',
                   }}
                 >
                   {
@@ -1069,7 +1069,7 @@ function CaseDetailPage() {
                 <Box
                   sx={{
                     color:
-                      '#637083',
+                      '#92400e',
                   }}
                 >
                   {formatDateTime(
@@ -1093,7 +1093,7 @@ function CaseDetailPage() {
                 <Box
                   sx={{
                     color:
-                      '#637083',
+                      '#92400e',
                   }}
                 >
                   {formatDateTime(
@@ -1117,7 +1117,7 @@ function CaseDetailPage() {
                 <Box
                   sx={{
                     color:
-                      '#637083',
+                      '#92400e',
                   }}
                 >
                   {assignedEvaluator
@@ -1144,7 +1144,7 @@ function CaseDetailPage() {
                 <Box
                   sx={{
                     color:
-                      '#637083',
+                      '#92400e',
                   }}
                 >
                   {
@@ -1246,7 +1246,7 @@ function CaseDetailPage() {
           p: 3,
           mt: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -1267,7 +1267,7 @@ function CaseDetailPage() {
           sx={{
             mt: 0,
             mb: 3,
-            color: '#637083',
+            color: '#92400e',
           }}
         >
           Decisiones tomadas por
@@ -1332,7 +1332,7 @@ function CaseDetailPage() {
                         sx={{
                           mt: 1,
                           color:
-                            '#637083',
+                            '#92400e',
                         }}
                       >
                         {
@@ -1344,7 +1344,7 @@ function CaseDetailPage() {
                     <Box
                       sx={{
                         color:
-                          '#637083',
+                          '#92400e',
                         fontSize:
                           '0.8rem',
                       }}
@@ -1367,7 +1367,7 @@ function CaseDetailPage() {
           p: 3,
           mt: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -1388,7 +1388,7 @@ function CaseDetailPage() {
           sx={{
             mt: 0,
             mb: 3,
-            color: '#637083',
+            color: '#92400e',
           }}
         >
           Programaciones,
@@ -1450,7 +1450,7 @@ function CaseDetailPage() {
                       <Box
                         sx={{
                           color:
-                            '#637083',
+                            '#92400e',
                           mt: 0.5,
                         }}
                       >
@@ -1464,7 +1464,7 @@ function CaseDetailPage() {
                         <Box
                           sx={{
                             color:
-                              '#637083',
+                              '#92400e',
                             mt: 0.5,
                           }}
                         >
@@ -1479,7 +1479,7 @@ function CaseDetailPage() {
                         <Box
                           sx={{
                             color:
-                              '#637083',
+                              '#92400e',
                             mt: 0.5,
                           }}
                         >
@@ -1493,7 +1493,7 @@ function CaseDetailPage() {
                       <Box
                         sx={{
                           color:
-                            '#8a94a3',
+                            '#92400e',
                           fontSize:
                             '0.8rem',
                           mt: 0.5,
@@ -1545,7 +1545,7 @@ function CaseDetailPage() {
                       <Box
                         sx={{
                           color:
-                            '#637083',
+                            '#92400e',
                           mt: 0.5,
                         }}
                       >
@@ -1559,7 +1559,7 @@ function CaseDetailPage() {
                         <Box
                           sx={{
                             color:
-                              '#637083',
+                              '#92400e',
                             mt: 0.5,
                           }}
                         >
@@ -1574,7 +1574,7 @@ function CaseDetailPage() {
                         <Box
                           sx={{
                             color:
-                              '#637083',
+                              '#92400e',
                             mt: 0.5,
                           }}
                         >
@@ -1588,7 +1588,7 @@ function CaseDetailPage() {
                       <Box
                         sx={{
                           color:
-                            '#8a94a3',
+                            '#92400e',
                           fontSize:
                             '0.8rem',
                           mt: 0.5,

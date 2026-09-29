@@ -44,7 +44,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       case 'success':
         return <CheckCircleIcon sx={{ color: '#166534', fontSize: 28 }} />;
       default:
-        return <HelpIcon sx={{ color: '#1E3A8A', fontSize: 28 }} />;
+        return <HelpIcon sx={{ color: '#78350f', fontSize: 28 }} />;
     }
   };
 
@@ -65,7 +65,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           sx={{
             p: 1,
             borderRadius: '50%',
-            bgcolor: variant === 'danger' || variant === 'warning' ? '#FEF3C7' : '#EFF6FF',
+            bgcolor: variant === 'danger' || variant === 'warning' ? '#FEF3C7' : '#fffbeb',
             display: 'flex',
           }}
         >
@@ -76,7 +76,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </Typography>
       </DialogTitle>
       <DialogContent sx={{ py: 1 }}>
-        <DialogContentText sx={{ color: '#475569', fontSize: '0.9rem', lineHeight: 1.6 }}>
+        <DialogContentText sx={{ color: '#92400e', fontSize: '0.9rem', lineHeight: 1.6 }}>
           {message}
         </DialogContentText>
       </DialogContent>
@@ -95,9 +95,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           onClick={onConfirm}
           disabled={loading}
           sx={{
-            bgcolor: variant === 'danger' ? '#DC2626' : '#1E3A8A',
+            bgcolor: variant === 'danger' ? '#DC2626' : '#78350f',
             '&:hover': {
-              bgcolor: variant === 'danger' ? '#B91C1C' : '#1E40AF',
+              bgcolor: variant === 'danger' ? '#B91C1C' : '#78350f',
             },
           }}
         >

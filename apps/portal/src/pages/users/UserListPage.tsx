@@ -72,12 +72,12 @@ export function UserListPage() {
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 3 }}>
       <Box>
         <Typography variant="h5" sx={{ fontWeight: 800, display: 'flex', gap: 1, alignItems: 'center' }}><ManageAccountsIcon color="primary" />Usuarios</Typography>
-        <Typography color="text.secondary">Cuentas del Core. La aprobación exige una carta de autorización válida.</Typography>
+        <Typography color="text.secondary">Consulte las cuentas y su estado. Para aprobar una cuenta se requiere una carta de autorización válida.</Typography>
       </Box>
       <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>Crear usuario</Button>
     </Box>
-    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ p: 2, borderBottom: '1px solid #E2E8F0' }}>
+    <Card sx={{ border: '1px solid #fde68a', borderRadius: 2 }}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ p: 2, borderBottom: '1px solid #fde68a' }}>
         <TextField fullWidth size="small" label="Buscar por nombre o correo" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applySearch() }} />
         <TextField select size="small" label="Estado" value={status} onChange={(event) => { setPage(0); setStatus(event.target.value as UserStatus | 'ALL') }} sx={{ minWidth: 210 }}>
           <MenuItem value="ALL">Todos</MenuItem>

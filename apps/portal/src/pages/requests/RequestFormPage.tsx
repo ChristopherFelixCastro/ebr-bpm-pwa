@@ -95,8 +95,8 @@ export const RequestFormPage = () => {
 
   return <Stack spacing={3}>
     <Box><Button startIcon={<ArrowBackIcon />} onClick={() => navigate(id ? `/solicitudes/${id}` : '/solicitudes')}>Volver</Button><Typography variant="h5" sx={{ fontWeight: 800 }}>{id ? 'Editar borrador' : 'Nueva solicitud BPM'}</Typography><Typography color="text.secondary">La solicitud se crea inicialmente en estado DRAFT.</Typography></Box>
-    {stale && <Alert severity="warning" action={<Button onClick={() => void load()}>Descartar y recargar</Button>}>La versión cambió en Core. Recargue antes de volver a guardar.</Alert>}
-    <Card sx={{ border: '1px solid #E2E8F0' }}><CardContent><Stack spacing={2}>
+    {stale && <Alert severity="warning" action={<Button onClick={() => void load()}>Descartar y recargar</Button>}>Este registro fue modificado. Recargue antes de volver a guardar.</Alert>}
+    <Card sx={{ border: '1px solid #fde68a' }}><CardContent><Stack spacing={2}>
       {isGlobal && <Stack direction="row" spacing={1}><TextField fullWidth label="Buscar empresa" value={companySearch} onChange={(event) => setCompanySearch(event.target.value)} /><Button onClick={() => void searchCompany()}>Buscar</Button></Stack>}
       {isGlobal && <TextField select label="Empresa" required value={companyId} onChange={(event) => void reloadEstablishments(event.target.value)}>{companies.map((company) => <MenuItem key={company.id} value={company.id}>{company.legalName}</MenuItem>)}</TextField>}
       <Stack direction="row" spacing={1}><TextField fullWidth label="Buscar establecimiento" value={establishmentSearch} onChange={(event) => setEstablishmentSearch(event.target.value)} disabled={!companyId} /><Button onClick={() => void searchEstablishment()} disabled={!companyId}>Buscar</Button></Stack>

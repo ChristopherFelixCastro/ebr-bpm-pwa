@@ -11,7 +11,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); core.disconnect(); localStora
 it('muestra campo solo a EVALUATOR y UNIVERSAL, y protege ambas URL directas', async () => {
   // Correcciones es exclusiva del EVALUATOR asignado; UNIVERSAL no es autor de correcciones.
   const fieldPages = (role: 'EVALUATOR' | 'UNIVERSAL') => visibleSections(account(role)).find((section) => section.name === 'Inspecciones de campo')?.pages.map((page) => page.id)
-  expect(fieldPages('EVALUATOR')).toEqual(['field', 'corrections'])
+  expect(fieldPages('EVALUATOR')).toEqual(['field', 'field-calendar', 'corrections'])
   expect(fieldPages('UNIVERSAL')).toEqual(['field'])
   for (const role of ['ADMIN', 'COORDINATOR', 'COMPANY_ADMIN', 'DELEGATE'] as const)
     expect(visibleSections(account(role)).some((section) => section.name === 'Inspecciones de campo')).toBe(false)
@@ -22,6 +22,11 @@ it('muestra campo solo a EVALUATOR y UNIVERSAL, y protege ambas URL directas', a
   expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
   expect(vi.mocked(core.request).mock.calls.some(([url]) => String(url).startsWith('/v1/inspections'))).toBe(false)
   view.unmount()
+  window.history.replaceState({}, '', '/campo/calendario')
+  const calendarView = render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
+  expect(vi.mocked(core.request).mock.calls.some(([url]) => String(url).startsWith('/v1/schedules'))).toBe(false)
+  calendarView.unmount()
   window.history.replaceState({}, '', '/campo/inspecciones/44444444-4444-4444-8444-444444444444')
   render(<App />)
   expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
@@ -35,6 +40,6 @@ it('oculta descarga y edición si Core responde 403 a un evaluador fuera de alca
   })
   window.history.replaceState({}, '', '/campo/inspecciones/44444444-4444-4444-8444-444444444444')
   render(<App />)
-  expect(await screen.findByText('Core denegó el acceso a esta inspección.')).toBeInTheDocument()
+  expect(await screen.findByText('No tiene acceso a esta inspección.')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Descargar o renovar paquete' })).not.toBeInTheDocument()
 })

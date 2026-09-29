@@ -55,7 +55,7 @@ export const ForgotPasswordPage: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F8FAFC',
+        backgroundColor: '#fffbeb',
         p: 2,
       }}
     >
@@ -64,14 +64,14 @@ export const ForgotPasswordPage: React.FC = () => {
           maxWidth: 480,
           width: '100%',
           borderRadius: 3,
-          border: '1px solid #E2E8F0',
+          border: '1px solid #fde68a',
           boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
         }}
       >
         <Box
           sx={{
             p: 3,
-            bgcolor: '#1E3A8A',
+            bgcolor: '#78350f',
             color: '#FFFFFF',
             textAlign: 'center',
           }}
@@ -80,8 +80,8 @@ export const ForgotPasswordPage: React.FC = () => {
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
             Recuperación de Contraseña
           </Typography>
-          <Typography variant="caption" sx={{ color: '#BFDBFE' }}>
-            Portal Web EBR/BPM - Módulo de Identidad
+          <Typography variant="caption" sx={{ color: '#fde68a' }}>
+            Portal Web SIRA Tech - Módulo de Identidad
           </Typography>
         </Box>
 
@@ -109,14 +109,14 @@ export const ForgotPasswordPage: React.FC = () => {
               >
                 <CheckCircleIcon sx={{ fontSize: 36 }} />
               </Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A', mb: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#451a03', mb: 1 }}>
                 Solicitud Procesada
               </Typography>
-              <Typography variant="body2" sx={{ color: '#475569', mb: 3 }}>
-                Si el correo <strong>{email}</strong> se encuentra registrado en el sistema oficial EBR/BPM, recibirá instrucciones de seguridad para restablecer su acceso.
+              <Typography variant="body2" sx={{ color: '#92400e', mb: 3 }}>
+                Si el correo <strong>{email}</strong> se encuentra registrado en el sistema oficial SIRA Tech, recibirá instrucciones de seguridad para restablecer su acceso.
               </Typography>
-              <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC', textAlign: 'left' }}>
-                <Typography variant="caption" sx={{ color: '#64748B' }}>
+              <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#fffbeb', textAlign: 'left' }}>
+                <Typography variant="caption" sx={{ color: '#92400e' }}>
                   Por motivos de seguridad y privacidad, el sistema no confirma públicamente la existencia de cuentas individuales. Si necesita asistencia inmediata, comuníquese con el Administrador Central de su entidad.
                 </Typography>
               </Paper>
@@ -124,14 +124,14 @@ export const ForgotPasswordPage: React.FC = () => {
                 variant="contained"
                 fullWidth
                 onClick={() => navigate('/login')}
-                sx={{ py: 1.2, bgcolor: '#1E3A8A', textTransform: 'none' }}
+                sx={{ py: 1.2, bgcolor: '#78350f', textTransform: 'none' }}
               >
                 Volver a Iniciar Sesión
               </Button>
             </Box>
           ) : (
             <Box component="form" onSubmit={handleRequest} noValidate>
-              <Typography variant="body2" sx={{ color: '#475569', mb: 3 }}>
+              <Typography variant="body2" sx={{ color: '#92400e', mb: 3 }}>
                 Ingrese su correo institucional o corporativo registrado para tramitar el restablecimiento seguro de su contraseña.
               </Typography>
 
@@ -154,7 +154,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 fullWidth
                 variant="contained"
                 disabled={loading}
-                sx={{ py: 1.2, bgcolor: '#1E3A8A', textTransform: 'none', '&:hover': { bgcolor: '#1E40AF' } }}
+                sx={{ py: 1.2, bgcolor: '#78350f', textTransform: 'none', '&:hover': { bgcolor: '#78350f' } }}
               >
                 {loading ? 'Enviando...' : 'Solicitar Restablecimiento'}
               </Button>
@@ -164,7 +164,7 @@ export const ForgotPasswordPage: React.FC = () => {
                   variant="text"
                   startIcon={<ArrowBackIcon />}
                   onClick={() => navigate('/login')}
-                  sx={{ color: '#475569', fontSize: '0.85rem', textTransform: 'none' }}
+                  sx={{ color: '#92400e', fontSize: '0.85rem', textTransform: 'none' }}
                 >
                   Volver a Iniciar Sesión
                 </Button>

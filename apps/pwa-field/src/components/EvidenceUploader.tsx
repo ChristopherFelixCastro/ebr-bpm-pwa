@@ -50,7 +50,7 @@ export default function EvidenceUploader({ inspectionId, bpmItemId, finalized }:
       onChange={(event) => void add(event)} />
     {error && <p role="alert">{error}</p>}
     <ul>{serverEvidence.filter((evidence) => evidence.bpmItemId === bpmItemId).map((evidence) => <li key={evidence.id}>
-      {evidence.fileName} ({Math.round(evidence.sizeBytes / 1024)} KB) · {evidence.status} (Core)
+      {evidence.fileName} ({Math.round(evidence.sizeBytes / 1024)} KB) · {evidence.status === 'ACTIVE' ? 'Disponible' : evidence.status === 'ARCHIVED' ? 'Archivado' : 'Pendiente'}
     </li>)}{evidences.filter((evidence) => evidence.bpmItemId === bpmItemId).map((evidence) => <li key={evidence.id}>
       {evidence.fileName} ({Math.round(evidence.sizeBytes / 1024)} KB) · {evidence.status}
       {evidence.lastError && <span role="alert"> · {evidence.lastError}</span>}

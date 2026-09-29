@@ -106,7 +106,7 @@ app.get('/openapi.json', (_req, res) => res.json(openApiDocument));
 
 if (env.OPENAPI_DOCS_ENABLED) {
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument, {
-    customSiteTitle: 'EBR/BPM API',
+    customSiteTitle: 'SIRA Tech API',
     swaggerOptions: { persistAuthorization: true, withCredentials: true },
   }));
 }

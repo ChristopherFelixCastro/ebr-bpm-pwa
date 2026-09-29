@@ -8,6 +8,7 @@ export default function AppHeader() {
   if (!user) return null;
 
   async function handleLogout() {
+    if (!window.confirm('¿Está seguro de cerrar sesión?')) return;
     await logout();
     navigate("/login", { replace: true });
   }
@@ -19,9 +20,12 @@ export default function AppHeader() {
         justifyContent: "space-between",
         alignItems: "center",
         padding: "8px 16px",
-        background: "#1c1c1c",
+        background: "#78350f",
+        color: "#ffffff",
+        gap: 16,
       }}
     >
+      <img src="/sira-isotipo.jpeg" alt="SIRA Tech" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, background: '#fffbeb' }} />
       <span style={{ fontSize: 13 }}>
         👤 {user.fullName} ({user.roleCode})
       </span>

@@ -24,7 +24,7 @@ it('reinicia página, estado y búsqueda al navegar entre las cuatro bandejas', 
   await waitFor(() => expect(requests).toHaveBeenCalledWith('/v1/cases?page=2&limit=10&origin=INSTITUTIONAL_PROGRAM&status=PENDING_ASSIGNMENT&search=PLAN-1', expect.anything()))
 
   const destinations = [
-    { link: 'Alertas sanitarias', heading: 'Alerta sanitaria', query: '/v1/cases?page=1&limit=10&origin=HEALTH_ALERT' },
+    { link: 'Alertas LAPCH', heading: 'Alerta sanitaria', query: '/v1/cases?page=1&limit=10&origin=HEALTH_ALERT' },
     { link: 'Denuncias', heading: 'Denuncia', query: '/v1/cases?page=1&limit=10&origin=COMPLAINT' },
     { link: 'Casos', heading: 'Casos de operación sanitaria', query: '/v1/cases?page=1&limit=10' },
   ]

@@ -29,7 +29,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 320 }}>
+    <div style={{ padding: 32, maxWidth: 400, margin: 'min(10vh, 80px) auto', background: '#fff', border: '1px solid #fde68a', borderRadius: 16, boxShadow: '0 4px 6px -1px rgba(120,53,15,.06)' }}>
+      <img src="/sira-imagotipo.jpeg" alt="SIRA Tech" style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 8 }} />
       <h2>Iniciar sesión</h2>
       <form onSubmit={handleSubmit}>
         {error && <p role="alert">{error}</p>}

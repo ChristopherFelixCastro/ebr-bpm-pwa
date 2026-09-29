@@ -9,7 +9,7 @@ export type OperationalCase = {
 }
 export type Evaluator = { id: string; fullName: string }
 export type Assignment = { id: string; caseId: string; evaluator: Evaluator; assignedBy: Evaluator; assignedAt: string; unassignedAt: string | null; isActive: boolean; hasEditableInspection: boolean; reason: string | null; version: number; case: { origin: CaseOrigin; status: CaseStatus; priority: string; companyId: string | null; establishmentId: string | null } }
-export type Schedule = { id: string; caseId: string; assignmentId: string; evaluator: Evaluator; scheduledStartAt: string; scheduledEndAt: string; timezone: string; status: 'SCHEDULED' | 'RESCHEDULED' | 'CANCELLED'; notes: string | null; cancellationReason: string | null; cancelledAt: string | null; rescheduledFromScheduleId: string | null; version: number }
+export type Schedule = { id: string; caseId: string; assignmentId: string; evaluator: Evaluator; scheduledStartAt: string; scheduledEndAt: string; timezone: string; status: 'SCHEDULED' | 'RESCHEDULED' | 'CANCELLED'; notes: string | null; cancellationReason: string | null; cancelledAt: string | null; rescheduledFromScheduleId: string | null; version: number; companyName: string | null; companyTradeName: string | null; establishmentName: string | null; establishmentAddress: string | null }
 export type OperationWarning = { code: 'EVALUATOR_SCHEDULE_OVERLAP'; conflictingScheduleIds: string[] }
 export type PageQuery = { page: number; limit: number; search?: string; origin?: CaseOrigin; status?: CaseStatus }
 const query = (values: object) => { const params = new URLSearchParams(); Object.entries(values).forEach(([key, value]) => { if (value !== undefined && value !== '') params.set(key, String(value)) }); return `?${params}` }

@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <Dialog open={Boolean(pending)} onClose={cancelReauthentication} fullWidth maxWidth="xs">
       <DialogTitle>Confirme su identidad</DialogTitle>
       <DialogContent sx={{ display: 'grid', gap: 2, pt: 1 }}>
-        <Alert severity="info">El Core exige una autenticación reciente para esta operación excepcional.</Alert>
+        <Alert severity="info">Confirme su contraseña para continuar.</Alert>
         {reauthError && <Alert severity="error">{reauthError}</Alert>}
         <TextField autoFocus label="Contraseña" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
       </DialogContent>

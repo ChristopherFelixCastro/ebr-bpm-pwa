@@ -38,7 +38,7 @@ export function EvaluationListPage({ mode }: { mode: Mode }) {
   }, [limit, mode, navigate, page, risk, search, status])
   useEffect(() => { void load() }, [load])
   return <Stack spacing={2}>
-    <Box><Typography variant="h5" sx={{ fontWeight: 800 }}>{labels[mode]}</Typography><Typography color="text.secondary">Datos vigentes del Core, paginados y sin registros simulados.</Typography></Box>
+    <Box><Typography variant="h5" sx={{ fontWeight: 800 }}>{labels[mode]}</Typography><Typography color="text.secondary">Consulte las evaluaciones y sus resultados vigentes.</Typography></Box>
     {mode === 'evaluations' && (summary ? <InstitutionalSummary summary={summary} /> : <Card sx={{ p: 2 }}><Typography variant="h6" sx={{ fontWeight: 800 }}>Resumen institucional</Typography>{summaryError ? <Alert severity="error" sx={{ mt: 1 }}>{summaryError}</Alert> : <CircularProgress size={24} sx={{ mt: 1 }} />}</Card>)}
     <Card sx={{ p: 2 }}><Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
       <TextField size="small" label="Empresa, establecimiento, evaluador o identificador" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} fullWidth />

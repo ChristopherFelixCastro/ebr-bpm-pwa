@@ -599,7 +599,7 @@ function AssignmentsPage() {
               m: 0,
               fontSize: '2rem',
               fontWeight: 700,
-              color: '#172033',
+              color: '#451a03',
             }}
           >
             Asignaciones
@@ -610,7 +610,7 @@ function AssignmentsPage() {
             sx={{
               mt: 0.5,
               mb: 0,
-              color: '#637083',
+              color: '#92400e',
             }}
           >
             Gestiona la asignación
@@ -652,13 +652,13 @@ function AssignmentsPage() {
           sx={{
             p: 2.5,
             border:
-              '1px solid #d9e2ec',
+              '1px solid #fde68a',
             borderRadius: 3,
           }}
         >
           <Box
             sx={{
-              color: '#637083',
+              color: '#92400e',
               fontSize: '0.9rem',
             }}
           >
@@ -670,7 +670,7 @@ function AssignmentsPage() {
               mt: 0.5,
               fontSize: '2rem',
               fontWeight: 700,
-              color: '#172033',
+              color: '#451a03',
             }}
           >
             {
@@ -685,13 +685,13 @@ function AssignmentsPage() {
           sx={{
             p: 2.5,
             border:
-              '1px solid #d9e2ec',
+              '1px solid #fde68a',
             borderRadius: 3,
           }}
         >
           <Box
             sx={{
-              color: '#637083',
+              color: '#92400e',
               fontSize: '0.9rem',
             }}
           >
@@ -715,13 +715,13 @@ function AssignmentsPage() {
           sx={{
             p: 2.5,
             border:
-              '1px solid #d9e2ec',
+              '1px solid #fde68a',
             borderRadius: 3,
           }}
         >
           <Box
             sx={{
-              color: '#637083',
+              color: '#92400e',
               fontSize: '0.9rem',
             }}
           >
@@ -751,7 +751,7 @@ function AssignmentsPage() {
           mt: 3,
           p: 3,
           border:
-            '1px solid #d9e2ec',
+            '1px solid #fde68a',
           borderRadius: 3,
         }}
       >
@@ -771,7 +771,7 @@ function AssignmentsPage() {
           sx={{
             mt: 0,
             mb: 3,
-            color: '#637083',
+            color: '#92400e',
           }}
         >
           Cada inspección puede
@@ -858,7 +858,7 @@ function AssignmentsPage() {
                         <Box
                           sx={{
                             color:
-                              '#637083',
+                              '#92400e',
                             fontSize:
                               '0.9rem',
                             mb: 0.5,
@@ -885,7 +885,7 @@ function AssignmentsPage() {
                               fontSize:
                                 18,
                               color:
-                                '#637083',
+                                '#92400e',
                             }}
                           />
 
@@ -925,7 +925,7 @@ function AssignmentsPage() {
                               fontSize:
                                 18,
                               color:
-                                '#637083',
+                                '#92400e',
                             }}
                           />
 
@@ -1098,13 +1098,13 @@ function AssignmentsPage() {
                     mb: 3,
                     borderRadius: 2,
                     bgcolor:
-                      '#fafcff',
+                      '#fffbeb',
                   }}
                 >
                   <Box
                     sx={{
                       color:
-                        '#637083',
+                        '#92400e',
                       fontSize:
                         '0.85rem',
                       mb: 0.5,
@@ -1197,7 +1197,7 @@ function AssignmentsPage() {
                       'center',
                     gap: 1,
                     color:
-                      '#637083',
+                      '#92400e',
                   }}
                 >
                   <CircularProgress
@@ -1299,7 +1299,7 @@ function AssignmentsPage() {
                           sx={{
                             mt: 0.5,
                             color:
-                              '#637083',
+                              '#92400e',
                             fontSize:
                               '0.9rem',
                           }}
@@ -1476,7 +1476,7 @@ function AssignmentsPage() {
         <DialogContent>
           <Box
             sx={{
-              color: '#637083',
+              color: '#92400e',
               mb: 2,
             }}
           >
@@ -1559,7 +1559,7 @@ function AssignmentsPage() {
                         <Box
                           sx={{
                             color:
-                              '#637083',
+                              '#92400e',
                             fontSize:
                               '0.85rem',
                           }}
@@ -1610,7 +1610,7 @@ function AssignmentsPage() {
                           <Box
                             sx={{
                               color:
-                                '#637083',
+                                '#92400e',
                               whiteSpace:
                                 'pre-wrap',
                             }}

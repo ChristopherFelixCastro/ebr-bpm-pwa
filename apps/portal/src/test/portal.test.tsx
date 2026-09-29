@@ -45,6 +45,16 @@ describe('portal A', () => {
     expect(core.restoreSession).toHaveBeenCalledTimes(1)
   })
 
+  it('intenta renovar la sesión aunque falle la comprobación de salud', async () => {
+    vi.mocked(core.request).mockRejectedValue(new Error('La comprobación de salud no respondió'))
+    vi.mocked(core.restoreSession).mockResolvedValue(user('ADMIN'))
+    at('/inicio')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument()
+    expect(core.restoreSession).toHaveBeenCalledTimes(1)
+    expect(core.request).not.toHaveBeenCalledWith('/health/ready', expect.anything())
+  })
+
   it('mantiene una sola sección del menú desplegada y deja Inicio como enlace', async () => {
     vi.mocked(core.restoreSession).mockResolvedValue(user('DELEGATE'))
     at('/inicio')
@@ -83,6 +93,10 @@ describe('portal A', () => {
     const reauthenticate = vi.spyOn(core, 'reauthenticate').mockResolvedValue(user('ADMIN'))
     at('/cuenta')
     render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Datos de la cuenta' })).toBeInTheDocument()
+    expect(screen.getAllByText('Administrador')).toHaveLength(2)
+    expect(screen.queryByLabelText('Contraseña actual')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar identidad ahora' }))
     fireEvent.change(await screen.findByLabelText('Contraseña actual'), { target: { value: 'clave actual' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar identidad' }))
     await waitFor(() => expect(reauthenticate).toHaveBeenCalledWith('clave actual'))
@@ -113,6 +127,7 @@ describe('portal A', () => {
     at('/inicio')
     render(<App />)
     fireEvent.click((await screen.findAllByRole('button', { name: 'Cerrar sesión' }))[0])
+    fireEvent.click(screen.getByRole('dialog').querySelector('button:last-child') as HTMLButtonElement)
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1))
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
     expect(localStorage.getItem('ebr-bpm-portal-logout-pending')).toBeNull()

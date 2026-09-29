@@ -137,8 +137,8 @@ describe('cliente HTTP y sesión', () => {
       status: 'PENDING_VALIDATION',
       version: 1,
       roleCode: 'COMPANY_ADMIN',
-      companyId: '22222222-2222-4222-8222-222222222222',
-      companyName: 'Empresa Test',
+      companyId: null,
+      companyName: null,
       createdAt: '2026-09-22T00:00:00.000Z',
       updatedAt: '2026-09-22T00:00:00.000Z',
     }
@@ -152,10 +152,13 @@ describe('cliente HTTP y sesión', () => {
       email: 'carlos@empresa.com.do',
       password: 'SecurePassword123!',
       roleCode: 'COMPANY_ADMIN',
-      companyId: '22222222-2222-4222-8222-222222222222',
+      authorizationLetter: new File(['carta de prueba'], 'carta.pdf', { type: 'application/pdf' }),
     })
     expect(registered.status).toBe('PENDING_VALIDATION')
     expect(registered.fullName).toBe('Carlos Gerente')
+    const registrationBody = fetchMock.mock.calls[0][1]?.body as FormData
+    expect(registrationBody.get('companyId')).toBeNull()
+    expect((registrationBody.get('authorizationLetter') as File).name).toBe('carta.pdf')
 
     const forgot = await authApi.forgotPassword('carlos@empresa.com.do')
     expect(forgot.requested).toBe(true)

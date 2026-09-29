@@ -102,12 +102,12 @@ export const FilePicker: React.FC<FilePickerProps> = ({
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.75 }}>
         <Typography
           variant="subtitle2"
-          sx={{ color: '#0F172A', fontWeight: 600, fontSize: '0.875rem' }}
+          sx={{ color: '#451a03', fontWeight: 600, fontSize: '0.875rem' }}
         >
           {label} {required && <span style={{ color: '#DC2626' }}>*</span>}
         </Typography>
         {helperText && (
-          <Typography variant="caption" sx={{ ml: 1, color: '#64748B' }}>
+          <Typography variant="caption" sx={{ ml: 1, color: '#92400e' }}>
             ({helperText})
           </Typography>
         )}
@@ -121,8 +121,8 @@ export const FilePicker: React.FC<FilePickerProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: '#F8FAFC',
-            borderColor: '#CBD5E1',
+            backgroundColor: '#fffbeb',
+            borderColor: '#d97706',
             borderRadius: '8px',
           }}
         >
@@ -132,11 +132,11 @@ export const FilePicker: React.FC<FilePickerProps> = ({
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: '#EFF6FF',
+                bgcolor: '#fffbeb',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#1E3A8A',
+                color: '#78350f',
                 flexShrink: 0,
               }}
             >
@@ -147,7 +147,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
                 variant="body2"
                 sx={{
                   fontWeight: 600,
-                  color: '#0F172A',
+                  color: '#451a03',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -156,7 +156,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
                 {currentDoc.name}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="caption" sx={{ color: '#64748B' }}>
+                <Typography variant="caption" sx={{ color: '#92400e' }}>
                   {formatBytes(currentDoc.sizeBytes)}
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#166534', display: 'flex', alignItems: 'center' }}>
@@ -169,7 +169,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
           <IconButton
             size="small"
             onClick={handleRemove}
-            sx={{ color: '#94A3B8', '&:hover': { color: '#EF4444', bgcolor: '#FEF2F2' } }}
+            sx={{ color: '#92400e', '&:hover': { color: '#EF4444', bgcolor: '#FEF2F2' } }}
             title="Eliminar archivo"
           >
             <DeleteIcon fontSize="small" />
@@ -185,16 +185,16 @@ export const FilePicker: React.FC<FilePickerProps> = ({
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           sx={{
-            border: `2px dashed ${isDragOver ? '#3B82F6' : '#CBD5E1'}`,
+            border: `2px dashed ${isDragOver ? '#b45309' : '#d97706'}`,
             borderRadius: '8px',
             p: 2.5,
             textAlign: 'center',
             cursor: 'pointer',
-            backgroundColor: isDragOver ? '#EFF6FF' : '#FFFFFF',
+            backgroundColor: isDragOver ? '#fffbeb' : '#FFFFFF',
             transition: 'all 0.2s ease',
             '&:hover': {
-              borderColor: '#3B82F6',
-              backgroundColor: '#F8FAFC',
+              borderColor: '#b45309',
+              backgroundColor: '#fffbeb',
             },
           }}
         >
@@ -206,18 +206,18 @@ export const FilePicker: React.FC<FilePickerProps> = ({
             style={{ display: 'none' }}
           />
 
-          <CloudUploadIcon sx={{ fontSize: 36, color: '#3B82F6', mb: 1 }} />
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A' }}>
+          <CloudUploadIcon sx={{ fontSize: 36, color: '#b45309', mb: 1 }} />
+          <Typography variant="body2" sx={{ fontWeight: 600, color: '#451a03' }}>
             Arrastra tu archivo aquí o haz clic para seleccionarlo
           </Typography>
-          <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mt: 0.5 }}>
+          <Typography variant="caption" sx={{ color: '#92400e', display: 'block', mt: 0.5 }}>
             Archivos permitidos: PDF, JPG, PNG (Tamaño máximo: 5 MB)
           </Typography>
 
           {uploading && (
             <Box sx={{ mt: 1.5, width: '100%' }}>
               <LinearProgress sx={{ borderRadius: 1 }} />
-              <Typography variant="caption" sx={{ color: '#3B82F6', mt: 0.5, display: 'block' }}>
+              <Typography variant="caption" sx={{ color: '#b45309', mt: 0.5, display: 'block' }}>
                 Validando y procesando archivo...
               </Typography>
             </Box>

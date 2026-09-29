@@ -10,11 +10,11 @@ import type { AnalyticsSummary } from '@ebr-bpm/core-client'
 type Metric = { label: string; value: number; color: string; background: string; icon: React.ReactNode }
 
 function MetricTile({ metric }: { metric: Metric }) {
-  return <Box sx={{ minWidth: 0, minHeight: 112, p: 2, border: '1px solid #e2e8f0', borderRadius: 2.5, bgcolor: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+  return <Box sx={{ minWidth: 0, minHeight: 112, p: 2, border: '1px solid #fde68a', borderRadius: 2.5, bgcolor: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
     <Box sx={{ width: 34, height: 34, borderRadius: 2, display: 'grid', placeItems: 'center', bgcolor: metric.background, color: metric.color, '& svg': { fontSize: 20 } }} aria-hidden="true">{metric.icon}</Box>
     <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'baseline' }}>
-      <Typography sx={{ fontSize: 29, lineHeight: 1, fontWeight: 850, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{metric.value}</Typography>
-      <Typography sx={{ fontSize: 13, lineHeight: 1.25, fontWeight: 600, color: '#334155' }}>{metric.label}</Typography>
+      <Typography sx={{ fontSize: 29, lineHeight: 1, fontWeight: 850, color: '#451a03', fontVariantNumeric: 'tabular-nums' }}>{metric.value}</Typography>
+      <Typography sx={{ fontSize: 13, lineHeight: 1.25, fontWeight: 600, color: '#451a03' }}>{metric.label}</Typography>
     </Stack>
   </Box>
 }
@@ -27,23 +27,23 @@ const riskRows = [
 
 export function InstitutionalSummary({ summary }: { summary: AnalyticsSummary }) {
   const attention: Metric[] = [
-    { label: 'Listas para revisión', value: summary.readyForReview, color: '#1d4ed8', background: '#dbeafe', icon: <PendingActionsOutlinedIcon /> },
+    { label: 'Listas para revisión', value: summary.readyForReview, color: '#b45309', background: '#fef3c7', icon: <PendingActionsOutlinedIcon /> },
     { label: 'En revisión', value: summary.pendingReview, color: '#6d28d9', background: '#ede9fe', icon: <RateReviewOutlinedIcon /> },
     { label: 'Devueltas', value: summary.returnedForCorrection, color: '#b45309', background: '#fef3c7', icon: <ReplayOutlinedIcon /> },
   ]
   const outcomes: Metric[] = [
     { label: 'Aprobadas', value: summary.approved, color: '#15803d', background: '#dcfce7', icon: <VerifiedOutlinedIcon /> },
     { label: 'Informes oficiales', value: summary.officialReports, color: '#0369a1', background: '#e0f2fe', icon: <DescriptionOutlinedIcon /> },
-    { label: 'Cerradas', value: summary.closed, color: '#475569', background: '#e2e8f0', icon: <TaskAltOutlinedIcon /> },
+    { label: 'Cerradas', value: summary.closed, color: '#92400e', background: '#fde68a', icon: <TaskAltOutlinedIcon /> },
   ]
   const classified = summary.byRisk.LOW + summary.byRisk.MEDIUM + summary.byRisk.HIGH
 
-  return <Card component="section" aria-labelledby="institutional-summary-title" sx={{ p: { xs: 2, md: 3 }, border: '1px solid #dbe4ef', boxShadow: '0 8px 24px rgba(15, 23, 42, .05)' }}>
+  return <Card component="section" aria-labelledby="institutional-summary-title" sx={{ p: { xs: 2, md: 3 }, border: '1px solid #fde68a', boxShadow: '0 4px 6px -1px rgba(120, 53, 15, .06)' }}>
     <Typography id="institutional-summary-title" variant="h6" sx={{ fontWeight: 800 }}>Resumen institucional</Typography>
-    <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>Totales globales de Core. Los filtros de la tabla no cambian este resumen.</Typography>
-    <Box sx={{ bgcolor: '#18366f', color: '#fff', borderRadius: 3, p: { xs: 2.5, md: 3 }, display: 'flex', flexWrap: 'wrap', alignItems: 'end', justifyContent: 'space-between', gap: 1 }}>
-      <Box><Typography sx={{ fontSize: 13, fontWeight: 700, color: '#cbdfff', textTransform: 'uppercase', letterSpacing: '.08em' }}>Panorama general</Typography><Typography sx={{ fontSize: { xs: 44, md: 52 }, lineHeight: 1.1, fontWeight: 850, fontVariantNumeric: 'tabular-nums' }}>{summary.total}</Typography><Typography sx={{ fontWeight: 700 }}>Inspecciones registradas</Typography></Box>
-      <Typography sx={{ color: '#e1ebff', fontSize: 13, maxWidth: 220 }}>Estado actual del trabajo institucional</Typography>
+    <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>Totales de todas las evaluaciones. Los filtros de la tabla no cambian este resumen.</Typography>
+    <Box sx={{ bgcolor: '#78350f', color: '#fff', borderRadius: 3, p: { xs: 2.5, md: 3 }, display: 'flex', flexWrap: 'wrap', alignItems: 'end', justifyContent: 'space-between', gap: 1 }}>
+      <Box><Typography sx={{ fontSize: 13, fontWeight: 700, color: '#fde68a', textTransform: 'uppercase', letterSpacing: '.08em' }}>Panorama general</Typography><Typography sx={{ fontSize: { xs: 44, md: 52 }, lineHeight: 1.1, fontWeight: 850, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{summary.total}</Typography><Typography sx={{ fontWeight: 700, color: '#fff' }}>Inspecciones registradas</Typography></Box>
+      <Typography sx={{ color: '#fef3c7', fontSize: 13, maxWidth: 220 }}>Estado actual del trabajo institucional</Typography>
     </Box>
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3, mt: 3 }}>
       <Box>
@@ -55,12 +55,12 @@ export function InstitutionalSummary({ summary }: { summary: AnalyticsSummary })
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.25 }}>{outcomes.map((metric) => <MetricTile key={metric.label} metric={metric} />)}</Box>
       </Box>
     </Box>
-    <Box sx={{ borderTop: '1px solid #e2e8f0', mt: 3, pt: 2.5 }}>
+    <Box sx={{ borderTop: '1px solid #fde68a', mt: 3, pt: 2.5 }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0.5} sx={{ mb: 2, justifyContent: 'space-between' }}><Typography sx={{ fontWeight: 800 }}>Riesgo calculado</Typography><Typography variant="body2" color="text.secondary">{classified} {classified === 1 ? 'inspección con riesgo calculado' : 'inspecciones con riesgo calculado'}</Typography></Stack>
       <Box sx={{ display: 'grid', gap: 1.5 }}>
         {riskRows.map((row) => <Box key={row.key} sx={{ display: 'grid', gridTemplateColumns: '56px minmax(0, 1fr) 28px', alignItems: 'center', gap: 1.5 }}>
           <Typography variant="body2" sx={{ fontWeight: 700 }}>{row.label}</Typography>
-          <Box sx={{ height: 12, borderRadius: 99, bgcolor: '#edf2f7', overflow: 'hidden' }} aria-hidden="true"><Box sx={{ height: '100%', width: `${classified ? (summary.byRisk[row.key] / classified) * 100 : 0}%`, bgcolor: row.color, borderRadius: 99 }} /></Box>
+          <Box sx={{ height: 12, borderRadius: 99, bgcolor: '#fef3c7', overflow: 'hidden' }} aria-hidden="true"><Box sx={{ height: '100%', width: `${classified ? (summary.byRisk[row.key] / classified) * 100 : 0}%`, bgcolor: row.color, borderRadius: 99 }} /></Box>
           <Typography variant="body2" sx={{ fontWeight: 800, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{summary.byRisk[row.key]}</Typography>
         </Box>)}
       </Box>

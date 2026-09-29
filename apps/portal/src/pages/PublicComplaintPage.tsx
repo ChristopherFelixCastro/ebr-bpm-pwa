@@ -40,7 +40,7 @@ export function PublicComplaintPage() {
     finally { setSending(false) }
   }
 
-  return <Box sx={{ minHeight: '100vh', bgcolor: '#f4f8f7' }}>
+  return <Box sx={{ minHeight: '100vh', bgcolor: '#fffbeb' }}>
     <PublicHeader />
     <Container maxWidth="md" sx={{ py: { xs: 4, md: 7 } }}>
       <Button component={RouterLink} to="/" sx={{ mb: 3, textTransform: 'none' }}>← Volver al inicio</Button>
@@ -57,7 +57,7 @@ export function PublicComplaintPage() {
           <Box><Typography variant="h6" sx={{ fontWeight: 800 }}>Lo que desea informar</Typography><Typography color="text.secondary">No incluya contraseñas ni datos sensibles que no sean necesarios para describir el hecho.</Typography></Box>
           <TextField label="Tipo de denuncia" value={type} onChange={(event) => setType(event.target.value)} required fullWidth slotProps={{ htmlInput: { maxLength: 120 } }} helperText="Por ejemplo: condiciones del establecimiento, manipulación de alimentos o calidad del agua." />
           <TextField label="Descripción de lo sucedido" value={description} onChange={(event) => setDescription(event.target.value)} required fullWidth multiline minRows={6} slotProps={{ htmlInput: { maxLength: 5000 } }} helperText="Indique dónde ocurrió, cuándo lo observó y qué sucedió. Máximo 5,000 caracteres." />
-          <Box sx={{ borderTop: '1px solid #e2e8f0', pt: 3 }}>
+          <Box sx={{ borderTop: '1px solid #fde68a', pt: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>Datos de contacto</Typography>
             <RadioGroup value={contact ? 'contacto' : 'anonima'} onChange={(event) => setContact(event.target.value === 'contacto')}>
               <FormControlLabel value="anonima" control={<Radio />} label="Enviar de forma anónima" />

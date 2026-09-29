@@ -3,9 +3,11 @@ import { createTheme } from '@mui/material/styles';
 export const tema = createTheme({
   palette: {
     mode: 'light',
-    primary: { main: '#155e75', dark: '#164e63', light: '#67e8f9' },
+    primary: { main: '#78350f', dark: '#451a03', light: '#f59e0b' },
     secondary: { main: '#b45309' },
-    background: { default: '#f4f7f8', paper: '#ffffff' },
+    background: { default: '#fffbeb', paper: '#ffffff' },
+    text: { primary: '#451a03', secondary: '#92400e' },
+    divider: '#fde68a',
     success: { main: '#15803d' },
     warning: { main: '#b45309' },
     error: { main: '#b91c1c' },
@@ -21,9 +23,9 @@ export const tema = createTheme({
   components: {
     MuiCard: {
       styleOverrides: {
-        root: { border: '1px solid #d9e3e6', boxShadow: '0 8px 30px rgba(15, 45, 56, 0.06)' },
+        root: { border: '1px solid #fde68a', boxShadow: '0 4px 6px -1px rgba(120, 53, 15, .06)' },
       },
     },
-    MuiButton: { defaultProps: { disableElevation: true } },
+    MuiButton: { defaultProps: { disableElevation: true }, styleOverrides: { root: { minHeight: 44, borderRadius: 9 } } },
   },
 });

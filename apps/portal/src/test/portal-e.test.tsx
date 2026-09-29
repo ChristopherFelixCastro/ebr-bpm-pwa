@@ -49,7 +49,7 @@ it('lee el resumen real de Core en Evaluaciones para los tres roles instituciona
     render(<App />)
     expect(await screen.findByText('19')).toBeInTheDocument()
     expect(screen.getByText('Resumen institucional')).toBeInTheDocument()
-    expect(screen.getByText('Riesgo alto')).toBeInTheDocument()
+    expect(screen.getByText('Alto')).toBeInTheDocument()
     expect(vi.mocked(core.request).mock.calls.filter(([path]) => path === '/v1/analytics/summary')).toHaveLength(1)
     expect(vi.mocked(core.request).mock.calls.filter(([path]) => String(path).startsWith('/v1/analytics/evaluations?'))).toHaveLength(1)
     cleanup(); core.disconnect(); vi.mocked(core.request).mockClear()
@@ -66,7 +66,7 @@ it('muestra estados en español y conserva el código esperado por Core al filtr
   })
   window.history.replaceState({}, '', '/evaluaciones')
   render(<App />)
-  expect(await screen.findByText('Resumen institucional')).toBeInTheDocument()
+  expect(await screen.findByRole('combobox', { name: 'Estado' })).toBeInTheDocument()
   fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Estado' }))
   fireEvent.click(await screen.findByRole('option', { name: 'Listo para revisión' }))
   await waitFor(() => expect(vi.mocked(core.request).mock.calls.some(([path]) => String(path).includes('lifecycleStatus=READY_FOR_REVIEW'))).toBe(true))
@@ -161,7 +161,7 @@ it('pide reautenticación a UNIVERSAL antes de devolver y repite la misma decisi
 it('reintenta informe con el mismo operationId y solo permite cerrar tras oficializar', async () => {
   vi.spyOn(core, 'restoreSession').mockResolvedValue(account('COORDINATOR'))
   let stage: 'approved' | 'draft' | 'official' | 'closed' = 'approved'
-  const report = { id: 'report-1', status: 'DRAFT', verificationId: 'verification-1', generatedAt: '2026-09-25T00:00:00Z' }
+  const report = { id: 'report-1', status: 'DRAFT', renderVariant: 'SIRA_V2', reportContentVersion: 1, verificationId: 'verification-1', generatedAt: '2026-09-25T00:00:00Z' }
   const generationIds: string[] = []
   vi.mocked(core.request).mockImplementation(async (path, init) => {
     const route = String(path)
@@ -169,6 +169,7 @@ it('reintenta informe con el mismo operationId y solo permite cerrar tras oficia
     if (route.startsWith('/v1/analytics/evaluations/')) return envelope({ ...evaluation, lifecycleStatus: stage === 'closed' ? 'CLOSED' : 'APPROVED', currentReview: { id: 'review-1', status: 'APPROVED' } })
     if (route.endsWith('/work-package')) return envelope(packageData)
     if (route.endsWith('/reviews/current')) return envelope({ id: 'review-1', status: 'APPROVED', cycleNumber: 1, returnCount: 0 })
+    if (route.endsWith('/report-content')) return envelope({ inspectionId: 'inspection-1', version: 1, executiveSummary: 'Resumen de la inspección', additionalFindings: '', recommendations: 'Recomendaciones de seguimiento' })
     if (route.endsWith('/reports')) return envelope(stage === 'approved' ? [] : [{ ...report, status: stage === 'draft' ? 'DRAFT' : 'OFFICIAL' }])
     if (route.endsWith('/closure')) { if (stage === 'closed') return envelope({ id: 'closure-1', closedAt: '2026-09-25T00:00:00Z' }); throw notFound() }
     if (route.endsWith('/reports/generate')) { generationIds.push(JSON.parse(String(init?.body)).operationId); if (generationIds.length === 1) throw new CoreApiError(503, 'REPORT_STORAGE_UNAVAILABLE', 'Almacenamiento no disponible'); stage = 'draft'; return envelope(report) }
@@ -186,6 +187,7 @@ it('reintenta informe con el mismo operationId y solo permite cerrar tras oficia
   await waitFor(() => expect(generationIds).toHaveLength(2))
   expect(generationIds[1]).toBe(generationIds[0])
   fireEvent.click(await screen.findByRole('button', { name: 'Oficializar informe' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Sí, oficializar' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Cerrar expediente' }))
   await waitFor(() => expect(vi.mocked(core.request).mock.calls.some(([path]) => String(path).endsWith('/close'))).toBe(true))
 })
