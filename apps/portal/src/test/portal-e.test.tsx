@@ -106,6 +106,29 @@ it('devuelve criterios solo desde la revisión institucional autorizada', async 
   await waitFor(() => expect(vi.mocked(core.request)).toHaveBeenCalledWith('/v1/inspections/inspection-1/reviews/review-1/return', expect.objectContaining({ body: JSON.stringify({ reason: 'Corregir respuesta', bpmItemIds: ['item-1'] }) })))
 })
 
+it('permite al coordinador abrir la evidencia vinculada a un criterio durante la revisión', async () => {
+  vi.spyOn(core, 'restoreSession').mockResolvedValue(account('COORDINATOR'))
+  const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  vi.mocked(core.request).mockImplementation(async (path) => {
+    const route = String(path)
+    if (route === '/health/ready') return envelope({ status: 'ready' })
+    if (route.startsWith('/v1/analytics/evaluations/')) return envelope({ ...evaluation, lifecycleStatus: 'PENDING_REVIEW' })
+    if (route.endsWith('/work-package')) return envelope({ ...packageData, evidence: [{ id: 'evidence-1', bpmItemId: 'item-1', fileName: 'foto-area.png', mimeType: 'image/png', sizeBytes: 2048, status: 'PENDING', deletedAt: null }] })
+    if (route.endsWith('/reviews/current')) return envelope({ id: 'review-1', status: 'PENDING_REVIEW' })
+    if (route.endsWith('/reports')) return envelope([])
+    if (route.endsWith('/closure')) throw notFound()
+    if (route.endsWith('/evidence/evidence-1/download-url')) return envelope({ signedUrl: 'https://signed.test/evidence' })
+    return envelope([])
+  })
+  window.history.replaceState({}, '', '/evaluaciones/inspection-1/revision')
+  render(<App />)
+  expect(await screen.findByText('foto-area.png')).toBeInTheDocument()
+  expect(screen.getByText(/1 Criterio · Pendiente/)).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Abrir evidencia' }))
+  await waitFor(() => expect(vi.mocked(core.request)).toHaveBeenCalledWith('/v1/inspections/inspection-1/evidence/evidence-1/download-url', { method: 'POST' }))
+  expect(anchorClick).toHaveBeenCalledOnce()
+})
+
 it('guarda una corrección con baseVersion y solo después ofrece el reenvío online', async () => {
   vi.spyOn(core, 'restoreSession').mockResolvedValue(account('EVALUATOR'))
   vi.spyOn(core, 'authenticated', 'get').mockReturnValue(true)

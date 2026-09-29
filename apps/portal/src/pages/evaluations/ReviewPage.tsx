@@ -6,19 +6,33 @@ import { CoreApiError } from '@ebr-bpm/core-client'
 import { core } from '../../api/core'
 import { evaluationDetail, type EvaluationDetail } from '../../api/evaluation'
 import { routeForError, supportMessage } from '../../api/presentation'
+import { displayLabel } from '../../api/displayLabels'
 import { useSession } from '../../session/SessionContext'
+
+type ReviewEvidence = { id: string; bpmItemId: string | null; fileName: string; mimeType: string; sizeBytes: number; status: string; deletedAt: string | null }
 
 export function ReviewPage() {
   const { id = '' } = useParams(), navigate = useNavigate()
   const { user, runWithReauthentication } = useSession()
   const [detail, setDetail] = useState<EvaluationDetail | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false)
   const [decision, setDecision] = useState<'APPROVE' | 'RETURN'>('APPROVE'), [reason, setReason] = useState(''), [selected, setSelected] = useState<string[]>([])
+  const [openingEvidence, setOpeningEvidence] = useState<string | null>(null)
   const load = useCallback(async () => {
     try { setDetail(await evaluationDetail(id)) }
     catch (cause) { const route = routeForError(cause); if (route) navigate(route, { replace: true }); else setError(supportMessage(cause, 'No se pudo cargar la revisión.')) }
   }, [id, navigate])
   useEffect(() => { void load() }, [load])
   const review = detail?.review
+  const openEvidence = async (evidenceId: string) => {
+    setOpeningEvidence(evidenceId); setError('')
+    try {
+      const response = await core.request<{ signedUrl: string }>(`/v1/inspections/${encodeURIComponent(id)}/evidence/${encodeURIComponent(evidenceId)}/download-url`, { method: 'POST' })
+      const link = document.createElement('a')
+      link.href = response.data.signedUrl; link.target = '_blank'; link.rel = 'noopener noreferrer'
+      document.body.append(link); link.click(); link.remove()
+    } catch (cause) { setError(supportMessage(cause, 'No fue posible abrir la evidencia.')) }
+    finally { setOpeningEvidence(null) }
+  }
   const canDecide = (user?.roleCode === 'COORDINATOR' || user?.roleCode === 'UNIVERSAL') && review && ['PENDING_REVIEW', 'RESUBMITTED'].includes(review.status)
   const save = async () => {
     if (!review || !canDecide || (decision === 'RETURN' && (!reason.trim() || !selected.length))) return
@@ -34,9 +48,19 @@ export function ReviewPage() {
   if (!detail) return error ? <Alert severity="error">{error}</Alert> : <Typography>Cargando revisión…</Typography>
   const responses = new Map(detail.workPackage.responses.map((entry) => [entry.bpmItemId, entry]))
   const criteria = orderBpmItems(detail.workPackage.bpmTemplate.items).map(({ item }) => item).filter((item) => item.itemKind === 'CRITERION' && item.isEvaluable)
+  const criterionNames = new Map(criteria.map((item) => [item.id, `${item.displayCode || ''} ${item.title}`.trim()]))
+  const evidence = (detail.workPackage.evidence as ReviewEvidence[]).filter((item) => !item.deletedAt && item.status !== 'ARCHIVED')
   return <Stack spacing={2}>
     <Box><Button onClick={() => navigate(`/evaluaciones/${id}`)}>← Evaluación</Button><Typography variant="h5" sx={{ fontWeight: 800 }}>Revisión institucional</Typography></Box>
     {error && <Alert severity="error">{error}</Alert>}
+    <Card sx={{ p: 2 }}><Typography variant="h6" sx={{ fontWeight: 750 }}>Evidencias de la inspección</Typography>
+      {evidence.length === 0 ? <Typography color="text.secondary">No hay evidencias registradas.</Typography> : evidence.map((item) =>
+        <Box key={item.id} sx={{ py: 1.25, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+          <Box><Typography sx={{ fontWeight: 650, overflowWrap: 'anywhere' }}>{item.fileName}</Typography>
+            <Typography variant="body2" color="text.secondary">{item.bpmItemId ? criterionNames.get(item.bpmItemId) || 'Criterio vinculado' : 'Evidencia general'} · {displayLabel(item.status)} · {item.mimeType} · {Math.ceil(Number(item.sizeBytes) / 1024)} KB</Typography></Box>
+          <Button variant="outlined" disabled={openingEvidence === item.id} onClick={() => void openEvidence(item.id)}>Abrir evidencia</Button>
+        </Box>)}
+    </Card>
     {!canDecide ? <Alert severity="info">Esta revisión no admite decisiones para su rol o estado actual.</Alert> : <>
       <Card sx={{ p: 2 }}><RadioGroup row value={decision} onChange={(event) => { setDecision(event.target.value as 'APPROVE' | 'RETURN'); setSelected([]) }}><FormControlLabel value="APPROVE" control={<Radio />} label="Aprobar" /><FormControlLabel value="RETURN" control={<Radio />} label="Devolver para corrección" /></RadioGroup><TextField fullWidth multiline minRows={2} label={decision === 'RETURN' ? 'Motivo obligatorio' : 'Nota opcional'} value={reason} onChange={(event) => setReason(event.target.value)} slotProps={{ htmlInput: { maxLength: 1000 } }} /></Card>
       {decision === 'RETURN' && <Card sx={{ p: 2 }}><Typography variant="h6">Criterios habilitados para corrección</Typography>{criteria.map((item) => <Box key={item.id} sx={{ py: 1 }}><FormControlLabel control={<Checkbox checked={selected.includes(item.id)} onChange={() => setSelected((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} />} label={`${item.displayCode || ''} ${item.title} · ${responses.get(item.id)?.responseValue || 'Sin respuesta'}`} /></Box>)}</Card>}
