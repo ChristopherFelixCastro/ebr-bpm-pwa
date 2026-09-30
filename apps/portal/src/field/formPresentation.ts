@@ -1,3 +1,4 @@
+import { orderBpmItems } from './bpmOrder'
 import type { BpmValue, FieldState } from './model'
 
 export const matchesKeywords = (text: string, query: string) => {
@@ -12,6 +13,70 @@ export const responseDisplay: Record<BpmValue | 'UNANSWERED', { label: string; c
   C: { label: 'Cumple', color: 'success', order: 2 },
   NA: { label: 'No aplica', color: 'default', order: 3 },
   UNANSWERED: { label: 'Sin respuesta', color: 'default', order: 4 },
+}
+
+export const bpmResponseOptions: ReadonlyArray<{
+  value: BpmValue
+  code: string
+  label: string
+  buttonLabel: string
+  color: 'success' | 'warning' | 'error' | 'default'
+}> = [
+  { value: 'C', code: 'C', label: 'Cumple', buttonLabel: 'C · Cumple', color: 'success' },
+  { value: 'CP', code: 'CP', label: 'Cumple parcialmente', buttonLabel: 'CP · Cumple parcialmente', color: 'warning' },
+  { value: 'IT', code: 'IT', label: 'Incumple', buttonLabel: 'IT · Incumple', color: 'error' },
+  { value: 'NA', code: 'N/A', label: 'No aplica', buttonLabel: 'N/A · No aplica', color: 'default' },
+]
+
+export interface MissingCriterion {
+  id: string
+  displayCode: string | null
+  title: string
+}
+
+export function missingCriteria(state: FieldState): MissingCriterion[] {
+  const answered = new Set(state.responses.map((response) => response.bpmItemId))
+  const ordered = orderBpmItems(state.signedPackage.bpmTemplate.items)
+  return ordered
+    .map(({ item }) => item)
+    .filter((item) => item.itemKind === 'CRITERION' && item.isEvaluable && !answered.has(item.id))
+    .map((item) => ({ id: item.id, displayCode: item.displayCode ?? null, title: item.title }))
+}
+
+export interface FormattedAddedFood {
+  id: string
+  foodRiskSubcategoryId: string
+  categoryName: string
+  subcategoryName: string
+  riskScore: number | null
+  label: string
+}
+
+export function formatAddedFoods(state: FieldState): FormattedAddedFood[] {
+  return state.foodSnapshots.map((entry) => {
+    for (const category of state.signedPackage.riskRule.foodCatalog) {
+      const sub = category.subcategories.find((s) => s.id === entry.foodRiskSubcategoryId)
+      if (sub) {
+        const naSuffix = sub.riskScore === null ? ' (No aplica)' : ''
+        return {
+          id: entry.foodRiskSubcategoryId,
+          foodRiskSubcategoryId: entry.foodRiskSubcategoryId,
+          categoryName: category.name,
+          subcategoryName: sub.name,
+          riskScore: sub.riskScore,
+          label: `${category.name}: ${sub.name}${naSuffix}`,
+        }
+      }
+    }
+    return {
+      id: entry.foodRiskSubcategoryId,
+      foodRiskSubcategoryId: entry.foodRiskSubcategoryId,
+      categoryName: '',
+      subcategoryName: entry.foodRiskSubcategoryId,
+      riskScore: null,
+      label: entry.foodRiskSubcategoryId,
+    }
+  })
 }
 
 export function captureProgress(state: FieldState) {

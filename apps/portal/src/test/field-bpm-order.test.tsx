@@ -57,5 +57,6 @@ it('muestra la ficha de campo en orden jerárquico y la criticidad como informac
   expect(screen.getByText('Criticidad mayor')).toBeInTheDocument()
   expect(screen.getByText('Criticidad crítica')).toBeInTheDocument()
   expect(screen.getByText('Instrucción: Observe rejillas.')).toBeInTheDocument()
-  expect(screen.getAllByRole('combobox', { name: 'Respuesta' })).toHaveLength(4)
+  expect(screen.getAllByRole('group', { name: /^Respuesta para/ })).toHaveLength(4)
+  expect(screen.getAllByRole('button', { name: 'C · Cumple' })).toHaveLength(4)
 })

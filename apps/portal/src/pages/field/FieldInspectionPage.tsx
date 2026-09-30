@@ -1,14 +1,14 @@
 import { displayLabel } from '../../api/displayLabels'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Autocomplete, Box, Button, Card, CardContent, Checkbox, Chip, FormControlLabel, LinearProgress, MenuItem, Stack, TextField, Typography } from '@mui/material'
+import { Alert, Autocomplete, Box, Button, Card, CardContent, Checkbox, Chip, FormControlLabel, LinearProgress, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import { useSession } from '../../session/SessionContext'
 import { core } from '../../api/core'
 import { CoreApiError, type CoreInspection, type CoreReport } from '@ebr-bpm/core-client'
 import { supportMessage } from '../../api/presentation'
 import { OfflinePackageMissingError } from '../../offline/vault'
 import { orderBpmItems } from '../../field/bpmOrder'
-import { captureProgress, matchesKeywords, responseDisplay } from '../../field/formPresentation'
+import { bpmResponseOptions, captureProgress, formatAddedFoods, matchesKeywords, missingCriteria, responseDisplay } from '../../field/formPresentation'
 import { criticalityLabels } from '../configuration/labels'
 import { acknowledgeRenewalConflict, addEvidence, addFood, compareRenewalConflict, confirmFieldRenewal, downloadFieldPackage, finalizeLocal, inspectStoredFieldState, previewFieldRenewal, rebaseConflict, removePendingEvidence, reviewFieldConflict, saveLocation, saveResponse, selectFactor, syncFieldState, type BpmValue, type FieldRenewalPreview, type FieldState, type StoredFieldState } from '../../field/model'
 
@@ -31,20 +31,54 @@ export function FieldInspectionPage() {
   const lastAutoSyncKey = useRef('')
   const [password, setPassword] = useState('')
   const [consent, setConsent] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [foodId, setFoodId] = useState('')
+  const [showMissingCriteria, setShowMissingCriteria] = useState(false)
   const [evidenceItemId, setEvidenceItemId] = useState('')
   const [conflictReview, setConflictReview] = useState<{ operationId: string; version: number; status: string; current: unknown; local: unknown } | null>(null)
   const [officialReport, setOfficialReport] = useState<CoreReport | null>(null)
   const orderedItems = useMemo(() => state ? orderBpmItems(state.signedPackage.bpmTemplate.items) : [], [state])
-  const foodOptions = state?.signedPackage.riskRule.foodCatalog.flatMap((category) => category.subcategories.map((sub) => ({ ...sub, categoryName: category.name }))) ?? []
+  const categories = useMemo(() => state?.signedPackage.riskRule.foodCatalog ?? [], [state])
+  const selectedCategory = useMemo(() => categories.find((cat) => cat.id === selectedCategoryId) ?? null, [categories, selectedCategoryId])
+  const subcategoryOptions = useMemo(() => selectedCategory?.subcategories ?? [], [selectedCategory])
+  const selectedSubcategory = useMemo(() => subcategoryOptions.find((sub) => sub.id === foodId) ?? null, [subcategoryOptions, foodId])
+  const missing = useMemo(() => state ? missingCriteria(state) : [], [state])
+  const isBpmIncomplete = (error === 'Faltan respuestas BPM.' || showMissingCriteria) && missing.length > 0
   const responseByItem = new Map(state?.responses.map((response) => [response.bpmItemId, response.responseValue] as const) ?? [])
   const evidenceOptions = orderedItems.map(({ item }) => item).filter((item) => item.itemKind === 'CRITERION' && item.isEvaluable)
     .map((item) => ({ ...item, result: responseDisplay[responseByItem.get(item.id) ?? 'UNANSWERED'] }))
     .sort((a, b) => a.result.order - b.result.order)
   const progress = state ? captureProgress(state) : null
+
+  useEffect(() => {
+    if (error === 'Faltan respuestas BPM.' && missing.length === 0) {
+      setError('')
+      setShowMissingCriteria(false)
+    }
+  }, [error, missing.length])
+
+  const scrollToCriterion = (itemId: string) => {
+    const container = document.getElementById(`criterio-${itemId}`)
+    if (container) {
+      if (typeof container.scrollIntoView === 'function') {
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+      const focusable = container.querySelector<HTMLElement>('button.MuiToggleButton-root, button, input')
+      focusable?.focus({ preventScroll: true })
+    }
+  }
+
+  const scrollToSection = (sectionId: string) => {
+    const container = document.getElementById(sectionId)
+    if (container && typeof container.scrollIntoView === 'function') {
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   const reload = useCallback(async () => {
     if (!actor || !id) return
     setState(null); setSealed(null); setRenewalPreview(null); setConflictReview(null); setOfficialReport(null)
+    setSelectedCategoryId(''); setFoodId(''); setShowMissingCriteria(false)
     try {
       const stored = await inspectStoredFieldState(actor.id, id)
       setServerDenied(false); setReadOnly(false); setCoreChanged(false); setError('')
@@ -147,6 +181,15 @@ export function FieldInspectionPage() {
     } catch (cause) { setError(supportMessage(cause, 'No se pudo abrir el informe oficial.')) }
     finally { setBusy(false) }
   }
+  const handleFinalize = () => {
+    if (!state || !actor) return
+    if (missing.length > 0) {
+      setError('Faltan respuestas BPM.')
+      setShowMissingCriteria(true)
+      return
+    }
+    void action(() => finalizeLocal(actor.id, id))
+  }
   if (!actor) return <Alert severity="error">Inicie sesión o desbloquee su cuenta local.</Alert>
   const permitCurrent = !state?.permit || (Date.now() >= Date.parse(state.permit.claims.issuedAt) - 5 * 60_000 && Date.now() < Date.parse(state.permit.claims.expiresAt))
   const editing = state && permitCurrent && !busy && !syncing && !readOnly && !coreChanged && !state.renewalConflict && ['DRAFT', 'IN_PROGRESS'].includes(state.inspection.status) && !state.localFinalized
@@ -154,9 +197,36 @@ export function FieldInspectionPage() {
   return <Stack spacing={2} sx={{ maxWidth: 1100, m: 'auto', p: offlineUser ? 3 : 0 }}>
     <Button component={Link} to={offlineUser ? '/campo/paquetes' : '/campo/asignadas'} sx={{ alignSelf: 'start' }}>Volver a mis inspecciones</Button>
     <Typography variant="h5" sx={{ fontWeight: 800 }}>Inspección de campo</Typography>
-    {(error || (state && permitCurrent)) && <Box sx={{ position: 'sticky', top: offlineUser ? 0 : { xs: 56, sm: 64 }, zIndex: (theme) => theme.zIndex.appBar - 1, bgcolor: 'background.default', borderRadius: 2, py: 1, maxHeight: '55vh', overflowY: 'auto', boxShadow: '0 5px 14px rgba(69,26,3,.12)' }}>
+    {(error || isBpmIncomplete || (state && permitCurrent)) && <Box sx={{ position: 'sticky', top: offlineUser ? 0 : { xs: 56, sm: 64 }, zIndex: (theme) => theme.zIndex.appBar - 1, bgcolor: 'background.default', borderRadius: 2, py: 1, maxHeight: '55vh', overflowY: 'auto', boxShadow: '0 5px 14px rgba(69,26,3,.12)' }}>
       <Stack spacing={1}>
-        {error && <Alert severity="warning" role="alert">{error}</Alert>}
+        {isBpmIncomplete && <Alert severity="warning" role="alert">
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+            Faltan respuestas BPM ({missing.length} {missing.length === 1 ? 'criterio pendiente' : 'criterios pendientes'}):
+          </Typography>
+          <Stack spacing={0.5} sx={{ maxHeight: '20vh', overflowY: 'auto', pr: 0.5 }}>
+            {missing.map((item) => <Box key={item.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                {item.displayCode ? `${item.displayCode} · ` : ''}{item.title}
+              </Typography>
+              <Button size="small" variant="outlined" onClick={() => scrollToCriterion(item.id)} sx={{ flexShrink: 0, py: 0.2, px: 1, fontSize: '0.75rem', textTransform: 'none' }}>
+                Ir al criterio
+              </Button>
+            </Box>)}
+          </Stack>
+        </Alert>}
+        {error === 'Complete los seis factores de riesgo.' && <Alert severity="warning" role="alert">
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <span>{error}</span>
+            <Button size="small" variant="outlined" onClick={() => scrollToSection('seccion-factores')} sx={{ textTransform: 'none' }}>Ir a factores de riesgo</Button>
+          </Box>
+        </Alert>}
+        {error === 'Seleccione al menos un producto aplicable; NA se excluye del cálculo.' && <Alert severity="warning" role="alert">
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <span>{error}</span>
+            <Button size="small" variant="outlined" onClick={() => scrollToSection('seccion-productos')} sx={{ textTransform: 'none' }}>Ir a productos de riesgo</Button>
+          </Box>
+        </Alert>}
+        {error && !isBpmIncomplete && error !== 'Complete los seis factores de riesgo.' && error !== 'Seleccione al menos un producto aplicable; NA se excluye del cálculo.' && <Alert severity="warning" role="alert">{error}</Alert>}
         {state && permitCurrent && <>
           {state.localFinalized && state.inspection.status !== 'SUBMITTED' && <Alert severity="warning">Inspección finalizada y guardada en este dispositivo. {online ? 'El envío está pendiente o en curso.' : 'Se enviará automáticamente cuando vuelva la conexión.'}</Alert>}
           {state.inspection.status === 'SUBMITTED' && <Alert severity="success" role="status">Inspección enviada correctamente.</Alert>}
@@ -202,7 +272,7 @@ export function FieldInspectionPage() {
       {user?.roleCode === 'EVALUATOR' && state.inspection.status === 'SUBMITTED' && officialReport && navigator.onLine &&
         <Button disabled={busy} onClick={() => void openOfficialReport()}>Abrir informe oficial</Button>}
       <Card><CardContent><Typography variant="h6">Respuestas BPM</Typography>
-        {orderedItems.map(({ item, depth }) => <Box key={item.id} sx={{ borderBottom: '1px solid #ddd', py: 2, pl: (depth - 1) * 2 }}>
+        {orderedItems.map(({ item, depth }) => <Box id={`criterio-${item.id}`} key={item.id} sx={{ borderBottom: '1px solid #ddd', py: 2, pl: (depth - 1) * 2, scrollMarginTop: { xs: 260, sm: 300 } }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
             <Typography sx={{ fontWeight: item.itemKind === 'CRITERION' ? 600 : 800 }}>{item.displayCode} {item.title}</Typography>
             {item.itemKind === 'CRITERION' && item.criticality && <Chip size="small" variant="outlined" label={`Criticidad ${criticalityLabels[item.criticality].toLowerCase()}`} />}
@@ -211,36 +281,93 @@ export function FieldInspectionPage() {
             <Typography variant="body2">Instrucción: {guidance.text}</Typography>
             {guidance.criticality && <Chip size="small" variant="outlined" color="warning" label={`Criticidad ${criticalityLabels[guidance.criticality].toLowerCase()}`} />}
           </Stack>)}
-          {item.itemKind === 'CRITERION' && item.isEvaluable && <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mt: 1 }}>
-            <TextField select size="small" label="Respuesta" value={state.responses.find((response) => response.bpmItemId === item.id)?.responseValue ?? ''} disabled={!editing || busy}
-              onChange={(event) => { const value = event.target.value as BpmValue; void action(() => saveResponse(actor.id, id, item.id, value, state.responses.find((response) => response.bpmItemId === item.id)?.observations ?? '')) }} sx={{ minWidth: 120 }}>
-              {(['C', 'CP', 'IT', 'NA'] as const).map((value) => <MenuItem key={value} value={value}>{responseDisplay[value].label}</MenuItem>)}
-            </TextField>
+          {item.itemKind === 'CRITERION' && item.isEvaluable && <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} sx={{ mt: 1.5, alignItems: { lg: 'flex-start' } }}>
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={state.responses.find((response) => response.bpmItemId === item.id)?.responseValue ?? null}
+              onChange={(_, nextValue: BpmValue | null) => {
+                if (!nextValue || !editing || busy) return
+                const current = state.responses.find((response) => response.bpmItemId === item.id)
+                void action(() => saveResponse(actor.id, id, item.id, nextValue, current?.observations ?? ''))
+              }}
+              disabled={!editing || busy}
+              aria-label={`Respuesta para ${item.displayCode ?? ''} ${item.title}`}
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 0.5,
+                '& .MuiToggleButtonGroup-grouped': {
+                  border: '1px solid #c4c4c4 !important',
+                  borderRadius: '4px !important',
+                },
+              }}
+            >
+              {bpmResponseOptions.map((opt) => (
+                <ToggleButton
+                  key={opt.value}
+                  value={opt.value}
+                  aria-label={opt.buttonLabel}
+                  sx={{
+                    textTransform: 'none',
+                    px: 1.5,
+                    py: 0.5,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    fontSize: '0.85rem',
+                    '&.Mui-selected': {
+                      bgcolor: opt.value === 'C' ? 'success.main' : opt.value === 'CP' ? 'warning.main' : opt.value === 'IT' ? 'error.main' : '#475569',
+                      color: '#fff',
+                      '&:hover': {
+                        bgcolor: opt.value === 'C' ? 'success.dark' : opt.value === 'CP' ? 'warning.dark' : opt.value === 'IT' ? 'error.dark' : '#334155',
+                      },
+                    },
+                    '&.Mui-selected.Mui-disabled': {
+                      bgcolor: opt.value === 'C' ? 'success.light' : opt.value === 'CP' ? 'warning.light' : opt.value === 'IT' ? 'error.light' : '#94a3b8',
+                      color: '#fff',
+                    },
+                  }}
+                >
+                  {opt.buttonLabel}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
             <TextField size="small" label="Observaciones" defaultValue={state.responses.find((response) => response.bpmItemId === item.id)?.observations ?? ''} disabled={!editing || busy}
-              onBlur={(event) => { const current = state.responses.find((response) => response.bpmItemId === item.id); if (current && current.observations !== event.target.value) void action(() => saveResponse(actor.id, id, item.id, current.responseValue, event.target.value)) }} sx={{ flex: 1 }} />
+              onBlur={(event) => { const current = state.responses.find((response) => response.bpmItemId === item.id); if (current && current.observations !== event.target.value) void action(() => saveResponse(actor.id, id, item.id, current.responseValue, event.target.value)) }} sx={{ flex: 1, minWidth: { xs: '100%', md: 240 } }} />
           </Stack>}
         </Box>)}
       </CardContent></Card>
-      <Card><CardContent><Typography variant="h6">Seis factores de riesgo</Typography>
+      <Card id="seccion-factores" sx={{ scrollMarginTop: { xs: 260, sm: 300 } }}><CardContent><Typography variant="h6">Seis factores de riesgo</Typography>
         {state.signedPackage.riskRule.factors.map((factor) => <TextField key={factor.id} select fullWidth size="small" label={`${factor.code}: ${factor.name}`} sx={{ my: 1 }} disabled={!editing || busy}
           value={state.factorSelections.find((entry) => entry.riskFactorId === factor.id)?.optionId ?? ''}
           onChange={(event) => void action(() => selectFactor(actor.id, id, factor.id, event.target.value))}>
           {factor.options.map((option) => <MenuItem key={option.id} value={option.id}>{option.label}</MenuItem>)}
         </TextField>)}
       </CardContent></Card>
-      <Card><CardContent><Typography variant="h6">Productos de riesgo</Typography>
+      <Card id="seccion-productos" sx={{ scrollMarginTop: { xs: 260, sm: 300 } }}><CardContent><Typography variant="h6">Productos de riesgo</Typography>
         <Typography variant="body2">Los productos NA se conservan, pero no cuentan para el cálculo.</Typography>
-        {editing && <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ my: 1, alignItems: { sm: 'flex-start' } }}>
-          <Autocomplete size="small" options={foodOptions} value={foodOptions.find((option) => option.id === foodId) ?? null}
-            onChange={(_, option) => setFoodId(option?.id ?? '')}
-            getOptionLabel={(option) => `${option.categoryName}: ${option.name}${option.riskScore === null ? ' (No aplica)' : ''}`}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            filterOptions={(options, { inputValue }) => options.filter((option) => matchesKeywords(`${option.categoryName} ${option.name}`, inputValue))}
-            noOptionsText="No se encontraron productos" sx={{ width: { xs: '100%', sm: 460 }, maxWidth: '100%' }}
-            renderInput={(params) => <TextField {...params} label="Buscar producto" helperText="Escriba palabras del producto o su categoría." />} />
-          <Button disabled={!foodId || busy} onClick={() => void action(() => addFood(actor.id, id, foodId), () => setFoodId(''))}>Agregar</Button>
+        {editing && <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ my: 1, alignItems: { md: 'flex-start' } }}>
+          <Autocomplete size="small" options={categories} value={selectedCategory}
+            clearText="Limpiar categoría" openText="Abrir categorías" closeText="Cerrar categorías"
+            onChange={(_, cat) => { setSelectedCategoryId(cat?.id ?? ''); setFoodId('') }}
+            getOptionLabel={(cat) => cat.name}
+            isOptionEqualToValue={(cat, val) => cat.id === val.id}
+            filterOptions={(options, { inputValue }) => options.filter((cat) => matchesKeywords(cat.name, inputValue))}
+            disabled={!editing || busy}
+            noOptionsText="No se encontraron categorías" sx={{ width: { xs: '100%', md: 320 }, maxWidth: '100%' }}
+            renderInput={(params) => <TextField {...params} label="Categoría de producto" helperText="Seleccione o busque una categoría." />} />
+          <Autocomplete key={`${selectedCategoryId}:${state.foodSnapshots.length}`} size="small" options={subcategoryOptions} value={selectedSubcategory}
+            clearText="Limpiar subcategoría" openText="Abrir subcategorías" closeText="Cerrar subcategorías"
+            onChange={(_, sub) => setFoodId(sub?.id ?? '')}
+            getOptionLabel={(sub) => `${sub.name}${sub.riskScore === null ? ' (No aplica)' : ''}`}
+            isOptionEqualToValue={(sub, val) => sub.id === val.id}
+            filterOptions={(options, { inputValue }) => options.filter((sub) => matchesKeywords(sub.name, inputValue))}
+            disabled={!editing || busy || !selectedCategoryId}
+            noOptionsText={selectedCategoryId ? 'No se encontraron subcategorías' : 'Seleccione una categoría primero'} sx={{ width: { xs: '100%', md: 360 }, maxWidth: '100%' }}
+            renderInput={(params) => <TextField {...params} label="Subcategoría de producto" helperText={selectedCategoryId ? 'Escriba palabras del producto.' : 'Elija una categoría para habilitar.'} />} />
+          <Button disabled={!foodId || busy || !editing} onClick={() => void action(() => addFood(actor.id, id, foodId), () => setFoodId(''))}>Agregar</Button>
         </Stack>}
-        {state.foodSnapshots.map((entry) => <Typography key={entry.foodRiskSubcategoryId}>{state.signedPackage.riskRule.foodCatalog.flatMap((category) => category.subcategories).find((sub) => sub.id === entry.foodRiskSubcategoryId)?.name ?? entry.foodRiskSubcategoryId}</Typography>)}
+        {formatAddedFoods(state).map((entry) => <Typography key={entry.id}>{entry.label}</Typography>)}
       </CardContent></Card>
       <Card><CardContent><Typography variant="h6">Evidencias privadas</Typography><Typography variant="body2">Hasta diez activas, máximo 5 MB por archivo.</Typography>
         {editing && <><Autocomplete size="small" options={evidenceOptions} value={evidenceOptions.find((option) => option.id === evidenceItemId) ?? null}
@@ -286,7 +413,7 @@ export function FieldInspectionPage() {
             {conflictReview?.operationId === item.operationId && <Box sx={{ p: 1, bgcolor: '#fffbeb' }}><Typography variant="body2">Estado registrado: {displayLabel(conflictReview.status)}, versión {conflictReview.version}. Valor actual: {JSON.stringify(conflictReview.current)}</Typography><Typography variant="body2">Cambio local: {JSON.stringify(conflictReview.local)}</Typography><Button disabled={busy} onClick={() => void action(() => rebaseConflict(user.id, id, item.operationId), () => setConflictReview(null))}>Reintentar mi cambio</Button></Box>}</>}
         </Box>)}
         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-          {editing && <Button disabled={busy || syncing} variant="contained" onClick={() => void action(() => finalizeLocal(actor.id, id))}>Finalizar inspección</Button>}
+          {editing && <Button disabled={busy || syncing} variant="contained" onClick={handleFinalize}>Finalizar inspección</Button>}
           {user && online && !readOnly && !coreChanged && !state.renewalConflict && !syncing && lastAutoSyncKey.current === autoSyncKey && queue.some((item) => item.status === 'PENDING' || item.status === 'SENDING') && <Button disabled={busy} onClick={() => { setRetryEpoch((value) => value + 1) }}>Reintentar envío pendiente</Button>}
         </Stack>
       </CardContent></Card>
